@@ -51,8 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(uid: string) {
     const [{ data: r }, { data: p }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
-      supabase.from("profiles").select("full_name, username").eq("id", uid).maybeSingle(),
+      supabase.from("profiles").select("full_name, username, is_active").eq("id", uid).maybeSingle(),
     ]);
+    if (p && (p as any).is_active === false) {
+      await supabase.auth.signOut();
+      setRole(null); setFullName(""); setUser(null); setSession(null);
+      setLoading(false);
+      if (typeof window !== "undefined") window.location.href = "/login?disabled=1";
+      return;
+    }
     setRole((r?.role as Role) ?? "cashier");
     setFullName(p?.full_name || p?.username || "User");
     setLoading(false);
