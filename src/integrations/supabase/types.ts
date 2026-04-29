@@ -434,6 +434,11 @@ export type Database = {
     }
     Functions: {
       approve_return: { Args: { _return_id: string }; Returns: Json }
+      get_admin_dashboard_summary: {
+        Args: { _days: number; _start_at: string }
+        Returns: Json
+      }
+      get_admin_inventory_summary: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
