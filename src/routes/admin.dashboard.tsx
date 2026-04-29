@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fmt } from "@/lib/format";
 import {
   ShoppingCart, TrendingUp, Package, AlertTriangle, ArrowRight,
@@ -39,100 +40,50 @@ function startOfPeriod(p: PeriodKey) {
 function Dashboard() {
   const [period, setPeriod] = useState<PeriodKey>("7d");
   const [stats, setStats] = useState({ products: 0, lowStock: 0 });
-  const [periodSales, setPeriodSales] = useState<any[]>([]);
-  const [periodReturns, setPeriodReturns] = useState<any[]>([]);
+  const [kpis, setKpis] = useState({ grossSales: 0, bills: 0, refunds: 0, net: 0, rate: 0, returnsCount: 0 });
   const [recent, setRecent] = useState<any[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
   const [daily, setDaily] = useState<{ day: string; sales: number; refunds: number }[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; qty: number; revenue: number }[]>([]);
   const [margin, setMargin] = useState<{ name: string; value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const startIso = startOfPeriod(period).toISOString();
+      const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
 
       const [
-        { data: sales },
-        { data: returns },
-        { data: prods },
-        { data: items },
+        { data: summary },
+        { data: inventory },
+        { data: recentSales },
       ] = await Promise.all([
+        supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
+        supabase.rpc("get_admin_inventory_summary" as any),
         supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
-          .gte("created_at", startIso).order("created_at", { ascending: false }),
-        supabase.from("returns").select("id,refund_amount,status,created_at,approved_at")
-          .gte("created_at", startIso),
-        supabase.from("products").select("id,name,stock,min_stock_alert,sale_price"),
-        supabase.from("sale_items")
-          .select("product_name,qty,unit_price,purchase_price,subtotal,sales!inner(created_at)")
-          .gte("sales.created_at", startIso),
+          .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
       ]);
 
-      const allProds = prods ?? [];
-      const low = allProds.filter(p => p.stock <= p.min_stock_alert);
-      setStats({ products: allProds.length, lowStock: low.length });
-      setPeriodSales(sales ?? []);
-      setPeriodReturns(returns ?? []);
-      setRecent((sales ?? []).slice(0, 6));
-      setLowStock(low.slice(0, 6));
-
-      // Daily series
-      const days: Record<string, { sales: number; refunds: number }> = {};
-      const periodDays = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
-      for (let i = periodDays - 1; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
-        days[d.toISOString().slice(0, 10)] = { sales: 0, refunds: 0 };
-      }
-      (sales ?? []).forEach(s => {
-        const k = new Date(s.created_at).toISOString().slice(0, 10);
-        if (days[k]) days[k].sales += Number(s.total);
+      const s = (summary as any) ?? {};
+      const i = (inventory as any) ?? {};
+      setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
+      setKpis({
+        grossSales: Number(s.grossSales ?? 0),
+        bills: Number(s.bills ?? 0),
+        refunds: Number(s.refunds ?? 0),
+        net: Number(s.net ?? 0),
+        rate: Number(s.rate ?? 0),
+        returnsCount: Number(s.returnsCount ?? 0),
       });
-      (returns ?? []).filter(r => r.status === "approved").forEach(r => {
-        const k = new Date(r.approved_at ?? r.created_at).toISOString().slice(0, 10);
-        if (days[k]) days[k].refunds += Number(r.refund_amount);
-      });
-      setDaily(Object.entries(days).map(([day, v]) => ({
-        day: period === "today" ? "Today" : day.slice(5),
-        sales: Math.round(v.sales),
-        refunds: Math.round(v.refunds),
-      })));
-
-      // Top products + margin
-      const agg: Record<string, { qty: number; revenue: number }> = {};
-      let lowM = 0, midM = 0, highM = 0;
-      (items ?? []).forEach((it: any) => {
-        const a = (agg[it.product_name] ??= { qty: 0, revenue: 0 });
-        a.qty += Number(it.qty);
-        a.revenue += Number(it.subtotal);
-        const cost = Number(it.purchase_price) * Number(it.qty);
-        const rev = Number(it.subtotal);
-        if (rev > 0) {
-          const m = ((rev - cost) / rev) * 100;
-          if (m < 10) lowM += rev;
-          else if (m < 30) midM += rev;
-          else highM += rev;
-        }
-      });
-      setTopProducts(
-        Object.entries(agg).map(([name, v]) => ({ name, ...v }))
-          .sort((a, b) => b.qty - a.qty).slice(0, 7)
-      );
-      setMargin([
-        { name: "Low (<10%)", value: Math.round(lowM) },
-        { name: "Mid (10-30%)", value: Math.round(midM) },
-        { name: "High (>30%)", value: Math.round(highM) },
-      ].filter(x => x.value > 0));
+      setRecent(recentSales ?? []);
+      setLowStock(((i.lowStockItems ?? []) as any[]).slice(0, 6));
+      setDaily((s.daily ?? []) as any[]);
+      setTopProducts((s.topProducts ?? []) as any[]);
+      setMargin((s.margin ?? []) as any[]);
+      setLoading(false);
     })();
   }, [period]);
-
-  const kpis = useMemo(() => {
-    const grossSales = periodSales.reduce((s, x) => s + Number(x.total), 0);
-    const bills = periodSales.length;
-    const approvedReturns = periodReturns.filter(r => r.status === "approved");
-    const refunds = approvedReturns.reduce((s, r) => s + Number(r.refund_amount), 0);
-    const net = grossSales - refunds;
-    const rate = grossSales > 0 ? (refunds / grossSales) * 100 : 0;
-    return { grossSales, bills, refunds, net, rate, returnsCount: approvedReturns.length };
-  }, [periodSales, periodReturns]);
 
   const cards = [
     { label: `${PERIODS.find(p => p.key === period)!.label} Sales`, value: fmt(kpis.grossSales), icon: TrendingUp, color: "var(--success)" },
