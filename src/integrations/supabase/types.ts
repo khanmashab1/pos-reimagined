@@ -108,21 +108,112 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_active: boolean
           username: string | null
         }
         Insert: {
           created_at?: string
           full_name?: string
           id: string
+          is_active?: boolean
           username?: string | null
         }
         Update: {
           created_at?: string
           full_name?: string
           id?: string
+          is_active?: boolean
           username?: string | null
         }
         Relationships: []
+      }
+      return_items: {
+        Row: {
+          barcode: string
+          id: string
+          product_id: string | null
+          product_name: string
+          qty: number
+          return_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          barcode?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          qty: number
+          return_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          barcode?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          return_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      returns: {
+        Row: {
+          cashier_id: string
+          cashier_name: string
+          created_at: string
+          id: string
+          items_count: number
+          original_bill_no: string
+          original_sale_id: string
+          reason: string
+          refund_amount: number
+          return_no: string
+        }
+        Insert: {
+          cashier_id: string
+          cashier_name?: string
+          created_at?: string
+          id?: string
+          items_count?: number
+          original_bill_no: string
+          original_sale_id: string
+          reason?: string
+          refund_amount?: number
+          return_no: string
+        }
+        Update: {
+          cashier_id?: string
+          cashier_name?: string
+          created_at?: string
+          id?: string
+          items_count?: number
+          original_bill_no?: string
+          original_sale_id?: string
+          reason?: string
+          refund_amount?: number
+          return_no?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "returns_original_sale_id_fkey"
+            columns: ["original_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sale_items: {
         Row: {
@@ -259,6 +350,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string
+          created_at: string
+          details: Json
+          id: string
+          target_user_id: string | null
+          target_user_name: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_user_id?: string | null
+          target_user_name?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_user_id?: string | null
+          target_user_name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -297,6 +421,10 @@ export type Database = {
         Returns: boolean
       }
       next_bill_no: { Args: { _prefix: string }; Returns: string }
+      process_return: {
+        Args: { _items: Json; _reason: string; _sale_id: string }
+        Returns: Json
+      }
       process_sale: {
         Args: {
           _cash_received: number
