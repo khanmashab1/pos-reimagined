@@ -49,40 +49,47 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      setLoading(true);
-      const startIso = startOfPeriod(period).toISOString();
-      const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
+      try {
+        setLoading(true);
+        const startIso = startOfPeriod(period).toISOString();
+        const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
 
-      const [
-        { data: summary },
-        { data: inventory },
-        { data: recentSales },
-      ] = await Promise.all([
-        supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
-        supabase.rpc("get_admin_inventory_summary" as any),
-        supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
-          .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
-      ]);
+        const [
+          { data: summary },
+          { data: inventory },
+          { data: recentSales },
+        ] = await Promise.all([
+          supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
+          supabase.rpc("get_admin_inventory_summary" as any),
+          supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
+            .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
+        ]);
 
-      const s = (summary as any) ?? {};
-      const i = (inventory as any) ?? {};
-      setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
-      setKpis({
-        grossSales: Number(s.grossSales ?? 0),
-        bills: Number(s.bills ?? 0),
-        refunds: Number(s.refunds ?? 0),
-        net: Number(s.net ?? 0),
-        rate: Number(s.rate ?? 0),
-        returnsCount: Number(s.returnsCount ?? 0),
-      });
-      setRecent(recentSales ?? []);
-      setLowStock(((i.lowStockItems ?? []) as any[]).slice(0, 6));
-      setDaily((s.daily ?? []) as any[]);
-      setTopProducts((s.topProducts ?? []) as any[]);
-      setMargin((s.margin ?? []) as any[]);
-      setLoading(false);
+        if (!active) return;
+
+        const s = (summary as any) ?? {};
+        const i = (inventory as any) ?? {};
+        setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
+        setKpis({
+          grossSales: Number(s.grossSales ?? 0),
+          bills: Number(s.bills ?? 0),
+          refunds: Number(s.refunds ?? 0),
+          net: Number(s.net ?? 0),
+          rate: Number(s.rate ?? 0),
+          returnsCount: Number(s.returnsCount ?? 0),
+        });
+        setRecent(recentSales ?? []);
+        setLowStock(((i.lowStockItems ?? []) as any[]).slice(0, 6));
+        setDaily((s.daily ?? []) as any[]);
+        setTopProducts((s.topProducts ?? []) as any[]);
+        setMargin((s.margin ?? []) as any[]);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, [period]);
 
   const cards = [
@@ -116,7 +123,7 @@ function Dashboard() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">{c.label}</div>
-                <div className="mt-1 text-lg font-bold truncate">{c.value}</div>
+                {loading ? <Skeleton className="mt-2 h-5 w-20" /> : <div className="mt-1 text-lg font-bold truncate">{c.value}</div>}
               </div>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: c.color, opacity: 0.15 }}>
                 <c.icon className="h-4 w-4" style={{ color: c.color }} />
