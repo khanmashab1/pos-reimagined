@@ -170,6 +170,9 @@ export type Database = {
       }
       returns: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string | null
           cashier_id: string
           cashier_name: string
           created_at: string
@@ -180,8 +183,16 @@ export type Database = {
           reason: string
           refund_amount: number
           return_no: string
+          status: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          voided_by_name: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
           cashier_id: string
           cashier_name?: string
           created_at?: string
@@ -192,8 +203,16 @@ export type Database = {
           reason?: string
           refund_amount?: number
           return_no: string
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          voided_by_name?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
           cashier_id?: string
           cashier_name?: string
           created_at?: string
@@ -204,6 +223,11 @@ export type Database = {
           reason?: string
           refund_amount?: number
           return_no?: string
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          voided_by_name?: string | null
         }
         Relationships: [
           {
@@ -409,6 +433,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_return: { Args: { _return_id: string }; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -436,6 +461,10 @@ export type Database = {
           _tax_amount: number
           _total: number
         }
+        Returns: Json
+      }
+      void_return: {
+        Args: { _reason: string; _return_id: string }
         Returns: Json
       }
     }
