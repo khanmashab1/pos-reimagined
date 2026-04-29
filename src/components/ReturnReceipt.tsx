@@ -42,14 +42,31 @@ export function ReturnReceipt({ ret, onClose }: { ret: ReturnReceiptData; onClos
             <div className="font-bold text-base">{store.store_name}</div>
             <div>{store.address}</div>
             <div>Tel: {store.phone}</div>
-            <div className="mt-1 font-bold text-sm bg-black text-white px-2 py-0.5 inline-block">RETURN RECEIPT</div>
+            <div className="mt-1 font-bold text-sm bg-black text-white px-2 py-0.5 inline-block">
+              {ret.status === "voided" ? "VOID RECEIPT" : "RETURN RECEIPT"}
+            </div>
           </div>
+          {ret.status === "voided" && (
+            <div className="text-center my-2 border-2 border-black border-dashed py-1 font-bold tracking-widest text-base">
+              ★ VOIDED ★
+            </div>
+          )}
           <div className="border-t border-dashed border-black my-2" />
           <div>Return: <b>{ret.return_no}</b></div>
           <div>Original Bill: {ret.original_bill_no}</div>
           <div>Date: {date.toLocaleDateString()} {date.toLocaleTimeString()}</div>
           <div>Cashier: {ret.cashier_name}</div>
           {ret.reason && <div>Reason: {ret.reason}</div>}
+          {ret.status && <div>Status: <b className="uppercase">{ret.status}</b></div>}
+          {ret.status === "approved" && ret.approved_by_name && (
+            <div>Approved by: {ret.approved_by_name}</div>
+          )}
+          {ret.status === "voided" && (
+            <>
+              {ret.void_reason && <div>Void reason: {ret.void_reason}</div>}
+              {ret.voided_at && <div>Voided at: {new Date(ret.voided_at).toLocaleString()}</div>}
+            </>
+          )}
           <div className="border-t border-dashed border-black my-2" />
 
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 font-bold">
