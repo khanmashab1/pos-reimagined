@@ -1,12 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, RotateCcw, Printer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, RotateCcw, Printer, CheckCircle2, Ban, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { fmt } from "@/lib/format";
 import { ReturnReceipt } from "@/components/ReturnReceipt";
@@ -20,7 +25,17 @@ interface SaleItemRow {
   barcode: string; qty: number; unit_price: number; subtotal: number;
 }
 
+type Status = "pending" | "approved" | "voided";
+
+function StatusBadge({ status }: { status: Status }) {
+  if (status === "approved") return <Badge className="bg-success text-success-foreground"><CheckCircle2 className="h-3 w-3 mr-1" />Approved</Badge>;
+  if (status === "voided") return <Badge variant="destructive"><Ban className="h-3 w-3 mr-1" />Voided</Badge>;
+  return <Badge className="bg-warning text-warning-foreground"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+}
+
 function ReturnsPage() {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [billNo, setBillNo] = useState("");
   const [sale, setSale] = useState<any>(null);
   const [items, setItems] = useState<SaleItemRow[]>([]);
@@ -30,12 +45,16 @@ function ReturnsPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [receipt, setReceipt] = useState<any>(null);
   const [viewing, setViewing] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
+  const [voidTarget, setVoidTarget] = useState<any>(null);
+  const [voidReason, setVoidReason] = useState("");
 
   useEffect(() => { loadHistory(); }, []);
 
   async function loadHistory() {
     const { data } = await supabase.from("returns")
-      .select("*").order("created_at", { ascending: false }).limit(50);
+      .select("*").order("created_at", { ascending: false }).limit(200);
     setHistory(data ?? []);
   }
 
@@ -84,7 +103,7 @@ function ReturnsPage() {
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     const res = data as any;
-    toast.success(`Return ${res.return_no} processed · refund ${fmt(res.refund)}`);
+    toast.success(`Return ${res.return_no} created · awaiting admin approval`);
     setReceipt({
       return_no: res.return_no,
       original_bill_no: sale.bill_no,
@@ -93,8 +112,41 @@ function ReturnsPage() {
       refund_amount: res.refund,
       cashier_name: sale.cashier_name,
       created_at: new Date().toISOString(),
+      status: "pending",
     });
     setSale(null); setItems([]); setReturnQty({}); setReason(""); setBillNo("");
+    loadHistory();
+  }
+
+  async function approve(r: any) {
+    const { error } = await supabase.rpc("approve_return", { _return_id: r.id });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Approved ${r.return_no} · stock restored`);
+    loadHistory();
+  }
+
+  async function confirmVoid() {
+    if (!voidTarget) return;
+    const { error } = await supabase.rpc("void_return", {
+      _return_id: voidTarget.id, _reason: voidReason,
+    });
+    if (error) { toast.error(error.message); setVoidTarget(null); return; }
+    toast.success(`${voidTarget.return_no} voided`);
+    const r = voidTarget;
+    const { data: ri } = await supabase.from("return_items").select("*").eq("return_id", r.id);
+    setReceipt({
+      return_no: r.return_no,
+      original_bill_no: r.original_bill_no,
+      reason: r.reason,
+      items: ri ?? [],
+      refund_amount: r.refund_amount,
+      cashier_name: r.cashier_name,
+      created_at: r.created_at,
+      status: "voided",
+      void_reason: voidReason,
+      voided_at: new Date().toISOString(),
+    });
+    setVoidTarget(null); setVoidReason("");
     loadHistory();
   }
 
@@ -108,14 +160,32 @@ function ReturnsPage() {
       refund_amount: r.refund_amount,
       cashier_name: r.cashier_name,
       created_at: r.created_at,
+      status: r.status,
+      void_reason: r.void_reason,
+      voided_at: r.voided_at,
+      approved_by_name: r.approved_by_name,
+      approved_at: r.approved_at,
     });
   }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return history.filter(r => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        r.return_no?.toLowerCase().includes(q) ||
+        r.original_bill_no?.toLowerCase().includes(q) ||
+        r.cashier_name?.toLowerCase().includes(q)
+      );
+    });
+  }, [history, search, statusFilter]);
 
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2"><RotateCcw className="h-7 w-7" /> Returns</h1>
-        <p className="text-muted-foreground">Process refunds and restore stock</p>
+        <p className="text-muted-foreground">Process refunds. Stock is restored only after admin approval.</p>
       </div>
 
       <Card className="p-5">
@@ -181,7 +251,7 @@ function ReturnsPage() {
                   <div className="text-2xl font-bold">{fmt(totalRefund)}</div>
                 </div>
                 <Button onClick={submit} disabled={submitting || totalQty === 0} size="lg">
-                  <RotateCcw className="h-4 w-4 mr-1" /> Process Return
+                  <RotateCcw className="h-4 w-4 mr-1" /> Submit for Approval
                 </Button>
               </div>
             </div>
@@ -190,9 +260,25 @@ function ReturnsPage() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-semibold mb-4">Recent Returns</h3>
-        {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">No returns yet.</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <h3 className="font-semibold">Returns</h3>
+          <div className="flex gap-2 flex-1 md:max-w-xl md:ml-auto">
+            <Input
+              placeholder="Search by return #, bill #, or cashier"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <div className="flex gap-1">
+              {(["all", "pending", "approved", "voided"] as const).map(s => (
+                <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm"
+                  onClick={() => setStatusFilter(s)} className="capitalize">{s}</Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">No returns match your filter.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -204,20 +290,32 @@ function ReturnsPage() {
                   <th className="text-left p-3">Cashier</th>
                   <th className="text-right p-3">Items</th>
                   <th className="text-right p-3">Refund</th>
-                  <th className="text-right p-3">Action</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-right p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map(r => (
+                {filtered.map(r => (
                   <tr key={r.id} className="border-t">
                     <td className="font-mono p-3">{r.return_no}</td>
                     <td className="font-mono p-3">{r.original_bill_no}</td>
-                    <td className="p-3">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="p-3 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
                     <td className="p-3">{r.cashier_name}</td>
                     <td className="text-right p-3">{r.items_count}</td>
                     <td className="text-right p-3 font-semibold">{fmt(r.refund_amount)}</td>
-                    <td className="text-right p-3">
-                      <Button variant="ghost" size="sm" onClick={() => viewReturn(r)}>
+                    <td className="p-3"><StatusBadge status={r.status} /></td>
+                    <td className="text-right p-3 whitespace-nowrap">
+                      {isAdmin && r.status === "pending" && (
+                        <Button variant="ghost" size="sm" onClick={() => approve(r)} title="Approve">
+                          <CheckCircle2 className="h-4 w-4 text-success" />
+                        </Button>
+                      )}
+                      {isAdmin && r.status !== "voided" && (
+                        <Button variant="ghost" size="sm" onClick={() => setVoidTarget(r)} title="Void">
+                          <Ban className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => viewReturn(r)} title="View receipt">
                         <Printer className="h-4 w-4" />
                       </Button>
                     </td>
@@ -231,6 +329,29 @@ function ReturnsPage() {
 
       {receipt && <ReturnReceipt ret={receipt} onClose={() => setReceipt(null)} />}
       {viewing && <ReturnReceipt ret={viewing} onClose={() => setViewing(null)} />}
+
+      <AlertDialog open={!!voidTarget} onOpenChange={(o) => !o && setVoidTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void return {voidTarget?.return_no}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {voidTarget?.status === "approved"
+                ? "This will reverse the stock restoration and mark the return as voided."
+                : "This will mark the pending return as voided. No stock changes."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div>
+            <Label>Reason (optional)</Label>
+            <Input value={voidReason} onChange={e => setVoidReason(e.target.value)} placeholder="Customer changed mind, error, etc." />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmVoid} className="bg-destructive text-destructive-foreground">
+              Void Return
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
