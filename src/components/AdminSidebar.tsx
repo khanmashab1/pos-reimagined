@@ -1,12 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store } from "lucide-react";
+import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const items = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/categories", label: "Categories", icon: Tag },
+  { to: "/admin/returns", label: "Returns", icon: RotateCcw },
+  { to: "/admin/reports", label: "Sales Reports", icon: FileBarChart },
+  { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -26,7 +29,7 @@ export function AdminSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {items.map(it => {
           const active = path.startsWith(it.to);
           return (
