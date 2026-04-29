@@ -13,6 +13,11 @@ interface ReturnReceiptData {
   refund_amount: number;
   cashier_name: string;
   created_at: string;
+  status?: "pending" | "approved" | "voided";
+  void_reason?: string | null;
+  voided_at?: string | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
 }
 
 export function ReturnReceipt({ ret, onClose }: { ret: ReturnReceiptData; onClose: () => void }) {
