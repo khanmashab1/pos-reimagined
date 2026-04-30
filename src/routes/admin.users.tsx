@@ -5,11 +5,15 @@ import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Users as UsersIcon, ShieldCheck, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createUser } from "@/server/users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,
@@ -82,9 +86,12 @@ function UsersPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UsersIcon className="h-7 w-7" /> Users</h1>
-        <p className="text-muted-foreground">Manage roles, activation, and view audit history</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2"><UsersIcon className="h-7 w-7" /> Users</h1>
+          <p className="text-muted-foreground">Manage roles, activation, and view audit history</p>
+        </div>
+        <CreateUserDialog onCreated={load} />
       </div>
 
       <Tabs defaultValue="users">
@@ -183,5 +190,87 @@ function UsersPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [role, setRole] = useState<"admin" | "cashier">("cashier");
+
+  function reset() {
+    setEmail(""); setPassword(""); setFullName(""); setUsername(""); setRole("cashier");
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 6) return toast.error("Password must be at least 6 characters");
+    setBusy(true);
+    try {
+      await createUser({
+        data: { email, password, full_name: fullName, username, role },
+      });
+      toast.success(`User created: ${fullName}`);
+      reset();
+      setOpen(false);
+      onCreated();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to create user");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+      <DialogTrigger asChild>
+        <Button><UserPlus className="h-4 w-4 mr-1" /> Create User</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create new user</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label htmlFor="cu-name">Full name</Label>
+            <Input id="cu-name" value={fullName} onChange={e => setFullName(e.target.value)} required maxLength={100} />
+          </div>
+          <div>
+            <Label htmlFor="cu-username">Username</Label>
+            <Input id="cu-username" value={username} onChange={e => setUsername(e.target.value)} required maxLength={50} />
+          </div>
+          <div>
+            <Label htmlFor="cu-email">Email</Label>
+            <Input id="cu-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required maxLength={255} />
+          </div>
+          <div>
+            <Label htmlFor="cu-pwd">Password</Label>
+            <Input id="cu-pwd" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} maxLength={128} />
+            <p className="text-xs text-muted-foreground mt-1">Minimum 6 characters. Share this with the new user.</p>
+          </div>
+          <div>
+            <Label>Role</Label>
+            <Select value={role} onValueChange={(v: any) => setRole(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cashier">Cashier</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+            <Button type="submit" disabled={busy}>
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create user
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
