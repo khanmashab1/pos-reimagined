@@ -128,13 +128,37 @@
   }
 }
 
-/* Print styles for receipt */
+/* Print styles for receipt – 80mm thermal, triggers auto-cut */
 @media print {
+  @page { size: 80mm auto; margin: 0; }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 80mm !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body * { visibility: hidden; }
-  .print-area, .print-area * { visibility: visible; }
-  .print-area { position: absolute; left: 0; top: 0; width: 80mm; }
+  .print-area, .print-area * { visibility: visible; color: #000 !important; background: #fff !important; }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 3mm 3mm 4mm 3mm !important;
+    box-sizing: border-box;
+    font-family: "Courier New", monospace !important;
+    font-weight: 700;
+    page-break-after: always; /* tells driver: end of job → cut */
+  }
+
   .no-print { display: none !important; }
-  @page { size: 80mm auto; margin: 2mm 0; }
 }
 
 @media print {
