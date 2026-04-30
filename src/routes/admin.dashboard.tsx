@@ -117,16 +117,18 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {cards.map(c => (
           <Card key={c.label} className="p-4 shadow-[var(--shadow-card)]">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">{c.label}</div>
-                {loading ? <Skeleton className="mt-2 h-5 w-20" /> : <div className="mt-1 text-lg font-bold truncate">{c.value}</div>}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">{c.label}</div>
+                {loading
+                  ? <Skeleton className="mt-2 h-6 w-24" />
+                  : <div className="mt-1 text-xl font-bold break-words leading-tight">{c.value}</div>}
               </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: c.color, opacity: 0.15 }}>
-                <c.icon className="h-4 w-4" style={{ color: c.color }} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: c.color, opacity: 0.15 }}>
+                <c.icon className="h-5 w-5" style={{ color: c.color }} />
               </div>
             </div>
           </Card>
