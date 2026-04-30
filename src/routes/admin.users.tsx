@@ -5,11 +5,15 @@ import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Users as UsersIcon, ShieldCheck, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createUser } from "@/server/users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,
