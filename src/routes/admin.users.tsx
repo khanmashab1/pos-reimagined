@@ -86,9 +86,12 @@ function UsersPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UsersIcon className="h-7 w-7" /> Users</h1>
-        <p className="text-muted-foreground">Manage roles, activation, and view audit history</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2"><UsersIcon className="h-7 w-7" /> Users</h1>
+          <p className="text-muted-foreground">Manage roles, activation, and view audit history</p>
+        </div>
+        <CreateUserDialog onCreated={load} />
       </div>
 
       <Tabs defaultValue="users">
