@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users } from "lucide-react";
+import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 const items = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -13,12 +14,12 @@ const items = [
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
 
-export function AdminSidebar() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { fullName, signOut } = useAuth();
   const path = useRouterState({ select: s => s.location.pathname });
 
   return (
-    <aside className="hidden md:flex w-60 flex-col bg-sidebar text-sidebar-foreground">
+    <>
       <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <Store className="h-5 w-5" />
@@ -33,7 +34,7 @@ export function AdminSidebar() {
         {items.map(it => {
           const active = path.startsWith(it.to);
           return (
-            <Link key={it.to} to={it.to}
+            <Link key={it.to} to={it.to} onClick={onNavigate}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 active ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : "hover:bg-sidebar-accent"
               }`}>
@@ -42,7 +43,7 @@ export function AdminSidebar() {
             </Link>
           );
         })}
-        <Link to="/pos"
+        <Link to="/pos" onClick={onNavigate}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-sidebar-accent">
           <ShoppingCart className="h-4 w-4" />
           Open POS
@@ -56,6 +57,39 @@ export function AdminSidebar() {
           <LogOut className="h-4 w-4 mr-2" /> Sign out
         </Button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function AdminSidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <div className="md:hidden fixed top-3 left-3 z-50">
+        <Button size="icon" variant="outline" className="h-10 w-10 bg-background shadow-md" onClick={() => setMobileOpen(true)}>
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <aside className="relative w-64 flex flex-col bg-sidebar text-sidebar-foreground h-full z-10">
+            <Button size="icon" variant="ghost" className="absolute top-3 right-3 text-sidebar-foreground" onClick={() => setMobileOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 flex-col bg-sidebar text-sidebar-foreground">
+        <SidebarContent />
+      </aside>
+    </>
   );
 }
