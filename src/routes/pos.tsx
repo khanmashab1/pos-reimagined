@@ -291,6 +291,7 @@ function PosPage() {
       </div>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
+      <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
     </div>
   );
 }
