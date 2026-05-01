@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera } from "lucide-react";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
@@ -33,6 +34,7 @@ function PosPage() {
   const [taxRate, setTaxRate] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -87,6 +89,12 @@ function PosPage() {
     else toast.error("Product not found");
     setScan("");
   };
+
+  const onCameraScan = useCallback((code: string) => {
+    const prod = products.find(p => p.barcode === code);
+    if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
+    else toast.error(`Product not found: ${code}`);
+  }, [products]);
 
   const filtered = useMemo(() => products.filter(p => {
     if (cat !== "all" && p.category_id !== cat) return false;
@@ -167,6 +175,9 @@ function PosPage() {
                 <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode or press Enter…"
                   value={scan} onChange={e => setScan(e.target.value)} autoFocus />
               </div>
+              <Button type="button" variant="outline" className="h-11 px-3" onClick={() => setCameraOpen(true)} title="Scan with camera">
+                <Camera className="h-5 w-5" />
+              </Button>
             </form>
             <div className="mt-2 flex gap-2">
               <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -279,6 +290,7 @@ function PosPage() {
       </div>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
+      <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
     </div>
   );
 }

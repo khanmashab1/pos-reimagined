@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createClient } from "@supabase/supabase-js";
 
 const createUserSchema = z.object({
   email: z.string().trim().email().max(255),
@@ -9,16 +9,32 @@ const createUserSchema = z.object({
   full_name: z.string().trim().min(1).max(100),
   username: z.string().trim().min(1).max(50),
   role: z.enum(["admin", "cashier"]),
+  token: z.string().min(1),
 });
 
 export const createUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => createUserSchema.parse(data))
-  .handler(async ({ data, context }) => {
-    const { userId, supabase } = context;
+  .handler(async ({ data }) => {
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
+    // Create a Supabase client authenticated as the calling user
+    const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${data.token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Verify caller is admin
-    const { data: roleRow, error: roleErr } = await supabase
+    const { data: claims, error: claimsErr } = await userClient.auth.getUser();
+    if (claimsErr || !claims?.user) throw new Error("Unauthorized");
+
+    const userId = claims.user.id;
+
+    const { data: roleRow, error: roleErr } = await userClient
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
@@ -53,14 +69,14 @@ export const createUser = createServerFn({ method: "POST" })
       .eq("user_id", newUserId);
 
     if (roleUpdateErr) {
-      // Fallback: insert if no row exists
       await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: data.role });
     }
 
     // Audit log
+    const callerName = claims.user.user_metadata?.full_name ?? "Admin";
     await supabaseAdmin.from("user_audit_log").insert({
       actor_id: userId,
-      actor_name: (context.claims as any)?.user_metadata?.full_name ?? "Admin",
+      actor_name: callerName,
       target_user_id: newUserId,
       target_user_name: data.full_name,
       action: "user_created",
