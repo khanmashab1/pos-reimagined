@@ -35,6 +35,7 @@ function PosPage() {
   const [taxRate, setTaxRate] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
