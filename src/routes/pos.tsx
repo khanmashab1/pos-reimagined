@@ -176,6 +176,9 @@ function PosPage() {
                 <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode or press Enter…"
                   value={scan} onChange={e => setScan(e.target.value)} autoFocus />
               </div>
+              <Button type="button" variant="outline" className="h-11 px-3" onClick={() => setCameraOpen(true)} title="Scan with camera">
+                <Camera className="h-5 w-5" />
+              </Button>
             </form>
             <div className="mt-2 flex gap-2">
               <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
