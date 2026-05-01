@@ -61,15 +61,34 @@ export const createUser = createServerFn({ method: "POST" })
 
     const newUserId = created.user.id;
 
-    // The handle_new_user trigger creates a profile + default role.
-    // Force the requested role.
+    // The handle_new_user trigger should create profile + default role.
+    // But ensure they exist as a safety net.
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("id", newUserId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      await supabaseAdmin.from("profiles").insert({
+        id: newUserId,
+        full_name: data.full_name,
+        username: data.username,
+        is_active: true,
+      });
+    }
+
+    // Upsert the requested role
     const { error: roleUpdateErr } = await supabaseAdmin
       .from("user_roles")
       .update({ role: data.role })
       .eq("user_id", newUserId);
 
     if (roleUpdateErr) {
-      await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: data.role });
+      await supabaseAdmin.from("user_roles").upsert(
+        { user_id: newUserId, role: data.role },
+        { onConflict: "user_id" }
+      );
     }
 
     // Audit log
