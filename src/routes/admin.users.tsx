@@ -211,8 +211,10 @@ function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
     if (password.length < 6) return toast.error("Password must be at least 6 characters");
     setBusy(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
       await createUser({
-        data: { email, password, full_name: fullName, username, role },
+        data: { email, password, full_name: fullName, username, role, token: session.access_token },
       });
       toast.success(`User created: ${fullName}`);
       reset();
