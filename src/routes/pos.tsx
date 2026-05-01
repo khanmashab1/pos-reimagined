@@ -91,6 +91,12 @@ function PosPage() {
     setScan("");
   };
 
+  const onCameraScan = useCallback((code: string) => {
+    const prod = products.find(p => p.barcode === code);
+    if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
+    else toast.error(`Product not found: ${code}`);
+  }, [products]);
+
   const filtered = useMemo(() => products.filter(p => {
     if (cat !== "all" && p.category_id !== cat) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.barcode.includes(search)) return false;
