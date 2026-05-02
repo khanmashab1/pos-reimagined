@@ -142,20 +142,26 @@
     print-color-adjust: exact !important;
   }
 
-  body * { visibility: hidden; }
-  .print-area, .print-area * { visibility: visible; color: #000 !important; background: #fff !important; }
+  /* Hide the entire app while printing */
+  body > * { display: none !important; }
 
-  .print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
+  /* Show only the dedicated print portal */
+  body > .print-portal-root { display: block !important; }
+  .print-portal-root, .print-portal-root * {
+    visibility: visible !important;
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .print-portal-root {
+    position: static !important;
     width: 80mm !important;
     margin: 0 !important;
-    padding: 3mm 3mm 4mm 3mm !important;
-    box-sizing: border-box;
+    padding: 3mm !important;
+    box-sizing: border-box !important;
     font-family: "Courier New", monospace !important;
     font-weight: 700;
-    page-break-after: always; /* tells driver: end of job → cut */
   }
 
   .no-print { display: none !important; }
