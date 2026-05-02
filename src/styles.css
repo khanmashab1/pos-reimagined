@@ -142,20 +142,41 @@
     print-color-adjust: exact !important;
   }
 
-  body * { visibility: hidden; }
-  .print-area, .print-area * { visibility: visible; color: #000 !important; background: #fff !important; }
+  /* Hide everything by default */
+  body > *:not(.print-portal-root) { display: none !important; }
+
+  /* Walk up: reveal the print area and all its ancestors, but strip their layout */
+  .print-area,
+  .print-area * { visibility: visible; }
+
+  body, body * {
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Hide siblings of the print-area's ancestors */
+  body *:not(:has(.print-area)):not(.print-area):not(.print-area *) {
+    display: none !important;
+  }
 
   .print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
+    display: block !important;
     width: 80mm !important;
     margin: 0 !important;
-    padding: 3mm 3mm 4mm 3mm !important;
-    box-sizing: border-box;
+    padding: 3mm !important;
+    box-sizing: border-box !important;
     font-family: "Courier New", monospace !important;
     font-weight: 700;
-    page-break-after: always; /* tells driver: end of job → cut */
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 
   .no-print { display: none !important; }
