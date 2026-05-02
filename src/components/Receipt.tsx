@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,19 @@ interface Sale {
 
 export function Receipt({ sale, onClose }: { sale: Sale; onClose: () => void }) {
   const [store, setStore] = useState({ store_name: "ZIC Mart", address: "", phone: "", footer_message: "" });
+  const portalRef = useRef<HTMLDivElement | null>(null);
+  if (typeof document !== "undefined" && !portalRef.current) {
+    const el = document.createElement("div");
+    el.className = "print-portal-root";
+    portalRef.current = el;
+  }
+
+  useEffect(() => {
+    const el = portalRef.current;
+    if (!el) return;
+    document.body.appendChild(el);
+    return () => { if (el.parentNode) el.parentNode.removeChild(el); };
+  }, []);
 
   useEffect(() => {
     supabase.from("store_settings").select("store_name,address,phone,footer_message").eq("id", 1).single()
