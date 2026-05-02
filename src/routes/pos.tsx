@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
