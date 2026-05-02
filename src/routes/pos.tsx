@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
@@ -35,6 +37,8 @@ function PosPage() {
   const [processing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -165,15 +169,15 @@ function PosPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Left: scan + products */}
-        <div className="flex-1 flex flex-col p-4 gap-3 overflow-hidden">
+        <div className="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-hidden">
           <Card className="p-3">
             <form onSubmit={onScan} className="flex gap-2">
               <div className="relative flex-1">
                 <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode or press Enter…"
-                  value={scan} onChange={e => setScan(e.target.value)} autoFocus />
+                <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode…"
+                  value={scan} onChange={e => setScan(e.target.value)} />
               </div>
               <Button type="button" variant="outline" className="h-11 px-3" onClick={() => setCameraOpen(true)} title="Scan with camera">
                 <Camera className="h-5 w-5" />
@@ -190,7 +194,7 @@ function PosPage() {
             </div>
           </Card>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto pb-20 lg:pb-0">
             {filtered.length === 0 ? (
               <div className="text-center text-muted-foreground py-12">No products available.</div>
             ) : (
@@ -211,86 +215,136 @@ function PosPage() {
           </div>
         </div>
 
-        {/* Right: cart */}
-        <div className="w-full max-w-md flex flex-col bg-card border-l">
-          <div className="px-4 py-3 border-b flex items-center justify-between">
-            <div className="flex items-center gap-2 font-semibold"><ShoppingCart className="h-4 w-4" /> Current Sale</div>
-            <span className="text-xs text-muted-foreground">{cart.reduce((s, i) => s + i.qty, 0)} items</span>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            {cart.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">Cart is empty.<br/>Scan or click a product to start.</div>
-            ) : (
-              <div className="divide-y">
-                {cart.map(i => (
-                  <div key={i.id} className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{i.name}</div>
-                        <div className="text-xs text-muted-foreground">{fmt(i.sale_price)} ea</div>
-                      </div>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive"
-                        onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Button size="icon" variant="outline" className="h-7 w-7"
-                          onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}><Minus className="h-3 w-3" /></Button>
-                        <span className="w-8 text-center text-sm font-medium">{i.qty}</span>
-                        <Button size="icon" variant="outline" className="h-7 w-7"
-                          onClick={() => {
-                            if (i.qty + 1 > i.stock) return toast.error("Stock limit");
-                            setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c));
-                          }}><Plus className="h-3 w-3" /></Button>
-                      </div>
-                      <div className="font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 border-t space-y-2.5 bg-muted/30">
-            <Row label="Subtotal" value={fmt(subtotal)} />
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Discount</span>
-              <Input type="number" className="h-7 w-24 text-right" value={discount}
-                onChange={e => setDiscount(Math.max(0, +e.target.value))} />
-            </div>
-            {taxRate > 0 && <Row label={`Tax (${taxRate}%)`} value={fmt(taxAmount)} />}
-            <div className="flex items-center justify-between pt-2 border-t">
-              <span className="font-bold">TOTAL</span>
-              <span className="text-2xl font-bold text-primary">{fmt(total)}</span>
-            </div>
-
-            <div className="pt-2 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">Cash Received</span>
-                <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
-                  onChange={e => setCash(e.target.value)} placeholder="0" />
-              </div>
-              <Row label="Change" value={fmt(change)} bold />
-            </div>
-
-            <div className="pt-2 grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => { if (confirm("Clear cart?")) { setCart([]); setCash(""); setDiscount(0); } }}>
-                <Trash2 className="h-4 w-4 mr-1" /> Clear (F4)
-              </Button>
-              <Button disabled={processing || cart.length === 0} onClick={processSale}>
-                {processing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Pay (F2)
-              </Button>
-            </div>
-          </div>
+        {/* Right: cart — desktop sidebar */}
+        <div className="hidden lg:flex w-full max-w-md flex-col bg-card border-l">
+          <CartPanel
+            cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+            taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
+            processing={processing} processSale={processSale}
+          />
         </div>
+
+        {/* Mobile floating cart button */}
+        {isMobile && (
+          <button
+            onClick={() => setCartOpen(true)}
+            className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 font-semibold"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            <span>{cart.reduce((s, i) => s + i.qty, 0)} • {fmt(total)}</span>
+          </button>
+        )}
+
+        {/* Mobile cart sheet */}
+        <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+            <SheetHeader className="px-4 py-3 border-b">
+              <SheetTitle className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Current Sale</SheetTitle>
+            </SheetHeader>
+            <CartPanel
+              cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+              taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
+              processing={processing} processSale={async () => { await processSale(); setCartOpen(false); }}
+              hideHeader
+            />
+          </SheetContent>
+        </Sheet>
       </div>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
       <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
+    </div>
+  );
+}
+
+interface CartPanelProps {
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  subtotal: number; discount: number; setDiscount: (n: number) => void;
+  taxRate: number; taxAmount: number; total: number;
+  cash: string; setCash: (s: string) => void; change: number;
+  processing: boolean; processSale: () => unknown | Promise<unknown>;
+  hideHeader?: boolean;
+}
+
+function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, hideHeader }: CartPanelProps) {
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      {!hideHeader && (
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2 font-semibold"><ShoppingCart className="h-4 w-4" /> Current Sale</div>
+          <span className="text-xs text-muted-foreground">{cart.reduce((s, i) => s + i.qty, 0)} items</span>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {cart.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">Cart is empty.<br/>Scan or click a product to start.</div>
+        ) : (
+          <div className="divide-y">
+            {cart.map(i => (
+              <div key={i.id} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{i.name}</div>
+                    <div className="text-xs text-muted-foreground">{fmt(i.sale_price)} ea</div>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive"
+                    onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Button size="icon" variant="outline" className="h-8 w-8"
+                      onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}><Minus className="h-3 w-3" /></Button>
+                    <span className="w-8 text-center text-sm font-medium">{i.qty}</span>
+                    <Button size="icon" variant="outline" className="h-8 w-8"
+                      onClick={() => {
+                        if (i.qty + 1 > i.stock) return toast.error("Stock limit");
+                        setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c));
+                      }}><Plus className="h-3 w-3" /></Button>
+                  </div>
+                  <div className="font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t space-y-2.5 bg-muted/30">
+        <Row label="Subtotal" value={fmt(subtotal)} />
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Discount</span>
+          <Input type="number" className="h-7 w-24 text-right" value={discount}
+            onChange={e => setDiscount(Math.max(0, +e.target.value))} />
+        </div>
+        {taxRate > 0 && <Row label={`Tax (${taxRate}%)`} value={fmt(taxAmount)} />}
+        <div className="flex items-center justify-between pt-2 border-t">
+          <span className="font-bold">TOTAL</span>
+          <span className="text-2xl font-bold text-primary">{fmt(total)}</span>
+        </div>
+
+        <div className="pt-2 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium">Cash Received</span>
+            <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
+              onChange={e => setCash(e.target.value)} placeholder="0" />
+          </div>
+          <Row label="Change" value={fmt(change)} bold />
+        </div>
+
+        <div className="pt-2 grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={() => { if (confirm("Clear cart?")) { setCart([]); setCash(""); setDiscount(0); } }}>
+            <Trash2 className="h-4 w-4 mr-1" /> Clear
+          </Button>
+          <Button disabled={processing || cart.length === 0} onClick={processSale}>
+            {processing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Pay
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
