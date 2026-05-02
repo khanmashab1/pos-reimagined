@@ -263,7 +263,7 @@ interface CartPanelProps {
   subtotal: number; discount: number; setDiscount: (n: number) => void;
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
-  processing: boolean; processSale: () => void | Promise<void>;
+  processing: boolean; processSale: () => unknown | Promise<unknown>;
   hideHeader?: boolean;
 }
 
