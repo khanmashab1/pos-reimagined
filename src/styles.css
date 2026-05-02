@@ -142,41 +142,26 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide everything by default */
-  body > *:not(.print-portal-root) { display: none !important; }
+  /* Hide the entire app while printing */
+  body > * { display: none !important; }
 
-  /* Walk up: reveal the print area and all its ancestors, but strip their layout */
-  .print-area,
-  .print-area * { visibility: visible; }
-
-  body, body * {
-    position: static !important;
-    transform: none !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: 0 !important;
-    background: #fff !important;
+  /* Show only the dedicated print portal */
+  body > .print-portal-root { display: block !important; }
+  .print-portal-root, .print-portal-root * {
+    visibility: visible !important;
     color: #000 !important;
-    max-width: none !important;
-    max-height: none !important;
-    height: auto !important;
+    background: #fff !important;
+    box-shadow: none !important;
   }
 
-  /* Hide siblings of the print-area's ancestors */
-  body *:not(:has(.print-area)):not(.print-area):not(.print-area *) {
-    display: none !important;
-  }
-
-  .print-area {
-    display: block !important;
+  .print-portal-root {
+    position: static !important;
     width: 80mm !important;
     margin: 0 !important;
     padding: 3mm !important;
     box-sizing: border-box !important;
     font-family: "Courier New", monospace !important;
     font-weight: 700;
-    page-break-after: avoid;
-    page-break-inside: avoid;
   }
 
   .no-print { display: none !important; }
