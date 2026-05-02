@@ -37,6 +37,8 @@ function PosPage() {
   const [processing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
