@@ -314,10 +314,11 @@ interface CartPanelProps {
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
   processing: boolean; processSale: () => unknown | Promise<unknown>;
+  paymentMethod: "cash" | "card"; setPaymentMethod: (m: "cash" | "card") => void;
   hideHeader?: boolean;
 }
 
-function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, hideHeader }: CartPanelProps) {
+function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, paymentMethod, setPaymentMethod, hideHeader }: CartPanelProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {!hideHeader && (
