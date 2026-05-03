@@ -32,6 +32,48 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_sessions: {
+        Row: {
+          cash_sales: number
+          closed_at: string | null
+          closing_cash: number | null
+          difference: number | null
+          expected_cash: number
+          id: string
+          opened_at: string
+          opening_cash: number
+          status: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          cash_sales?: number
+          closed_at?: string | null
+          closing_cash?: number | null
+          difference?: number | null
+          expected_cash?: number
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          status?: string
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          cash_sales?: number
+          closed_at?: string | null
+          closing_cash?: number | null
+          difference?: number | null
+          expected_cash?: number
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          status?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -301,7 +343,9 @@ export type Database = {
           discount: number
           id: string
           items_count: number
+          payment_method: string
           payment_type: string
+          session_id: string | null
           subtotal: number
           tax_amount: number
           total: number
@@ -316,7 +360,9 @@ export type Database = {
           discount?: number
           id?: string
           items_count?: number
+          payment_method?: string
           payment_type?: string
+          session_id?: string | null
           subtotal?: number
           tax_amount?: number
           total?: number
@@ -331,12 +377,22 @@ export type Database = {
           discount?: number
           id?: string
           items_count?: number
+          payment_method?: string
           payment_type?: string
+          session_id?: string | null
           subtotal?: number
           tax_amount?: number
           total?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_settings: {
         Row: {
@@ -434,11 +490,13 @@ export type Database = {
     }
     Functions: {
       approve_return: { Args: { _return_id: string }; Returns: Json }
+      close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {
         Args: { _days: number; _start_at: string }
         Returns: Json
       }
       get_admin_inventory_summary: { Args: never; Returns: Json }
+      get_open_session: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -451,6 +509,7 @@ export type Database = {
         Returns: boolean
       }
       next_bill_no: { Args: { _prefix: string }; Returns: string }
+      open_shift: { Args: { _opening_cash: number }; Returns: Json }
       process_return: {
         Args: { _items: Json; _reason: string; _sale_id: string }
         Returns: Json
