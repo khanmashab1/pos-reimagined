@@ -179,9 +179,18 @@ function PosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {session ? (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setCloseOpen(true)}>
+              <StopCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Close Shift</span>
+            </Button>
+          ) : (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setStartOpen(true)} disabled={shiftLoading}>
+              <PlayCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Start Shift</span>
+            </Button>
+          )}
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
-              <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Admin</Link>
+              <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Admin</span></Link>
             </Button>
           )}
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
