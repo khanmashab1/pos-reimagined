@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X } from "lucide-react";
+import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ const items = [
   { to: "/admin/categories", label: "Categories", icon: Tag },
   { to: "/admin/returns", label: "Returns", icon: RotateCcw },
   { to: "/admin/reports", label: "Sales Reports", icon: FileBarChart },
+  { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
