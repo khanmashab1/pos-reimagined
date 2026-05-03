@@ -275,14 +275,33 @@ function PosPage() {
               cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
               taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
               processing={processing} processSale={async () => { await processSale(); setCartOpen(false); }}
+              paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
               hideHeader
             />
           </SheetContent>
         </Sheet>
+
+        {!shiftLoading && !session && (
+          <div className="absolute inset-0 z-30 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <Card className="p-6 max-w-sm w-full text-center space-y-4">
+              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <PlayCircle className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-lg">No Active Shift</div>
+                <p className="text-sm text-muted-foreground mt-1">Start a shift to begin selling.</p>
+              </div>
+              <Button className="w-full" onClick={() => setStartOpen(true)}>Start Shift</Button>
+            </Card>
+          </div>
+        )}
       </div>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
       <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
+      <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
+      <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
+        onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
     </div>
   );
 }
