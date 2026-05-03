@@ -5,13 +5,14 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard, Banknote } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
@@ -38,8 +39,21 @@ function PosPage() {
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [session, setSession] = useState<OpenSession | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [startOpen, setStartOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
+
+  const refreshSession = useCallback(async () => {
+    const { data } = await supabase.rpc("get_open_session");
+    setSession((data as unknown as OpenSession) ?? null);
+    setShiftLoading(false);
+  }, []);
+
+  useEffect(() => { if (user) refreshSession(); }, [user, refreshSession]);
 
   useEffect(() => {
     if (loading) return;
@@ -113,8 +127,9 @@ function PosPage() {
   const change = Math.max(0, cashNum - total);
 
   const processSale = async () => {
+    if (!session) return toast.error("Start a shift first");
     if (cart.length === 0) return toast.error("Cart is empty");
-    if (cashNum < total) return toast.error("Cash received is less than total");
+    if (paymentMethod === "cash" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     const { data, error } = await supabase.rpc("process_sale", {
       _items: cart.map(i => ({
@@ -123,7 +138,10 @@ function PosPage() {
         subtotal: i.qty * i.sale_price,
       })),
       _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount,
-      _total: total, _cash_received: cashNum, _change_returned: change, _payment_type: "cash",
+      _total: total,
+      _cash_received: paymentMethod === "cash" ? cashNum : total,
+      _change_returned: paymentMethod === "cash" ? change : 0,
+      _payment_type: paymentMethod,
     });
     setProcessing(false);
     if (error) return toast.error(error.message);
@@ -131,13 +149,16 @@ function PosPage() {
     const result = data as any;
     setLastReceipt({
       bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
-      discount, total, cash_received: cashNum, change_returned: change,
+      discount, total,
+      cash_received: paymentMethod === "cash" ? cashNum : total,
+      change_returned: paymentMethod === "cash" ? change : 0,
       cashier_name: fullName, created_at: new Date().toISOString(),
     });
     setCart([]); setCash(""); setDiscount(0);
-    // refresh stock
+    // refresh stock + session totals
     const { data: p } = await supabase.from("products").select("*").eq("is_active", true).order("name");
     setProducts((p ?? []) as Product[]);
+    refreshSession();
   };
 
   if (loading) {
@@ -158,9 +179,18 @@ function PosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {session ? (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setCloseOpen(true)}>
+              <StopCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Close Shift</span>
+            </Button>
+          ) : (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setStartOpen(true)} disabled={shiftLoading}>
+              <PlayCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Start Shift</span>
+            </Button>
+          )}
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
-              <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Admin</Link>
+              <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Admin</span></Link>
             </Button>
           )}
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
@@ -221,6 +251,7 @@ function PosPage() {
             cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
             taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
             processing={processing} processSale={processSale}
+            paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
           />
         </div>
 
@@ -245,14 +276,33 @@ function PosPage() {
               cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
               taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
               processing={processing} processSale={async () => { await processSale(); setCartOpen(false); }}
+              paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
               hideHeader
             />
           </SheetContent>
         </Sheet>
+
+        {!shiftLoading && !session && (
+          <div className="absolute inset-0 z-30 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <Card className="p-6 max-w-sm w-full text-center space-y-4">
+              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <PlayCircle className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-lg">No Active Shift</div>
+                <p className="text-sm text-muted-foreground mt-1">Start a shift to begin selling.</p>
+              </div>
+              <Button className="w-full" onClick={() => setStartOpen(true)}>Start Shift</Button>
+            </Card>
+          </div>
+        )}
       </div>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
       <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
+      <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
+      <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
+        onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
     </div>
   );
 }
@@ -264,10 +314,11 @@ interface CartPanelProps {
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
   processing: boolean; processSale: () => unknown | Promise<unknown>;
+  paymentMethod: "cash" | "card"; setPaymentMethod: (m: "cash" | "card") => void;
   hideHeader?: boolean;
 }
 
-function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, hideHeader }: CartPanelProps) {
+function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, paymentMethod, setPaymentMethod, hideHeader }: CartPanelProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {!hideHeader && (
@@ -326,14 +377,25 @@ function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, ta
           <span className="text-2xl font-bold text-primary">{fmt(total)}</span>
         </div>
 
-        <div className="pt-2 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">Cash Received</span>
-            <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
-              onChange={e => setCash(e.target.value)} placeholder="0" />
-          </div>
-          <Row label="Change" value={fmt(change)} bold />
+        <div className="pt-2 grid grid-cols-2 gap-2">
+          <Button type="button" variant={paymentMethod === "cash" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("cash")}>
+            <Banknote className="h-4 w-4 mr-1" /> Cash
+          </Button>
+          <Button type="button" variant={paymentMethod === "card" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("card")}>
+            <CreditCard className="h-4 w-4 mr-1" /> Card
+          </Button>
         </div>
+
+        {paymentMethod === "cash" && (
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">Cash Received</span>
+              <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
+                onChange={e => setCash(e.target.value)} placeholder="0" />
+            </div>
+            <Row label="Change" value={fmt(change)} bold />
+          </div>
+        )}
 
         <div className="pt-2 grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => { if (confirm("Clear cart?")) { setCart([]); setCash(""); setDiscount(0); } }}>
