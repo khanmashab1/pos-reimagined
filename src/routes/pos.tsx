@@ -39,8 +39,21 @@ function PosPage() {
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [session, setSession] = useState<OpenSession | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [startOpen, setStartOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
+
+  const refreshSession = useCallback(async () => {
+    const { data } = await supabase.rpc("get_open_session");
+    setSession((data as unknown as OpenSession) ?? null);
+    setShiftLoading(false);
+  }, []);
+
+  useEffect(() => { if (user) refreshSession(); }, [user, refreshSession]);
 
   useEffect(() => {
     if (loading) return;
