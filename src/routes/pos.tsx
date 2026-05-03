@@ -377,14 +377,25 @@ function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, ta
           <span className="text-2xl font-bold text-primary">{fmt(total)}</span>
         </div>
 
-        <div className="pt-2 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">Cash Received</span>
-            <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
-              onChange={e => setCash(e.target.value)} placeholder="0" />
-          </div>
-          <Row label="Change" value={fmt(change)} bold />
+        <div className="pt-2 grid grid-cols-2 gap-2">
+          <Button type="button" variant={paymentMethod === "cash" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("cash")}>
+            <Banknote className="h-4 w-4 mr-1" /> Cash
+          </Button>
+          <Button type="button" variant={paymentMethod === "card" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("card")}>
+            <CreditCard className="h-4 w-4 mr-1" /> Card
+          </Button>
         </div>
+
+        {paymentMethod === "cash" && (
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">Cash Received</span>
+              <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
+                onChange={e => setCash(e.target.value)} placeholder="0" />
+            </div>
+            <Row label="Change" value={fmt(change)} bold />
+          </div>
+        )}
 
         <div className="pt-2 grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => { if (confirm("Clear cart?")) { setCart([]); setCash(""); setDiscount(0); } }}>
