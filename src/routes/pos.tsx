@@ -251,6 +251,7 @@ function PosPage() {
             cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
             taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
             processing={processing} processSale={processSale}
+            paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
           />
         </div>
 
