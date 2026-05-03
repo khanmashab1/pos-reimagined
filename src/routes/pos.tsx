@@ -127,8 +127,9 @@ function PosPage() {
   const change = Math.max(0, cashNum - total);
 
   const processSale = async () => {
+    if (!session) return toast.error("Start a shift first");
     if (cart.length === 0) return toast.error("Cart is empty");
-    if (cashNum < total) return toast.error("Cash received is less than total");
+    if (paymentMethod === "cash" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     const { data, error } = await supabase.rpc("process_sale", {
       _items: cart.map(i => ({
@@ -137,7 +138,10 @@ function PosPage() {
         subtotal: i.qty * i.sale_price,
       })),
       _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount,
-      _total: total, _cash_received: cashNum, _change_returned: change, _payment_type: "cash",
+      _total: total,
+      _cash_received: paymentMethod === "cash" ? cashNum : total,
+      _change_returned: paymentMethod === "cash" ? change : 0,
+      _payment_type: paymentMethod,
     });
     setProcessing(false);
     if (error) return toast.error(error.message);
@@ -145,13 +149,16 @@ function PosPage() {
     const result = data as any;
     setLastReceipt({
       bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
-      discount, total, cash_received: cashNum, change_returned: change,
+      discount, total,
+      cash_received: paymentMethod === "cash" ? cashNum : total,
+      change_returned: paymentMethod === "cash" ? change : 0,
       cashier_name: fullName, created_at: new Date().toISOString(),
     });
     setCart([]); setCash(""); setDiscount(0);
-    // refresh stock
+    // refresh stock + session totals
     const { data: p } = await supabase.from("products").select("*").eq("is_active", true).order("name");
     setProducts((p ?? []) as Product[]);
+    refreshSession();
   };
 
   if (loading) {
