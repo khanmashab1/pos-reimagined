@@ -90,10 +90,8 @@ function PosPage() {
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
       if (ex) {
-        if (ex.qty + 1 > p.stock) { toast.error("Insufficient stock"); return prev; }
         return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
       }
-      if (p.stock < 1) { toast.error("Out of stock"); return prev; }
       return [...prev, { ...p, qty: 1 }];
     });
   };
@@ -231,7 +229,7 @@ function PosPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filtered.map(p => (
                   <button key={p.id} onClick={() => addToCart(p)}
-                    disabled={p.stock < 1}
+                    
                     className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-[var(--shadow-card)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">{p.name}</div>
                     <div className="mt-2 flex items-center justify-between">
@@ -352,7 +350,6 @@ function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, ta
                     <span className="w-8 text-center text-sm font-medium">{i.qty}</span>
                     <Button size="icon" variant="outline" className="h-8 w-8"
                       onClick={() => {
-                        if (i.qty + 1 > i.stock) return toast.error("Stock limit");
                         setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c));
                       }}><Plus className="h-3 w-3" /></Button>
                   </div>
