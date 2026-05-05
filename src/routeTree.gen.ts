@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -22,6 +23,11 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 
+const ReturnsRoute = ReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PosRoute = PosRouteImport.update({
   id: '/pos',
   path: '/pos',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/returns': typeof ReturnsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/returns': typeof ReturnsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/returns': typeof ReturnsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/pos'
+    | '/returns'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/pos'
+    | '/returns'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/pos'
+    | '/returns'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -176,10 +188,18 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
+  ReturnsRoute: typeof ReturnsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/returns': {
+      id: '/returns'
+      path: '/returns'
+      fullPath: '/returns'
+      preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pos': {
       id: '/pos'
       path: '/pos'
@@ -296,6 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
+  ReturnsRoute: ReturnsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
