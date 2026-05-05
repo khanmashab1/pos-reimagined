@@ -350,7 +350,6 @@ function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, ta
                     <span className="w-8 text-center text-sm font-medium">{i.qty}</span>
                     <Button size="icon" variant="outline" className="h-8 w-8"
                       onClick={() => {
-                        if (i.qty + 1 > i.stock) return toast.error("Stock limit");
                         setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c));
                       }}><Plus className="h-3 w-3" /></Button>
                   </div>
