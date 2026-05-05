@@ -136,10 +136,14 @@
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
-    width: 80mm !important;
     color: #000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  body {
+    display: flex !important;
+    justify-content: center !important;
   }
 
   /* Hide the entire app while printing */
@@ -157,7 +161,8 @@
   .print-portal-root {
     position: static !important;
     width: 80mm !important;
-    margin: 0 !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
     padding: 3mm !important;
     box-sizing: border-box !important;
     font-family: "Courier New", monospace !important;
