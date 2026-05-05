@@ -157,7 +157,8 @@
   .print-portal-root {
     position: static !important;
     width: 80mm !important;
-    margin: 0 !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
     padding: 3mm !important;
     box-sizing: border-box !important;
     font-family: "Courier New", monospace !important;
