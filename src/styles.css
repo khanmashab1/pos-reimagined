@@ -136,8 +136,9 @@
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
-    width: 80mm !important;
+    width: auto !important;
     color: #000 !important;
+    text-align: center !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
