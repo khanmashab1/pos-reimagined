@@ -90,10 +90,8 @@ function PosPage() {
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
       if (ex) {
-        if (ex.qty + 1 > p.stock) { toast.error("Insufficient stock"); return prev; }
         return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
       }
-      if (p.stock < 1) { toast.error("Out of stock"); return prev; }
       return [...prev, { ...p, qty: 1 }];
     });
   };
