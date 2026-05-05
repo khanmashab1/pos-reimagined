@@ -186,6 +186,9 @@ function PosPage() {
               <PlayCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Start Shift</span>
             </Button>
           )}
+          <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
+            <Link to="/returns"><RotateCcw className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Return</span></Link>
+          </Button>
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
               <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Admin</span></Link>
