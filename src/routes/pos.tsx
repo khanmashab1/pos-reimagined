@@ -229,7 +229,7 @@ function PosPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filtered.map(p => (
                   <button key={p.id} onClick={() => addToCart(p)}
-                    disabled={p.stock < 1}
+                    
                     className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-[var(--shadow-card)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">{p.name}</div>
                     <div className="mt-2 flex items-center justify-between">
