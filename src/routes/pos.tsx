@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard, Banknote } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard, Banknote, RotateCcw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
@@ -186,6 +186,9 @@ function PosPage() {
               <PlayCircle className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Start Shift</span>
             </Button>
           )}
+          <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
+            <Link to="/returns"><RotateCcw className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Return</span></Link>
+          </Button>
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
               <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Admin</span></Link>
