@@ -103,11 +103,11 @@ function Dashboard() {
   ];
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="p-4 pt-16 md:p-8 md:pt-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back to ZIC Mart POS</p>
+        <div className="pl-12 md:pl-0">
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Welcome back to ZIC Mart POS</p>
         </div>
         <div className="flex gap-1 flex-wrap">
           {PERIODS.map(p => (
