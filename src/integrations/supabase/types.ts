@@ -430,6 +430,127 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          id: string
+          method: string
+          notes: string
+          payment_date: string
+          supplier_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          id?: string
+          method?: string
+          notes?: string
+          payment_date?: string
+          supplier_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          id?: string
+          method?: string
+          notes?: string
+          payment_date?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_purchases: {
+        Row: {
+          amount: number
+          bill_no: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          description: string
+          id: string
+          purchase_date: string
+          supplier_id: string
+        }
+        Insert: {
+          amount?: number
+          bill_no?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          description?: string
+          id?: string
+          purchase_date?: string
+          supplier_id: string
+        }
+        Update: {
+          amount?: number
+          bill_no?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          description?: string
+          id?: string
+          purchase_date?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string
+          phone?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_audit_log: {
         Row: {
           action: string
@@ -497,6 +618,7 @@ export type Database = {
       }
       get_admin_inventory_summary: { Args: never; Returns: Json }
       get_open_session: { Args: never; Returns: Json }
+      get_suppliers_summary: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
