@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart, LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -8,6 +8,7 @@ const items = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/categories", label: "Categories", icon: Tag },
+  { to: "/admin/suppliers", label: "Suppliers", icon: Truck },
   { to: "/admin/returns", label: "Returns", icon: RotateCcw },
   { to: "/admin/reports", label: "Sales Reports", icon: FileBarChart },
   { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
