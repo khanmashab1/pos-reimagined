@@ -140,7 +140,8 @@ function CashierReturnsPage() {
               </p>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-lg border">
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto rounded-lg border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted text-xs uppercase">
                       <tr>
@@ -172,17 +173,48 @@ function CashierReturnsPage() {
                   </table>
                 </div>
 
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-2">
+                  {items.map(it => (
+                    <div key={it.id} className="rounded-lg border p-3 space-y-2">
+                      <div className="font-medium text-sm">{it.product_name}</div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Sold: {it.qty}</span>
+                        <span>Price: {fmt(it.unit_price)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Return:</Label>
+                          <div className="flex items-center">
+                            <Button type="button" size="sm" variant="outline" className="h-9 w-9 p-0"
+                              onClick={() => setQty(it.id, it.qty, String((returnQty[it.id] || 0) - 1))}>−</Button>
+                            <Input type="number" min={0} max={it.qty}
+                              value={returnQty[it.id] ?? 0}
+                              onChange={e => setQty(it.id, it.qty, e.target.value)}
+                              className="w-14 h-9 mx-1 text-center" />
+                            <Button type="button" size="sm" variant="outline" className="h-9 w-9 p-0"
+                              onClick={() => setQty(it.id, it.qty, String((returnQty[it.id] || 0) + 1))}>+</Button>
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold">
+                          {fmt((returnQty[it.id] || 0) * Number(it.unit_price))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <div>
                   <Label>Reason</Label>
                   <Input placeholder="Damaged, wrong item, etc." value={reason} onChange={e => setReason(e.target.value)} />
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t">
                   <div>
                     <div className="text-xs text-muted-foreground">Total Refund</div>
                     <div className="text-2xl font-bold text-primary">{fmt(totalRefund)}</div>
                   </div>
-                  <Button onClick={submit} disabled={submitting || totalQty === 0} size="lg">
+                  <Button onClick={submit} disabled={submitting || totalQty === 0} size="lg" className="w-full sm:w-auto">
                     {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                     <RotateCcw className="h-4 w-4 mr-1" /> Submit Return
                   </Button>

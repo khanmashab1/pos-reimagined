@@ -75,8 +75,26 @@ function ProductsPage() {
       if (error) return toast.error(error.message);
       toast.success("Product updated");
     } else {
+      // Check if barcode already exists
+      const { data: existing } = await supabase
+        .from("products")
+        .select("*")
+        .eq("barcode", payload.barcode)
+        .maybeSingle();
+      if (existing) {
+        if (confirm(`Barcode already used by "${existing.name}". Open it for editing instead?`)) {
+          setForm(existing as Product);
+          setEditing(existing as Product);
+        }
+        return;
+      }
       const { error } = await supabase.from("products").insert(payload);
-      if (error) return toast.error(error.message);
+      if (error) {
+        if (error.message.includes("duplicate") || error.code === "23505") {
+          return toast.error("This barcode is already in use. Use 'Gen' to create a new one.");
+        }
+        return toast.error(error.message);
+      }
       toast.success("Product added");
     }
     setOpen(false); load();
