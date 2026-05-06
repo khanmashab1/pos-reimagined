@@ -127,8 +127,9 @@ function Dashboard() {
                   ? <Skeleton className="mt-2 h-6 w-24" />
                   : <div className="mt-1 text-xl font-bold break-words leading-tight">{c.value}</div>}
               </div>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: c.color, opacity: 0.15 }}>
-                <c.icon className="h-5 w-5" style={{ color: c.color }} />
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                <div className="absolute inset-0 rounded-lg opacity-15" style={{ background: c.color }} />
+                <c.icon className="relative h-5 w-5" style={{ color: c.color }} />
               </div>
             </div>
           </Card>
