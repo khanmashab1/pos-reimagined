@@ -250,6 +250,18 @@ function Dashboard() {
           )}
         </Card>
       </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-5 bg-muted/40">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2"><Package className="h-5 w-5" /> Stock Management</h3>
+              <p className="text-xs text-muted-foreground mt-1">View stock entries from cashiers</p>
+            </div>
+            <Link to="/admin/stock-summary" className="text-primary hover:underline text-sm font-medium">View →</Link>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

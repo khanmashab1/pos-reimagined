@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StockEntryRouteImport } from './routes/stock-entry'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
@@ -16,6 +17,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
+import { Route as AdminStockSummaryRouteImport } from './routes/admin.stock-summary'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
@@ -24,6 +26,11 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 
+const StockEntryRoute = StockEntryRouteImport.update({
+  id: '/stock-entry',
+  path: '/stock-entry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReturnsRoute = ReturnsRouteImport.update({
   id: '/returns',
   path: '/returns',
@@ -57,6 +64,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
 const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStockSummaryRoute = AdminStockSummaryRouteImport.update({
+  id: '/stock-summary',
+  path: '/stock-summary',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminShiftsRoute = AdminShiftsRouteImport.update({
@@ -101,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
+  '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -108,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
 }
@@ -117,6 +131,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
+  '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -124,6 +139,7 @@ export interface FileRoutesByTo {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
 }
@@ -134,6 +150,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
+  '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
@@ -141,6 +158,7 @@ export interface FileRoutesById {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
 }
@@ -152,6 +170,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pos'
     | '/returns'
+    | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -159,6 +178,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
@@ -168,6 +188,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pos'
     | '/returns'
+    | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -175,6 +196,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
   id:
@@ -184,6 +206,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pos'
     | '/returns'
+    | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
@@ -191,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
   fileRoutesById: FileRoutesById
@@ -201,10 +225,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
   ReturnsRoute: typeof ReturnsRoute
+  StockEntryRoute: typeof StockEntryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stock-entry': {
+      id: '/stock-entry'
+      path: '/stock-entry'
+      fullPath: '/stock-entry'
+      preLoaderRoute: typeof StockEntryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/returns': {
       id: '/returns'
       path: '/returns'
@@ -252,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/suppliers'
       fullPath: '/admin/suppliers'
       preLoaderRoute: typeof AdminSuppliersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/stock-summary': {
+      id: '/admin/stock-summary'
+      path: '/stock-summary'
+      fullPath: '/admin/stock-summary'
+      preLoaderRoute: typeof AdminStockSummaryRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shifts': {
@@ -314,6 +353,7 @@ interface AdminRouteChildren {
   AdminReturnsRoute: typeof AdminReturnsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
+  AdminStockSummaryRoute: typeof AdminStockSummaryRoute
   AdminSuppliersRoute: typeof AdminSuppliersRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
@@ -326,6 +366,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminReturnsRoute: AdminReturnsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
+  AdminStockSummaryRoute: AdminStockSummaryRoute,
   AdminSuppliersRoute: AdminSuppliersRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
@@ -338,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
   ReturnsRoute: ReturnsRoute,
+  StockEntryRoute: StockEntryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
