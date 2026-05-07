@@ -77,19 +77,33 @@ function PosPage() {
 
   // load products page (server-side search + category filter)
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      let q = supabase
-        .from("products")
-        .select("*", { count: "exact" })
-        .eq("is_active", true)
-        .order("name")
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-      if (cat !== "all") q = q.eq("category_id", cat);
-      if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
-      const { data: p, count } = await q;
-      setProducts((p ?? []) as Product[]);
-      setTotalCount(count ?? 0);
+      try {
+        let q = supabase
+          .from("products")
+          .select("*", { count: "exact" })
+          .eq("is_active", true)
+          .order("name")
+          .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+        if (cat !== "all") q = q.eq("category_id", cat);
+        if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
+        const { data: p, count, error } = await q;
+        
+        if (error) {
+          console.error("Error fetching products:", error);
+          return;
+        }
+        
+        if (!cancelled) {
+          setProducts((p ?? []) as Product[]);
+          setTotalCount(count ?? 0);
+        }
+      } catch (err) {
+        console.error("Products fetch error:", err);
+      }
     })();
+    return () => { cancelled = true; };
   }, [page, search, cat]);
 
   // reset to page 0 when search or category changes
@@ -201,44 +215,62 @@ function PosPage() {
     if (cart.length === 0) return toast.error("Cart is empty");
     if (paymentMethod === "cash" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
-    const { data, error } = await supabase.rpc("process_sale", {
-      _items: cart.map(i => ({
-        product_id: i.id, product_name: i.name, barcode: i.barcode,
-        qty: i.qty, unit_price: i.sale_price, purchase_price: i.purchase_price,
-        subtotal: i.qty * i.sale_price,
-      })),
-      _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount,
-      _total: total,
-      _cash_received: paymentMethod === "cash" ? cashNum : total,
-      _change_returned: paymentMethod === "cash" ? change : 0,
-      _payment_type: paymentMethod,
-    });
-    setProcessing(false);
-    if (error) return toast.error(error.message);
-    toast.success("Sale completed!");
-    const result = data as any;
-    setLastReceipt({
-      bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
-      discount, total,
-      cash_received: paymentMethod === "cash" ? cashNum : total,
-      change_returned: paymentMethod === "cash" ? change : 0,
-      cashier_name: fullName, created_at: new Date().toISOString(),
-    });
-    setCart([]); setCash(""); setDiscount(0);
-    // refresh stock + session totals
-    // re-fetch current page to update stock numbers
-    let q = supabase
-      .from("products")
-      .select("*", { count: "exact" })
-      .eq("is_active", true)
-      .order("name")
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-    if (cat !== "all") q = q.eq("category_id", cat);
-    if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
-    const { data: p, count } = await q;
-    setProducts((p ?? []) as Product[]);
-    setTotalCount(count ?? 0);
-    refreshSession();
+    try {
+      const { data, error } = await supabase.rpc("process_sale", {
+        _items: cart.map(i => ({
+          product_id: i.id, product_name: i.name, barcode: i.barcode,
+          qty: i.qty, unit_price: i.sale_price, purchase_price: i.purchase_price,
+          subtotal: i.qty * i.sale_price,
+        })),
+        _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount,
+        _total: total,
+        _cash_received: paymentMethod === "cash" ? cashNum : total,
+        _change_returned: paymentMethod === "cash" ? change : 0,
+        _payment_type: paymentMethod,
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      
+      toast.success("Sale completed!");
+      const result = data as any;
+      setLastReceipt({
+        bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
+        discount, total,
+        cash_received: paymentMethod === "cash" ? cashNum : total,
+        change_returned: paymentMethod === "cash" ? change : 0,
+        cashier_name: fullName, created_at: new Date().toISOString(),
+      });
+      setCart([]); setCash(""); setDiscount(0);
+      
+      // refresh stock + session totals
+      try {
+        let q = supabase
+          .from("products")
+          .select("*", { count: "exact" })
+          .eq("is_active", true)
+          .order("name")
+          .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+        if (cat !== "all") q = q.eq("category_id", cat);
+        if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
+        const { data: p, count, error: fetchError } = await q;
+        
+        if (fetchError) {
+          console.error("Error refetching products:", fetchError);
+        } else {
+          setProducts((p ?? []) as Product[]);
+          setTotalCount(count ?? 0);
+        }
+      } catch (refetchErr) {
+        console.error("Refetch error:", refetchErr);
+      }
+      
+      await refreshSession();
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (loading) {
