@@ -5,8 +5,9 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard, Banknote, RotateCcw, Package } from "lucide-react";
+import { Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store, LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard, Banknote, RotateCcw, Package, Tag } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
@@ -47,6 +48,9 @@ function PosPage() {
   const [shiftLoading, setShiftLoading] = useState(true);
   const [startOpen, setStartOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountInput, setDiscountInput] = useState("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
 
@@ -116,7 +120,12 @@ function PosPage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F2") { e.preventDefault(); processSale(); }
       if (e.key === "F4") { e.preventDefault(); if (confirm("Clear cart?")) setCart([]); }
-      if (e.key === "Escape") scanRef.current?.focus();
+      if (e.key === "F10") {
+        e.preventDefault();
+        setDiscountInput(discount > 0 ? String(discount) : "");
+        setDiscountOpen(prev => !prev);
+      }
+      if (e.key === "Escape") { setDiscountOpen(false); scanRef.current?.focus(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -318,100 +327,114 @@ function PosPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left: scan + products */}
-        <div className="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-hidden">
-          <Card className="p-3">
-            <form onSubmit={onScan} className="flex gap-2">
-              <div className="relative flex-1">
-                <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode…"
-                  value={scan} onChange={e => setScan(e.target.value)} />
-              </div>
+        {/* Left: cart table */}
+        <div className="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-hidden bg-background">
+          <Card className="p-4 flex-shrink-0">
+            <div className="flex gap-2">
+              <form onSubmit={onScan} className="flex gap-2 flex-1">
+                <div className="relative flex-1">
+                  <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode or enter manually…"
+                    value={scan} onChange={e => setScan(e.target.value)} />
+                </div>
+              </form>
               <Button type="button" variant="outline" className="h-11 px-3" onClick={() => setCameraOpen(true)} title="Scan with camera">
                 <Camera className="h-5 w-5" />
               </Button>
-            </form>
-            <div className="mt-2 flex gap-2">
-              <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-              <Button size="sm" variant={cat === "all" ? "default" : "outline"} onClick={() => setCat("all")}>All</Button>
-              {cats.map(c => (
-                <Button key={c.id} size="sm" variant={cat === c.id ? "default" : "outline"} onClick={() => setCat(c.id)}>{c.name}</Button>
-              ))}
-            </div>
+            <Button className="w-full mt-3 h-11 text-base font-semibold" onClick={() => setSearchOpen(true)}>
+              <Plus className="h-5 w-5 mr-2" /> Manual Product Search
+            </Button>
           </Card>
 
-          <div className="flex-1 overflow-auto pb-20 lg:pb-0 flex flex-col gap-3">
-            {filtered.length === 0 ? (
-              <div className="text-center text-muted-foreground py-12">No products available.</div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filtered.map(p => (
-                  <button key={p.id} onClick={() => addToCart(p)}
-                    className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-[var(--shadow-card)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    <div className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">{p.name}</div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="font-bold text-primary">{fmt(p.sale_price)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock === 0 ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{p.stock}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t mt-auto">
-                <span className="text-xs text-muted-foreground">Page {page + 1} / {totalPages} &nbsp;&bull;&nbsp; {totalCount.toLocaleString()} products</span>
-                <div className="flex gap-2">
-                  <button
-                    disabled={page === 0}
-                    onClick={() => setPage(p => p - 1)}
-                    className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
-                  >← Prev</button>
-                  <button
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage(p => p + 1)}
-                    className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
-                  >Next →</button>
+          <Card className="flex-1 overflow-hidden p-0">
+            <div className="h-full flex flex-col overflow-hidden">
+              {cart.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                  <ShoppingCart className="h-16 w-16 text-muted-foreground/30 mb-3" />
+                  <div className="text-muted-foreground">
+                    <p className="font-medium text-lg">Cart is empty</p>
+                    <p className="text-sm">Scan items to add to cart</p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="overflow-auto flex-1">
+                  <div className="border-b sticky top-0 bg-muted/50 backdrop-blur">
+                    <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-bold text-muted-foreground">
+                      <div className="col-span-5">Product Name</div>
+                      <div className="col-span-2 text-right">Price</div>
+                      <div className="col-span-2 text-right">Qty</div>
+                      <div className="col-span-3 text-right">Total</div>
+                    </div>
+                  </div>
+                  <div className="divide-y">
+                    {cart.map(i => (
+                      <div key={i.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
+                        <div className="col-span-5">
+                          <div className="font-medium text-sm truncate">{i.name}</div>
+                        </div>
+                        <div className="col-span-2 text-right text-sm">{fmt(i.sale_price)}</div>
+                        <div className="col-span-2 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                              onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}><Minus className="h-3 w-3" /></Button>
+                            <span className="w-6 text-center text-sm font-semibold">{i.qty}</span>
+                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                              onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c))}><Plus className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                        <div className="col-span-2 text-right font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
+                        <div className="col-span-1 text-right">
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
 
-        {/* Right: cart — desktop sidebar */}
-        <div className="hidden lg:flex w-full max-w-md flex-col bg-card border-l">
-          <CartPanel
-            cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+        {/* Right: bill summary sidebar */}
+        <div className="hidden lg:flex w-full lg:w-80 xl:w-96 2xl:w-[450px] flex-col bg-sidebar border-l">
+          <BillSummary
+            cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
             taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
             processing={processing} processSale={processSale}
             paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
+            discountOpen={discountOpen} setDiscountOpen={setDiscountOpen}
+            discountInput={discountInput} setDiscountInput={setDiscountInput}
           />
         </div>
 
         {/* Mobile floating cart button */}
         {isMobile && (
           <button
-            onClick={() => setCartOpen(true)}
-            className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 font-semibold"
+            onClick={() => setSearchOpen(true)}
+            className="lg:hidden fixed bottom-4 right-4 z-40 h-16 px-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 flex items-center gap-3 font-bold text-base hover:shadow-lg hover:shadow-primary/60 transition-all"
           >
-            <ShoppingCart className="h-5 w-5" />
-            <span>{cart.reduce((s, i) => s + i.qty, 0)} • {fmt(total)}</span>
+            <Plus className="h-6 w-6" />
+            <span>Add Item</span>
           </button>
         )}
 
-        {/* Mobile cart sheet */}
+        {/* Mobile bill summary sheet */}
         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
-            <SheetHeader className="px-4 py-3 border-b">
-              <SheetTitle className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Current Sale</SheetTitle>
+          <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col h-full">
+            <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
+              <SheetTitle className="flex items-center gap-2 text-base"><ShoppingCart className="h-5 w-5" /> Bill Summary</SheetTitle>
             </SheetHeader>
-            <CartPanel
-              cart={cart} setCart={setCart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+            <BillSummary
+              cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
               taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
               processing={processing} processSale={async () => { await processSale(); setCartOpen(false); }}
               paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
+              discountOpen={discountOpen} setDiscountOpen={setDiscountOpen}
+              discountInput={discountInput} setDiscountInput={setDiscountInput}
               hideHeader
             />
           </SheetContent>
@@ -433,6 +456,65 @@ function PosPage() {
         )}
       </div>
 
+      {/* Product Search Modal */}
+      <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+        <SheetContent side="bottom" className="w-full h-[90vh] p-0 flex flex-col rounded-t-xl">
+          <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
+            <SheetTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" /> Manual Product Search
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex-shrink-0 space-y-2">
+              <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className="h-10" />
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                <Button size="sm" variant={cat === "all" ? "default" : "outline"} onClick={() => setCat("all")}>All</Button>
+                {cats.map(c => (
+                  <Button key={c.id} size="sm" variant={cat === c.id ? "default" : "outline"} onClick={() => setCat(c.id)}>{c.name}</Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-3">
+              {filtered.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12">No products found.</div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {filtered.map(p => (
+                    <button key={p.id} onClick={() => { addToCart(p); setSearchOpen(false); }}
+                      className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex flex-col">
+                      <div className="font-semibold text-sm line-clamp-2 flex-1">{p.name}</div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="font-bold text-primary">{fmt(p.sale_price)}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock === 0 ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{p.stock}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                  <span className="text-xs text-muted-foreground">Page {page + 1} / {totalPages} &nbsp;&bull;&nbsp; {totalCount.toLocaleString()} products</span>
+                  <div className="flex gap-2">
+                    <button
+                      disabled={page === 0}
+                      onClick={() => setPage(p => p - 1)}
+                      className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
+                    >← Prev</button>
+                    <button
+                      disabled={page >= totalPages - 1}
+                      onClick={() => setPage(p => p + 1)}
+                      className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
+                    >Next →</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
       <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
       <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
@@ -444,102 +526,153 @@ function PosPage() {
 
 interface CartPanelProps {
   cart: CartItem[];
-  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   subtotal: number; discount: number; setDiscount: (n: number) => void;
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
   processing: boolean; processSale: () => unknown | Promise<unknown>;
   paymentMethod: "cash" | "card"; setPaymentMethod: (m: "cash" | "card") => void;
+  discountOpen: boolean; setDiscountOpen: (o: boolean) => void;
+  discountInput: string; setDiscountInput: (v: string) => void;
   hideHeader?: boolean;
 }
 
-function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, paymentMethod, setPaymentMethod, hideHeader }: CartPanelProps) {
+function BillSummary({ cart, subtotal, discount, setDiscount, taxRate, taxAmount, total, cash, setCash, change, processing, processSale, paymentMethod, setPaymentMethod, discountOpen, setDiscountOpen, discountInput, setDiscountInput, hideHeader }: CartPanelProps) {
+  const applyDiscount = () => {
+    setDiscount(Math.max(0, Number(discountInput) || 0));
+    setDiscountOpen(false);
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground overflow-hidden">
       {!hideHeader && (
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <div className="flex items-center gap-2 font-semibold"><ShoppingCart className="h-4 w-4" /> Current Sale</div>
-          <span className="text-xs text-muted-foreground">{cart.reduce((s, i) => s + i.qty, 0)} items</span>
+        <div className="px-4 py-3 border-b flex items-center flex-shrink-0 border-sidebar-accent/30">
+          <div className="flex items-center gap-2 font-bold"><ShoppingCart className="h-5 w-5" /> Bill Summary</div>
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
-        {cart.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">Cart is empty.<br/>Scan or click a product to start.</div>
-        ) : (
-          <div className="divide-y">
-            {cart.map(i => (
-              <div key={i.id} className="p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{i.name}</div>
-                    <div className="text-xs text-muted-foreground">{fmt(i.sale_price)} ea</div>
-                  </div>
-                  <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive"
-                    onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Button size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}><Minus className="h-3 w-3" /></Button>
-                    <span className="w-8 text-center text-sm font-medium">{i.qty}</span>
-                    <Button size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => {
-                        setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c));
-                      }}><Plus className="h-3 w-3" /></Button>
-                  </div>
-                  <div className="font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
-                </div>
+      {/* Totals — always visible, never scrolls */}
+      <div className="flex-1 flex flex-col justify-between min-h-0 p-3 gap-3">
+
+        {/* Summary rows */}
+        <div className="space-y-2 bg-sidebar-accent/30 px-3 py-2.5 rounded-lg">
+          <Row label="Items:" value={cart.reduce((s, i) => s + i.qty, 0).toString()} />
+          <Row label="Subtotal:" value={fmt(subtotal)} />
+          {discount > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-orange-400/80">Discount:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-orange-400">- {fmt(discount)}</span>
+                <button
+                  onClick={() => { setDiscount(0); setDiscountInput(""); }}
+                  className="h-4 w-4 rounded-full bg-orange-500/20 hover:bg-orange-500/40 flex items-center justify-center transition-colors"
+                  title="Remove discount"
+                >
+                  <X className="h-2.5 w-2.5 text-orange-400" />
+                </button>
               </div>
-            ))}
+            </div>
+          )}
+          {taxRate > 0 && <Row label={`Tax (${taxRate}%):`} value={fmt(taxAmount)} />}
+          <div className="flex items-center justify-between pt-2 border-t border-sidebar-accent/30">
+            <span className="font-bold text-sm">Net Total:</span>
+            <span className="text-xl font-bold text-green-500">{fmt(total)}</span>
+          </div>
+        </div>
+
+        {/* Cash received */}
+        {paymentMethod === "cash" && (
+          <div className="space-y-1.5 bg-sidebar-accent/20 px-3 py-2.5 rounded-lg">
+            <label className="text-xs font-semibold text-sidebar-foreground/80">Cash Received (Rs.)</label>
+            <Input
+              type="number"
+              className="h-9 w-full text-right text-base font-bold"
+              value={cash}
+              onChange={e => setCash(e.target.value)}
+              placeholder="0.00"
+            />
+            <div className="flex items-center justify-between pt-1.5 border-t border-sidebar-accent/30">
+              <span className="text-xs font-semibold text-sidebar-foreground/80">Change</span>
+              <span className="text-base font-bold text-green-500">{fmt(change)}</span>
+            </div>
           </div>
         )}
-      </div>
 
-      <div className="p-4 border-t space-y-2.5 bg-muted/30">
-        <Row label="Subtotal" value={fmt(subtotal)} />
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Discount</span>
-          <Input type="number" className="h-7 w-24 text-right" value={discount}
-            onChange={e => setDiscount(Math.max(0, +e.target.value))} />
-        </div>
-        {taxRate > 0 && <Row label={`Tax (${taxRate}%)`} value={fmt(taxAmount)} />}
-        <div className="flex items-center justify-between pt-2 border-t">
-          <span className="font-bold">TOTAL</span>
-          <span className="text-2xl font-bold text-primary">{fmt(total)}</span>
-        </div>
-
-        <div className="pt-2 grid grid-cols-2 gap-2">
-          <Button type="button" variant={paymentMethod === "cash" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("cash")}>
+        {/* Payment method */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant={paymentMethod === "cash" ? "default" : "outline"} size="sm"
+            onClick={() => setPaymentMethod("cash")} className="text-sm h-9">
             <Banknote className="h-4 w-4 mr-1" /> Cash
           </Button>
-          <Button type="button" variant={paymentMethod === "card" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("card")}>
+          <Button type="button" variant={paymentMethod === "card" ? "default" : "outline"} size="sm"
+            onClick={() => setPaymentMethod("card")} className="text-sm h-9">
             <CreditCard className="h-4 w-4 mr-1" /> Card
           </Button>
         </div>
+      </div>
 
-        {paymentMethod === "cash" && (
-          <div className="pt-2 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">Cash Received</span>
-              <Input type="number" className="h-9 w-32 text-right text-base font-semibold" value={cash}
-                onChange={e => setCash(e.target.value)} placeholder="0" />
+      {/* Bottom actions — always pinned */}
+      <div className="px-3 pb-3 pt-2 border-t border-sidebar-accent/30 space-y-2 flex-shrink-0">
+        <Button
+          disabled={processing || cart.length === 0}
+          onClick={processSale}
+          className="w-full h-11 text-base font-semibold"
+        >
+          {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Process Sale
+        </Button>
+
+        {/* Discount Popover trigger */}
+        <Popover open={discountOpen} onOpenChange={(o) => {
+          setDiscountOpen(o);
+          if (o) setDiscountInput(discount > 0 ? String(discount) : "");
+        }}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={`w-full text-xs font-semibold h-8 gap-1.5 ${
+                discount > 0 ? "border-orange-500/60 text-orange-400 bg-orange-500/10" : ""
+              }`}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              {discount > 0 ? `Discount: ${fmt(discount)}` : "Add Discount"}
+              <kbd className="ml-auto text-[10px] opacity-50 font-mono bg-muted px-1 rounded">F10</kbd>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="w-64 p-3 space-y-3">
+            <div className="text-sm font-semibold flex items-center gap-1.5">
+              <Tag className="h-4 w-4 text-orange-400" /> Discount Amount (Rs.)
             </div>
-            <Row label="Change" value={fmt(change)} bold />
-          </div>
-        )}
-
-        <div className="pt-2 grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={() => { if (confirm("Clear cart?")) { setCart([]); setCash(""); setDiscount(0); } }}>
-            <Trash2 className="h-4 w-4 mr-1" /> Clear
-          </Button>
-          <Button disabled={processing || cart.length === 0} onClick={processSale}>
-            {processing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Pay
-          </Button>
-        </div>
+            <Input
+              type="number"
+              min={0}
+              autoFocus
+              className="h-10 text-right text-lg font-bold"
+              placeholder="0.00"
+              value={discountInput}
+              onChange={e => setDiscountInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") applyDiscount();
+                if (e.key === "Escape") setDiscountOpen(false);
+              }}
+            />
+            {subtotal > 0 && Number(discountInput) > 0 && (
+              <p className="text-xs text-muted-foreground text-right -mt-1">
+                = {((Number(discountInput) / subtotal) * 100).toFixed(1)}% off
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onClick={applyDiscount}>Apply</Button>
+              {discount > 0 && (
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive px-2"
+                  onClick={() => { setDiscount(0); setDiscountInput(""); setDiscountOpen(false); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
@@ -548,8 +681,8 @@ function CartPanel({ cart, setCart, subtotal, discount, setDiscount, taxRate, ta
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={bold ? "font-bold text-base" : "font-medium"}>{value}</span>
+      <span className="text-sidebar-foreground/80">{label}</span>
+      <span className={bold ? "font-bold text-base text-sidebar-foreground" : "font-semibold text-sidebar-foreground"}>{value}</span>
     </div>
   );
 }
