@@ -6,19 +6,14 @@ import { Camera, X } from "lucide-react";
 interface BarcodeScannerProps {
   open: boolean;
   onClose: () => void;
-  onScan: (code: string) => void | Promise<void>;
+  onScan: (code: string) => void;
 }
 
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // stable refs so the useEffect doesn't restart every render
-  const onScanRef = useRef(onScan);
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  const processingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -35,35 +30,23 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         await scanner.start(
           { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.0,
-          },
-          async (decodedText: string) => {
-            try {
-              const code = decodedText.trim();
-              if (!code) return;
-              
-              // stop camera first so it doesn't fire again while we process
-              try {
-                await scanner.stop();
-              } catch (stopErr) {
-                console.error("Error stopping scanner:", stopErr);
+          { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
+          (decodedText: string) => {
+            // Prevent double-firing
+            if (processingRef.current) return;
+            processingRef.current = true;
+
+            // Stop scanner first, then close dialog, then call onScan
+            scanner.stop().catch(() => {}).finally(() => {
+              if (!cancelled) {
+                onClose();
+                // Small delay so dialog close animation doesn't interfere with state updates
+                setTimeout(() => {
+                  onScan(decodedText);
+                  processingRef.current = false;
+                }, 100);
               }
-              
-              // call the scan handler
-              try {
-                await onScanRef.current(code);
-              } catch (err) {
-                console.error("onScan handler error:", err);
-              }
-              
-              // close dialog after scan completes
-              onCloseRef.current();
-            } catch (err) {
-              console.error("Scan callback error:", err);
-            }
+            });
           },
           () => {}
         );
@@ -75,7 +58,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }
     };
 
-    // Small delay to let dialog DOM render
+    processingRef.current = false;
     const timer = setTimeout(startScanner, 300);
 
     return () => {
@@ -87,7 +70,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }
       setError(null);
     };
-  }, [open]); // only re-run when open changes; onScan/onClose accessed via refs
+  }, [open, onScan, onClose]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
