@@ -375,11 +375,24 @@ function PosPage() {
                         </div>
                         <div className="col-span-2 text-right text-sm">{fmt(i.sale_price)}</div>
                         <div className="col-span-2 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-6 w-6 flex-shrink-0"
                               onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}><Minus className="h-3 w-3" /></Button>
-                            <span className="w-6 text-center text-sm font-semibold">{i.qty}</span>
-                            <Button size="icon" variant="ghost" className="h-6 w-6"
+                            <input
+                              type="number"
+                              min={1}
+                              className="w-10 text-center text-sm font-semibold bg-transparent border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              value={i.qty}
+                              onChange={e => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: val } : c));
+                              }}
+                              onBlur={e => {
+                                const val = parseInt(e.target.value, 10);
+                                if (isNaN(val) || val < 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: 1 } : c));
+                              }}
+                            />
+                            <Button size="icon" variant="ghost" className="h-6 w-6 flex-shrink-0"
                               onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c))}><Plus className="h-3 w-3" /></Button>
                           </div>
                         </div>
@@ -414,11 +427,11 @@ function PosPage() {
         {/* Mobile floating cart button */}
         {isMobile && (
           <button
-            onClick={() => setSearchOpen(true)}
-            className="lg:hidden fixed bottom-4 right-4 z-40 h-16 px-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 flex items-center gap-3 font-bold text-base hover:shadow-lg hover:shadow-primary/60 transition-all"
+            onClick={() => setCartOpen(true)}
+            className="lg:hidden fixed bottom-4 right-4 z-40 h-16 px-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 flex items-center gap-3 font-bold text-base hover:shadow-xl hover:shadow-primary/60 transition-all"
           >
-            <Plus className="h-6 w-6" />
-            <span>Add Item</span>
+            <CreditCard className="h-6 w-6" />
+            <span>Proceed to Payment</span>
           </button>
         )}
 
@@ -603,8 +616,13 @@ function BillSummary({ cart, subtotal, discount, setDiscount, taxRate, taxAmount
             onClick={() => setPaymentMethod("cash")} className="text-sm h-9">
             <Banknote className="h-4 w-4 mr-1" /> Cash
           </Button>
-          <Button type="button" variant={paymentMethod === "card" ? "default" : "outline"} size="sm"
-            onClick={() => setPaymentMethod("card")} className="text-sm h-9">
+          <Button type="button" variant="outline" size="sm"
+            onClick={() => setPaymentMethod("card")}
+            className={`text-sm h-9 transition-colors ${
+              paymentMethod === "card"
+                ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700"
+                : "border-blue-500 text-blue-500 hover:bg-blue-500/10"
+            }`}>
             <CreditCard className="h-4 w-4 mr-1" /> Card
           </Button>
         </div>
