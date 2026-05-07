@@ -6,13 +6,19 @@ import { Camera, X } from "lucide-react";
 interface BarcodeScannerProps {
   open: boolean;
   onClose: () => void;
-  onScan: (code: string) => void;
+  onScan: (code: string) => void | Promise<void>;
 }
 
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // stable refs so the useEffect doesn't restart every render
+  const onScanRef = useRef(onScan);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -34,10 +40,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             qrbox: { width: 250, height: 150 },
             aspectRatio: 1.0,
           },
-          (decodedText: string) => {
-            onScan(decodedText);
+          async (decodedText: string) => {
+            const code = decodedText.trim();
+            if (!code) return;
+            // stop camera first so it doesn't fire again while we look up
             scanner.stop().catch(() => {});
-            onClose();
+            onCloseRef.current();
+            try {
+              await onScanRef.current(code);
+            } catch (err) {
+              console.error("onScan handler error:", err);
+            }
           },
           () => {}
         );
@@ -61,7 +74,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }
       setError(null);
     };
-  }, [open, onScan, onClose]);
+  }, [open]); // only re-run when open changes; onScan/onClose accessed via refs
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>

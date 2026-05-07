@@ -32,6 +32,8 @@ function genBarcode() {
   return "ZIC" + Date.now().toString().slice(-9) + Math.floor(Math.random() * 10);
 }
 
+const PAGE_SIZE = 50;
+
 function ProductsPage() {
   const [items, setItems] = useState<Product[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
@@ -41,25 +43,45 @@ function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, "id">>(empty);
   const [printing, setPrinting] = useState<Product | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingItems, setLoadingItems] = useState(false);
 
-  const load = async () => {
-    const [{ data: p }, { data: c }] = await Promise.all([
-      supabase.from("products").select("*").order("created_at", { ascending: false }),
+  const load = async (currentPage = page, currentSearch = search, currentFilter = filter) => {
+    setLoadingItems(true);
+    let query = supabase
+      .from("products")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE - 1);
+
+    if (currentFilter !== "all") query = query.eq("category_id", currentFilter);
+    if (currentSearch) {
+      query = query.or(`name.ilike.%${currentSearch}%,barcode.ilike.%${currentSearch}%`);
+    }
+
+    const [{ data: p, count }, { data: c }] = await Promise.all([
+      query,
       supabase.from("categories").select("id,name").order("name"),
     ]);
     setItems((p ?? []) as Product[]);
+    setTotalCount(count ?? 0);
     setCats((c ?? []) as Cat[]);
+    setLoadingItems(false);
   };
-  useEffect(() => { load(); }, []);
 
-  const filtered = items.filter(p => {
-    if (filter !== "all" && p.category_id !== filter) return false;
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.barcode.includes(search)) return false;
-    return true;
-  });
+  useEffect(() => { load(0, search, filter); setPage(0); }, [search, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(page, search, filter); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const reload = () => load(page, search, filter);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // filtering is now done server-side; items already contains the filtered page
+  const filtered = items;
 
   const openNew = () => { setForm({ ...empty, barcode: genBarcode() }); setEditing(null); setOpen(true); };
-  const openEdit = (p: Product) => { setForm(p); setEditing(p); setOpen(true); };
+  const openEdit = (p: Product) => { setForm({ ...p }); setEditing(p); setOpen(true); };
 
   const save = async () => {
     if (!form.name.trim() || !form.barcode.trim()) return toast.error("Name and barcode are required");
@@ -97,14 +119,14 @@ function ProductsPage() {
       }
       toast.success("Product added");
     }
-    setOpen(false); load();
+    setOpen(false); reload();
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Deleted"); load();
+    toast.success("Deleted"); reload();
   };
 
   const stockBadge = (p: Product) => {
@@ -118,7 +140,7 @@ function ProductsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">{items.length} items in catalog</p>
+          <p className="text-muted-foreground">{totalCount.toLocaleString()} items in catalog</p>
         </div>
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> Add Product</Button>
       </div>
@@ -153,7 +175,10 @@ function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filtered.length === 0 && (
+              {loadingItems && (
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-10">Loading…</td></tr>
+              )}
+              {!loadingItems && filtered.length === 0 && (
                 <tr><td colSpan={6} className="text-center text-muted-foreground py-10">No products found.</td></tr>
               )}
               {filtered.map(p => (
@@ -178,6 +203,18 @@ function ProductsPage() {
             </tbody>
           </table>
         </div>
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+            <span className="text-sm text-muted-foreground">
+              Page {page + 1} of {totalPages} &mdash; {totalCount.toLocaleString()} total
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</Button>
+              <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>

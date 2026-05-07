@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,9 @@ function PosPage() {
   const [scan, setScan] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 60;
   const [discount, setDiscount] = useState(0);
   const [cash, setCash] = useState<string>("");
   const [taxRate, setTaxRate] = useState(0);
@@ -60,18 +63,37 @@ function PosPage() {
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
+  // load categories + tax once
   useEffect(() => {
     (async () => {
-      const [{ data: p }, { data: c }, { data: s }] = await Promise.all([
-        supabase.from("products").select("*").eq("is_active", true).order("name"),
+      const [{ data: c }, { data: s }] = await Promise.all([
         supabase.from("categories").select("id,name").order("name"),
         supabase.from("store_settings").select("tax_rate").eq("id", 1).single(),
       ]);
-      setProducts((p ?? []) as Product[]);
       setCats(c ?? []);
       setTaxRate(Number(s?.tax_rate ?? 0));
     })();
   }, []);
+
+  // load products page (server-side search + category filter)
+  useEffect(() => {
+    (async () => {
+      let q = supabase
+        .from("products")
+        .select("*", { count: "exact" })
+        .eq("is_active", true)
+        .order("name")
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (cat !== "all") q = q.eq("category_id", cat);
+      if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
+      const { data: p, count } = await q;
+      setProducts((p ?? []) as Product[]);
+      setTotalCount(count ?? 0);
+    })();
+  }, [page, search, cat]);
+
+  // reset to page 0 when search or category changes
+  useEffect(() => { setPage(0); }, [search, cat]);
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
@@ -96,27 +118,43 @@ function PosPage() {
     });
   };
 
-  const onScan = (e: React.FormEvent) => {
+  const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = scan.trim();
     if (!code) return;
-    const prod = products.find(p => p.barcode === code);
+    // check current page first for speed, then fall back to DB lookup
+    let prod: Product | undefined = products.find(p => p.barcode === code);
+    if (!prod) {
+      const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
+      prod = (data as Product) ?? undefined;
+    }
     if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
     else toast.error("Product not found");
     setScan("");
   };
 
-  const onCameraScan = useCallback((code: string) => {
-    const prod = products.find(p => p.barcode === code);
-    if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
-    else toast.error(`Product not found: ${code}`);
+  const onCameraScan = useCallback(async (code: string) => {
+    try {
+      let prod: Product | undefined = products.find(p => p.barcode === code);
+      if (!prod) {
+        const { data, error } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
+        if (error) {
+          toast.error(`Error scanning product: ${error.message}`);
+          return;
+        }
+        prod = (data as Product) ?? undefined;
+      }
+      if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
+      else toast.error(`Product not found: ${code}`);
+    } catch (error) {
+      console.error("Camera scan error:", error);
+      toast.error(`Error scanning: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   }, [products]);
 
-  const filtered = useMemo(() => products.filter(p => {
-    if (cat !== "all" && p.category_id !== cat) return false;
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.barcode.includes(search)) return false;
-    return true;
-  }), [products, search, cat]);
+  // filtering is done server-side; products already contains the right page
+  const filtered = products;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.sale_price), 0);
   const taxAmount = Math.max(0, (subtotal - discount) * (taxRate / 100));
@@ -154,8 +192,18 @@ function PosPage() {
     });
     setCart([]); setCash(""); setDiscount(0);
     // refresh stock + session totals
-    const { data: p } = await supabase.from("products").select("*").eq("is_active", true).order("name");
+    // re-fetch current page to update stock numbers
+    let q = supabase
+      .from("products")
+      .select("*", { count: "exact" })
+      .eq("is_active", true)
+      .order("name")
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+    if (cat !== "all") q = q.eq("category_id", cat);
+    if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
+    const { data: p, count } = await q;
     setProducts((p ?? []) as Product[]);
+    setTotalCount(count ?? 0);
     refreshSession();
   };
 
@@ -225,14 +273,13 @@ function PosPage() {
             </div>
           </Card>
 
-          <div className="flex-1 overflow-auto pb-20 lg:pb-0">
+          <div className="flex-1 overflow-auto pb-20 lg:pb-0 flex flex-col gap-3">
             {filtered.length === 0 ? (
               <div className="text-center text-muted-foreground py-12">No products available.</div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filtered.map(p => (
                   <button key={p.id} onClick={() => addToCart(p)}
-                    
                     className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-[var(--shadow-card)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">{p.name}</div>
                     <div className="mt-2 flex items-center justify-between">
@@ -241,6 +288,24 @@ function PosPage() {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2 border-t mt-auto">
+                <span className="text-xs text-muted-foreground">Page {page + 1} / {totalPages} &nbsp;&bull;&nbsp; {totalCount.toLocaleString()} products</span>
+                <div className="flex gap-2">
+                  <button
+                    disabled={page === 0}
+                    onClick={() => setPage(p => p - 1)}
+                    className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
+                  >← Prev</button>
+                  <button
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage(p => p + 1)}
+                    className="px-3 py-1 text-sm rounded border bg-card hover:bg-muted disabled:opacity-40"
+                  >Next →</button>
+                </div>
               </div>
             )}
           </div>
