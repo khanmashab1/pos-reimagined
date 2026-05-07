@@ -120,7 +120,7 @@ function PosPage() {
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = scan.trim();
+    const code = scan.trim().replace(/[\s\-]/g, '');
     if (!code) return;
     // check current page first for speed, then fall back to DB lookup
     let prod: Product | undefined = products.find(p => p.barcode === code);
@@ -135,17 +135,51 @@ function PosPage() {
 
   const onCameraScan = useCallback(async (code: string) => {
     try {
-      let prod: Product | undefined = products.find(p => p.barcode === code);
+      // Normalize barcode: trim, remove special chars, keep only alphanumeric
+      const cleanCode = code.trim().replace(/[\s\-]/g, '');
+      console.log("Scanned barcode:", { raw: code, cleaned: cleanCode });
+      
+      let prod: Product | undefined = products.find(p => p.barcode === cleanCode);
       if (!prod) {
-        const { data, error } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
+        // Try exact match first
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("barcode", cleanCode)
+          .eq("is_active", true)
+          .maybeSingle();
+        
         if (error) {
+          console.error("Database error:", error);
           toast.error(`Error scanning product: ${error.message}`);
           return;
         }
+        
         prod = (data as Product) ?? undefined;
+        
+        // If not found, try case-insensitive search
+        if (!prod) {
+          const { data: fuzzyData, error: fuzzyError } = await supabase
+            .from("products")
+            .select("*")
+            .ilike("barcode", cleanCode)
+            .eq("is_active", true)
+            .maybeSingle();
+          
+          if (!fuzzyError) {
+            prod = (fuzzyData as Product) ?? undefined;
+          }
+        }
       }
-      if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
-      else toast.error(`Product not found: ${code}`);
+      
+      if (prod) { 
+        addToCart(prod); 
+        toast.success(`Scanned: ${prod.name}`); 
+      }
+      else {
+        console.warn("Product not found:", cleanCode);
+        toast.error(`Product not found: ${cleanCode}`);
+      }
     } catch (error) {
       console.error("Camera scan error:", error);
       toast.error(`Error scanning: ${error instanceof Error ? error.message : "Unknown error"}`);
