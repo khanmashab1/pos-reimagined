@@ -41,15 +41,28 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             aspectRatio: 1.0,
           },
           async (decodedText: string) => {
-            const code = decodedText.trim();
-            if (!code) return;
-            // stop camera first so it doesn't fire again while we look up
-            scanner.stop().catch(() => {});
-            onCloseRef.current();
             try {
-              await onScanRef.current(code);
+              const code = decodedText.trim();
+              if (!code) return;
+              
+              // stop camera first so it doesn't fire again while we process
+              try {
+                await scanner.stop();
+              } catch (stopErr) {
+                console.error("Error stopping scanner:", stopErr);
+              }
+              
+              // call the scan handler
+              try {
+                await onScanRef.current(code);
+              } catch (err) {
+                console.error("onScan handler error:", err);
+              }
+              
+              // close dialog after scan completes
+              onCloseRef.current();
             } catch (err) {
-              console.error("onScan handler error:", err);
+              console.error("Scan callback error:", err);
             }
           },
           () => {}
