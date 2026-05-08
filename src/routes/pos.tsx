@@ -53,6 +53,7 @@ function PosPage() {
   const [discountInput, setDiscountInput] = useState("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
+  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshSession = useCallback(async () => {
     const { data } = await supabase.rpc("get_open_session");
@@ -115,21 +116,7 @@ function PosPage() {
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
-  // keyboard shortcuts
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "F2") { e.preventDefault(); processSale(); }
-      if (e.key === "F4") { e.preventDefault(); if (confirm("Clear cart?")) setCart([]); }
-      if (e.key === "F10") {
-        e.preventDefault();
-        setDiscountInput(discount > 0 ? String(discount) : "");
-        setDiscountOpen(prev => !prev);
-      }
-      if (e.key === "Escape") { setDiscountOpen(false); scanRef.current?.focus(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
+
 
   const addToCart = (p: Product) => {
     setCart(prev => {
@@ -140,6 +127,74 @@ function PosPage() {
       return [...prev, { ...p, qty: 1 }];
     });
   };
+
+  // Global keyboard handler for scanning (handles both scanner devices and keyboard input)
+  useEffect(() => {
+    const handleGlobalKey = async (e: KeyboardEvent) => {
+      // F-key shortcuts remain unchanged
+      if (e.key === "F2") { e.preventDefault(); processSale(); return; }
+      if (e.key === "F4") { e.preventDefault(); if (confirm("Clear cart?")) setCart([]); return; }
+      if (e.key === "F10") {
+        e.preventDefault();
+        setDiscountInput(discount > 0 ? String(discount) : "");
+        setDiscountOpen(prev => !prev);
+        return;
+      }
+      if (e.key === "Escape") { setDiscountOpen(false); scanRef.current?.focus(); return; }
+      
+      // Auto-scan: accumulate keystrokes into scan buffer
+      if (!discountOpen && e.key !== "Enter") {
+        e.preventDefault();
+        // Clear previous timeout if exists
+        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+        
+        // Add character to scan buffer
+        setScan(prev => prev + e.key);
+        
+        // Reset scan buffer after 100ms of inactivity (barcode scanner auto-submit timing)
+        scanTimerRef.current = setTimeout(async () => {
+          setScan(prev => {
+            const code = prev.trim().replace(/[\s\-]/g, '');
+            if (!code) return "";
+            
+            // Look up product with fresh products state
+            (async () => {
+              let prod: Product | undefined = products.find(p => p.barcode === code);
+              if (!prod) {
+                const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
+                prod = (data as Product) ?? undefined;
+              }
+              if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
+              else toast.error("Product not found");
+            })();
+            return "";
+          });
+        }, 100);
+      }
+      
+      // Enter key submits the scan form normally
+      if (e.key === "Enter" && scan) {
+        e.preventDefault();
+        const code = scan.trim().replace(/[\s\-]/g, '');
+        if (code) {
+          let prod: Product | undefined = products.find(p => p.barcode === code);
+          if (!prod) {
+            const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
+            prod = (data as Product) ?? undefined;
+          }
+          if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
+          else toast.error("Product not found");
+          setScan("");
+        }
+      }
+    };
+    
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKey);
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+    };
+  }, [products, discount, discountOpen]);
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,7 +390,7 @@ function PosPage() {
                 <div className="relative flex-1">
                   <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
                   <Input ref={scanRef} className="pl-10 h-11 text-base" placeholder="Scan barcode or enter manually…"
-                    value={scan} onChange={e => setScan(e.target.value)} />
+                    value={scan} onChange={e => setScan(e.target.value)} autoComplete="off" />
                 </div>
               </form>
               <Button type="button" variant="outline" className="h-11 px-3" onClick={() => setCameraOpen(true)} title="Scan with camera">

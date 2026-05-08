@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Pencil, Search, Printer } from "lucide-react";
@@ -34,6 +34,38 @@ function genBarcode() {
 
 const PAGE_SIZE = 50;
 
+const StockBadge = ({ stock, minStockAlert }: { stock: number; minStockAlert: number }) => {
+  if (stock === 0) return <Badge variant="destructive">Out</Badge>;
+  if (stock <= minStockAlert) return <Badge className="bg-warning text-warning-foreground">Low ({stock})</Badge>;
+  return <Badge className="bg-success text-success-foreground">{stock}</Badge>;
+};
+
+const ProductRow = memo(({ p, cats, onOpenEdit, onSetPrinting, onRemove }: {
+  p: Product; cats: Cat[];
+  onOpenEdit: (p: Product) => void; onSetPrinting: (p: Product) => void; onRemove: (id: string) => void;
+}) => {
+  const catName = useMemo(() => cats.find(c => c.id === p.category_id)?.name ?? "—", [cats, p.category_id]);
+  return (
+    <tr className="hover:bg-muted/30">
+      <td className="px-4 py-3">
+        <div className="font-medium">{p.name}</div>
+        <div className="text-xs text-muted-foreground">{catName}</div>
+      </td>
+      <td className="px-4 py-3 font-mono text-xs">{p.barcode}</td>
+      <td className="px-4 py-3 text-right">{fmt(p.purchase_price)}</td>
+      <td className="px-4 py-3 text-right font-semibold">{fmt(p.sale_price)}</td>
+      <td className="px-4 py-3 text-center"><StockBadge stock={p.stock} minStockAlert={p.min_stock_alert} /></td>
+      <td className="px-4 py-3 text-right">
+        <div className="inline-flex gap-1">
+          <Button size="icon" variant="ghost" onClick={() => onSetPrinting(p)} title="Print barcode"><Printer className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={() => onOpenEdit(p)}><Pencil className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => onRemove(p.id)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 function ProductsPage() {
   const [items, setItems] = useState<Product[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
@@ -47,7 +79,7 @@ function ProductsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  const load = async (currentPage = page, currentSearch = search, currentFilter = filter) => {
+  const load = useCallback(async (currentPage = page, currentSearch = search, currentFilter = filter) => {
     setLoadingItems(true);
     let query = supabase
       .from("products")
@@ -68,22 +100,24 @@ function ProductsPage() {
     setTotalCount(count ?? 0);
     setCats((c ?? []) as Cat[]);
     setLoadingItems(false);
-  };
+  }, [page, search, filter]);
 
-  useEffect(() => { load(0, search, filter); setPage(0); }, [search, filter]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { load(page, search, filter); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const reload = () => load(page, search, filter);
+  useEffect(() => { load(0, search, filter); setPage(0); }, [search, filter, load]);
+  useEffect(() => { load(page, search, filter); }, [page, load]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  // filtering is now done server-side; items already contains the filtered page
   const filtered = items;
 
-  const openNew = () => { setForm({ ...empty, barcode: genBarcode() }); setEditing(null); setOpen(true); };
-  const openEdit = (p: Product) => { setForm({ ...p }); setEditing(p); setOpen(true); };
+  const openNew = useCallback(() => { setForm({ ...empty, barcode: genBarcode() }); setEditing(null); setOpen(true); }, []);
+  const openEdit = useCallback((p: Product) => { setForm({ ...p }); setEditing(p); setOpen(true); }, []);
+  const remove = useCallback(async (id: string) => {
+    if (!confirm("Delete this product?")) return;
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted"); load(page, search, filter);
+  }, [load, page, search, filter]);
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (!form.name.trim() || !form.barcode.trim()) return toast.error("Name and barcode are required");
     const payload = {
       ...form,
@@ -97,12 +131,7 @@ function ProductsPage() {
       if (error) return toast.error(error.message);
       toast.success("Product updated");
     } else {
-      // Check if barcode already exists
-      const { data: existing } = await supabase
-        .from("products")
-        .select("*")
-        .eq("barcode", payload.barcode)
-        .maybeSingle();
+      const { data: existing } = await supabase.from("products").select("*").eq("barcode", payload.barcode).maybeSingle();
       if (existing) {
         if (confirm(`Barcode already used by "${existing.name}". Open it for editing instead?`)) {
           setForm(existing as Product);
@@ -119,21 +148,12 @@ function ProductsPage() {
       }
       toast.success("Product added");
     }
-    setOpen(false); reload();
-  };
+    setOpen(false); load(page, search, filter);
+  }, [form, editing, load, page, search, filter]);
 
-  const remove = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Deleted"); reload();
-  };
-
-  const stockBadge = (p: Product) => {
-    if (p.stock === 0) return <Badge variant="destructive">Out</Badge>;
-    if (p.stock <= p.min_stock_alert) return <Badge className="bg-warning text-warning-foreground">Low ({p.stock})</Badge>;
-    return <Badge className="bg-success text-success-foreground">{p.stock}</Badge>;
-  };
+  const marginDisplay = useMemo(() => {
+    return form.sale_price > 0 ? (((form.sale_price - form.purchase_price) / form.sale_price) * 100).toFixed(1) : "0";
+  }, [form.sale_price, form.purchase_price]);
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -176,34 +196,24 @@ function ProductsPage() {
             </thead>
             <tbody className="divide-y">
               {loadingItems && (
-                <tr><td colSpan={6} className="text-center text-muted-foreground py-10">Loading…</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-10">Loading...</td></tr>
               )}
               {!loadingItems && filtered.length === 0 && (
                 <tr><td colSpan={6} className="text-center text-muted-foreground py-10">No products found.</td></tr>
               )}
               {filtered.map(p => (
-                <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{cats.find(c => c.id === p.category_id)?.name ?? "—"}</div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{p.barcode}</td>
-                  <td className="px-4 py-3 text-right">{fmt(p.purchase_price)}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{fmt(p.sale_price)}</td>
-                  <td className="px-4 py-3 text-center">{stockBadge(p)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setPrinting(p)} title="Print barcode"><Printer className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </td>
-                </tr>
+                <ProductRow
+                  key={p.id}
+                  p={p}
+                  cats={cats}
+                  onOpenEdit={openEdit}
+                  onSetPrinting={setPrinting}
+                  onRemove={remove}
+                />
               ))}
             </tbody>
           </table>
         </div>
-        {/* Pagination controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
             <span className="text-sm text-muted-foreground">
@@ -229,12 +239,12 @@ function ProductsPage() {
               <Label>Barcode</Label>
               <div className="flex gap-2">
                 <Input value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })} />
-                <Button type="button" variant="outline" onClick={() => setForm({ ...form, barcode: genBarcode() })}>Gen</Button>
+                <Button type="button" variant="outline" onClick={() => setForm(f => ({ ...f, barcode: genBarcode() }))}>Gen</Button>
               </div>
             </div>
             <div>
               <Label>Category</Label>
-              <Select value={form.category_id ?? "none"} onValueChange={v => setForm({ ...form, category_id: v === "none" ? null : v })}>
+              <Select value={form.category_id ?? "none"} onValueChange={v => setForm(f => ({ ...f, category_id: v === "none" ? null : v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— None —</SelectItem>
@@ -242,12 +252,12 @@ function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Purchase Price</Label><Input type="number" step="0.01" value={form.purchase_price} onChange={e => setForm({ ...form, purchase_price: +e.target.value })} /></div>
-            <div><Label>Sale Price</Label><Input type="number" step="0.01" value={form.sale_price} onChange={e => setForm({ ...form, sale_price: +e.target.value })} /></div>
-            <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={e => setForm({ ...form, stock: +e.target.value })} /></div>
-            <div><Label>Low Stock Alert</Label><Input type="number" value={form.min_stock_alert} onChange={e => setForm({ ...form, min_stock_alert: +e.target.value })} /></div>
+            <div><Label>Purchase Price</Label><Input type="number" step="0.01" value={form.purchase_price} onChange={e => setForm(f => ({ ...f, purchase_price: +e.target.value }))} /></div>
+            <div><Label>Sale Price</Label><Input type="number" step="0.01" value={form.sale_price} onChange={e => setForm(f => ({ ...f, sale_price: +e.target.value }))} /></div>
+            <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: +e.target.value }))} /></div>
+            <div><Label>Low Stock Alert</Label><Input type="number" value={form.min_stock_alert} onChange={e => setForm(f => ({ ...f, min_stock_alert: +e.target.value }))} /></div>
             <div className="col-span-2 text-sm text-muted-foreground">
-              Profit margin: <span className="font-semibold text-foreground">{form.sale_price > 0 ? (((form.sale_price - form.purchase_price) / form.sale_price) * 100).toFixed(1) : 0}%</span>
+              Profit margin: <span className="font-semibold text-foreground">{marginDisplay}%</span>
             </div>
           </div>
           <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
