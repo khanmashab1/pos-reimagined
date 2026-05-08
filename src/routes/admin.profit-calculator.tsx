@@ -62,21 +62,31 @@ function ProfitCalculator() {
       const fromIso = new Date(from + "T00:00:00").toISOString();
       const toIso = new Date(to + "T23:59:59.999").toISOString();
 
-      const { data: salesData, error: salesError } = await supabase
-        .from("sales")
-        .select("id,bill_no,cashier_name,subtotal,tax_amount,discount,total,created_at")
-        .gte("created_at", fromIso)
-        .lte("created_at", toIso)
-        .order("created_at", { ascending: true });
+      // Paginate through all sales (Supabase default cap is 1000 rows)
+      const SALES_PAGE = 1000;
+      let salesData: any[] = [];
+      let salesPage = 0;
+      while (true) {
+        const { data: batch, error: salesError } = await supabase
+          .from("sales")
+          .select("id,bill_no,cashier_name,subtotal,tax_amount,discount,total,created_at")
+          .gte("created_at", fromIso)
+          .lte("created_at", toIso)
+          .order("created_at", { ascending: true })
+          .range(salesPage * SALES_PAGE, salesPage * SALES_PAGE + SALES_PAGE - 1);
 
-      if (salesError) {
-        console.error("Sales fetch error:", salesError);
-        setError("Failed to load sales data");
-        setSales([]);
-        return;
+        if (salesError) {
+          console.error("Sales fetch error:", salesError);
+          setError("Failed to load sales data");
+          setSales([]);
+          return;
+        }
+        salesData = salesData.concat(batch ?? []);
+        if (!batch || batch.length < SALES_PAGE) break;
+        salesPage++;
       }
 
-      if (!salesData || salesData.length === 0) {
+      if (salesData.length === 0) {
         setSales([]);
         calculateMetrics([]);
         setError(null);
