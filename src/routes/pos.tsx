@@ -49,11 +49,14 @@ function PosPage() {
   const [startOpen, setStartOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [manualSearch, setManualSearch] = useState("");
+  const [manualResults, setManualResults] = useState<Product[]>([]);
+  const [manualLoading, setManualLoading] = useState(false);
+  const manualSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
-  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshSession = useCallback(async () => {
     const { data } = await supabase.rpc("get_open_session");
@@ -121,73 +124,16 @@ function PosPage() {
     });
   };
 
-  // Global keyboard handler for scanning (handles both scanner devices and keyboard input)
+  // F-key shortcuts only — no global scanner
   useEffect(() => {
-    const handleGlobalKey = async (e: KeyboardEvent) => {
-      // F-key shortcuts remain unchanged
-      if (e.key === "F2") { e.preventDefault(); processSale(); return; }
-      if (e.key === "F4") { e.preventDefault(); if (confirm("Clear cart?")) setCart([]); return; }
-      if (e.key === "F10") {
-        e.preventDefault();
-        setDiscountInput(discount > 0 ? String(discount) : "");
-        setDiscountOpen(prev => !prev);
-        return;
-      }
-      if (e.key === "Escape") { setDiscountOpen(false); scanRef.current?.focus(); return; }
-      
-      // Auto-scan: accumulate keystrokes into scan buffer
-      if (!discountOpen && e.key !== "Enter") {
-        e.preventDefault();
-        // Clear previous timeout if exists
-        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-        
-        // Add character to scan buffer
-        setScan(prev => prev + e.key);
-        
-        // Reset scan buffer after 100ms of inactivity (barcode scanner auto-submit timing)
-        scanTimerRef.current = setTimeout(async () => {
-          setScan(prev => {
-            const code = prev.trim().replace(/[\s\-]/g, '');
-            if (!code) return "";
-            
-            // Look up product with fresh products state
-            (async () => {
-              let prod: Product | undefined = products.find(p => p.barcode === code);
-              if (!prod) {
-                const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
-                prod = (data as Product) ?? undefined;
-              }
-              if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-              else toast.error("Product not found");
-            })();
-            return "";
-          });
-        }, 100);
-      }
-      
-      // Enter key submits the scan form normally
-      if (e.key === "Enter" && scan) {
-        e.preventDefault();
-        const code = scan.trim().replace(/[\s\-]/g, '');
-        if (code) {
-          let prod: Product | undefined = products.find(p => p.barcode === code);
-          if (!prod) {
-            const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
-            prod = (data as Product) ?? undefined;
-          }
-          if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-          else toast.error("Product not found");
-          setScan("");
-        }
-      }
+    const handleKeys = (e: KeyboardEvent) => {
+      if (e.key === "F2") { e.preventDefault(); processSale(); }
+      if (e.key === "F4") { e.preventDefault(); if (confirm("Clear cart?")) setCart([]); }
+      if (e.key === "Escape") { scanRef.current?.focus(); }
     };
-    
-    window.addEventListener("keydown", handleGlobalKey);
-    return () => {
-      window.removeEventListener("keydown", handleGlobalKey);
-      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-    };
-  }, [products, discount, discountOpen]);
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
+  }, []);
 
   const onScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,6 +202,26 @@ function PosPage() {
       toast.error(`Error scanning: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }, [products]);
+
+  // Manual search — queries DB globally, not just current page
+  useEffect(() => {
+    if (!searchOpen) return;
+    if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current);
+    manualSearchTimer.current = setTimeout(async () => {
+      setManualLoading(true);
+      let q = supabase.from("products").select("*").eq("is_active", true).order("name");
+      if (manualSearch.trim()) {
+        q = q.or(`name.ilike.%${manualSearch}%,barcode.ilike.%${manualSearch}%`);
+      }
+      q = q.range(0, 99);
+      const { data } = await q;
+      setManualResults((data ?? []) as Product[]);
+      setManualLoading(false);
+    }, manualSearch ? 300 : 0);
+    return () => { if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current); };
+  }, [manualSearch, searchOpen]);
+
+  const manualFiltered = manualResults;
 
   // filtering is done server-side; products already contains the right page
   const filtered = products;
@@ -518,7 +484,7 @@ function PosPage() {
       </div>
 
       {/* Product Search Modal */}
-      <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+      <Sheet open={searchOpen} onOpenChange={val => { setSearchOpen(val); if (!val) { setManualSearch(""); setManualResults([]); } }}>
         <SheetContent side="bottom" className="w-full h-[90vh] p-0 flex flex-col rounded-t-xl">
           <SheetHeader className="px-4 py-3 border-b flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
@@ -527,7 +493,7 @@ function PosPage() {
           </SheetHeader>
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="p-4 border-b flex-shrink-0 space-y-2">
-              <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className="h-10" />
+              <Input placeholder="Search products..." value={manualSearch} onChange={e => setManualSearch(e.target.value)} className="h-10" autoFocus />
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 <Button size="sm" variant={cat === "all" ? "default" : "outline"} onClick={() => setCat("all")}>All</Button>
                 {cats.map(c => (
@@ -537,12 +503,14 @@ function PosPage() {
             </div>
 
             <div className="flex-1 overflow-auto p-3">
-              {filtered.length === 0 ? (
-                <div className="text-center text-muted-foreground py-12">No products found.</div>
+              {manualLoading ? (
+                <div className="text-center text-muted-foreground py-12">Searching...</div>
+              ) : manualFiltered.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12">{manualSearch ? "No products found." : "Start typing to search."}</div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {filtered.map(p => (
-                    <button key={p.id} onClick={() => { addToCart(p); setSearchOpen(false); }}
+                  {manualFiltered.map(p => (
+                    <button key={p.id} onClick={() => { addToCart(p); setSearchOpen(false); setManualSearch(""); setManualResults([]); }}
                       className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex flex-col">
                       <div className="font-semibold text-sm line-clamp-2 flex-1">{p.name}</div>
                       <div className="mt-2 flex items-center justify-between">

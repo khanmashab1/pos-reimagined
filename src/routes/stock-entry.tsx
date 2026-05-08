@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { fmt } from "@/lib/format";
+import { Label } from "@/components/ui/label";
+import { Loader2, ArrowLeft, Plus, ScanLine, CheckCircle2, ClipboardList, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/stock-entry")({
@@ -14,135 +14,228 @@ export const Route = createFileRoute("/stock-entry")({
 });
 
 interface Product {
-  id: string;
-  barcode: string;
-  name: string;
-  stock: number;
-  category_id: string | null;
+  id: string; barcode: string; name: string; stock: number;
 }
 
-interface StockEntry {
-  product_id: string;
-  product_name: string;
-  qty: number;
-  notes: string;
+interface EntryRow {
+  product_id: string; product_name: string; barcode: string;
+  current_stock: number; qty: number; notes: string;
+}
+
+interface SubmitSummary {
+  entries: EntryRow[]; submittedAt: string; submittedBy: string;
 }
 
 function StockEntryPage() {
   const { loading, user, role, fullName } = useAuth();
   const navigate = useNavigate();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
-  const [entries, setEntries] = useState<StockEntry[]>([]);
+  const [showDrop, setShowDrop] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
+  const [entries, setEntries] = useState<EntryRow[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  const [summary, setSummary] = useState<SubmitSummary | null>(null);
+
+  const scanBuffer = useRef("");
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
-  // Load all products for search
   useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+        .from("products").select("id,barcode,name,stock")
+        .eq("is_active", true).order("name").range(0, 9999);
       setProducts((data ?? []) as Product[]);
     })();
   }, []);
 
-  const filtered = search.trim()
+  // Global barcode scanner
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (e.key === "Enter") {
+        const code = scanBuffer.current.trim();
+        scanBuffer.current = "";
+        if (scanTimer.current) clearTimeout(scanTimer.current);
+        if (!code) return;
+        const prod = products.find(p => p.barcode === code);
+        if (prod) { setSelectedProduct(prod); setSearch(prod.name); setQty(""); setNotes(""); setTimeout(() => qtyRef.current?.focus(), 50); }
+        else toast.error(`Barcode not found: ${code}`);
+        return;
+      }
+      if (e.key.length === 1) {
+        scanBuffer.current += e.key;
+        if (scanTimer.current) clearTimeout(scanTimer.current);
+        scanTimer.current = setTimeout(() => { scanBuffer.current = ""; }, 300);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [products]);
+
+  const filtered = search.trim() && !selectedProduct
     ? products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.barcode.includes(search)
-      )
+        p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search)
+      ).slice(0, 10)
     : [];
 
-  const selectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setSearch("");
-    setShowResults(false);
+  const selectProduct = (p: Product) => {
+    setSelectedProduct(p);
+    setSearch(p.name);
+    setShowDrop(false);
     setQty("");
     setNotes("");
+    setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
   const addEntry = () => {
-    if (!selectedProduct) {
-      toast.error("Select a product");
-      return;
-    }
-    if (!qty || Number(qty) <= 0) {
-      toast.error("Enter a valid quantity");
-      return;
-    }
+    if (!selectedProduct) return toast.error("Select a product first");
+    const qtyNum = Number(qty);
+    if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
 
-    setEntries([
-      ...entries,
-      {
+    const existing = entries.findIndex(e => e.product_id === selectedProduct.id);
+    if (existing >= 0) {
+      setEntries(prev => prev.map((e, i) =>
+        i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e
+      ));
+      toast.success(`Updated: ${selectedProduct.name}`);
+    } else {
+      setEntries(prev => [...prev, {
         product_id: selectedProduct.id,
         product_name: selectedProduct.name,
-        qty: Number(qty),
+        barcode: selectedProduct.barcode,
+        current_stock: selectedProduct.stock,
+        qty: qtyNum,
         notes,
-      },
-    ]);
-
+      }]);
+      toast.success(`Added: ${selectedProduct.name}`);
+    }
     setSelectedProduct(null);
+    setSearch("");
     setQty("");
     setNotes("");
-    toast.success("Entry added");
   };
 
-  const removeEntry = (index: number) => {
-    setEntries(entries.filter((_, i) => i !== index));
-  };
+  const removeEntry = (idx: number) => setEntries(e => e.filter((_, i) => i !== idx));
 
   const submitEntries = async () => {
-    if (entries.length === 0) {
-      toast.error("No stock entries to submit");
-      return;
-    }
-
+    if (entries.length === 0) return toast.error("No entries to submit");
     setProcessing(true);
     try {
       const results = await Promise.all(
-        entries.map(entry =>
-          supabase.rpc("add_stock_entry", {
-            _product_id: entry.product_id,
-            _qty: entry.qty,
-            _notes: entry.notes || null,
-          })
-        )
+        entries.map(e => supabase.rpc("add_stock_entry", {
+          _product_id: e.product_id, _qty: e.qty, _notes: e.notes || null,
+        }))
       );
-
       const errors = results.filter(r => r.error);
-      if (errors.length > 0) {
-        toast.error(`Error: ${errors[0].error.message}`);
-        return;
-      }
-
-      toast.success(`${entries.length} stock entry(ies) recorded!`);
+      if (errors.length > 0) return toast.error(errors[0].error.message);
+      toast.success(`${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted!`);
+      setSummary({ entries: [...entries], submittedAt: new Date().toISOString(), submittedBy: fullName ?? "" });
       setEntries([]);
-    } catch (error) {
-      console.error("Submit error:", error);
-      toast.error(`Error submitting entries: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setProcessing(false);
     }
   };
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+  );
+
+  // ── SUMMARY SCREEN ───────────────────────────────────────────────────
+  if (summary) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="border-b bg-card p-4 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setSummary(null)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" /> Submitted
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {summary.submittedBy} · {new Date(summary.submittedAt).toLocaleString()}
+            </p>
+          </div>
+        </header>
+        <div className="flex-1 overflow-auto p-4 max-w-3xl mx-auto w-full space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4 border-l-4 border-l-green-500">
+              <div className="text-xs text-muted-foreground">Products Restocked</div>
+              <div className="text-3xl font-bold text-green-600">{summary.entries.length}</div>
+            </Card>
+            <Card className="p-4 border-l-4 border-l-blue-500">
+              <div className="text-xs text-muted-foreground">Total Units Added</div>
+              <div className="text-3xl font-bold text-blue-600">{summary.entries.reduce((s, e) => s + e.qty, 0)}</div>
+            </Card>
+          </div>
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3">Product</th>
+                    <th className="text-left px-4 py-3">Barcode</th>
+                    <th className="text-right px-4 py-3">Before</th>
+                    <th className="text-right px-4 py-3">Added</th>
+                    <th className="text-right px-4 py-3">After</th>
+                    <th className="text-left px-4 py-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {summary.entries.map((e, i) => (
+                    <tr key={i} className="hover:bg-muted/40">
+                      <td className="px-4 py-3 font-medium">{e.product_name}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{e.barcode}</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{e.current_stock}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
+                      <td className="px-4 py-3 text-right font-bold">{e.current_stock + e.qty}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          {role === "admin" && (
+            <Card className="p-4 border-l-4 border-l-purple-500 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-sm">Full Stock Entry History</div>
+                <div className="text-xs text-muted-foreground">View all entries from all cashiers</div>
+              </div>
+              <Button asChild size="sm">
+                <Link to="/admin/stock-summary"><ClipboardList className="h-4 w-4 mr-2" /> View</Link>
+              </Button>
+            </Card>
+          )}
+          <div className="grid grid-cols-2 gap-3 pb-4">
+            <Button variant="outline" onClick={() => setSummary(null)}>
+              <Plus className="h-4 w-4 mr-2" /> New Entry
+            </Button>
+            <Button asChild>
+              <Link to="/pos"><ArrowLeft className="h-4 w-4 mr-2" /> Back to POS</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  // ── MAIN FORM ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -150,130 +243,164 @@ function StockEntryPage() {
               <Link to="/pos"><ArrowLeft className="h-5 w-5" /></Link>
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Stock Entry</h1>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                <Package className="h-5 w-5" /> Stock Entry
+              </h1>
               <p className="text-xs text-muted-foreground">{fullName}</p>
             </div>
           </div>
+          {role === "admin" && (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/stock-summary"><ClipboardList className="h-4 w-4 mr-2" /> History</Link>
+            </Button>
+          )}
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-4 max-w-2xl mx-auto w-full">
-        <div className="space-y-4">
-          {/* Search and select product */}
-          <Card className="p-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Product</label>
-              <div className="relative">
+      <div className="flex-1 overflow-auto p-6 max-w-2xl mx-auto w-full space-y-6">
+
+        {/* Add stock form — styled like admin Add Product */}
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Add Stock</h2>
+          <div className="grid grid-cols-2 gap-4">
+
+            {/* Product search — full width */}
+            <div className="col-span-2 relative">
+              <Label>Product</Label>
+              <div className="relative mt-1">
+                <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search product by name or barcode..."
+                  className="pl-9"
+                  placeholder="Search by name or scan barcode..."
                   value={search}
                   onChange={e => {
                     setSearch(e.target.value);
-                    setShowResults(true);
+                    setSelectedProduct(null);
+                    setShowDrop(true);
                   }}
-                  onFocus={() => search && setShowResults(true)}
+                  onFocus={() => setShowDrop(true)}
+                  onBlur={() => setTimeout(() => setShowDrop(false), 150)}
                 />
-                {showResults && filtered.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-10 max-h-48 overflow-auto">
+                {showDrop && filtered.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-20 max-h-52 overflow-auto">
                     {filtered.map(p => (
                       <button
                         key={p.id}
-                        onClick={() => selectProduct(p)}
-                        className="w-full text-left px-4 py-2 hover:bg-muted transition-colors border-b last:border-0"
+                        onMouseDown={() => selectProduct(p)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors border-b last:border-0"
                       >
                         <div className="font-medium text-sm">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Stock: {p.stock} | Barcode: {p.barcode}
-                        </div>
+                        <div className="text-xs text-muted-foreground">Stock: {p.stock} · {p.barcode}</div>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-
               {selectedProduct && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="text-sm">
-                    <div className="font-medium">{selectedProduct.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Current Stock: {selectedProduct.stock}
-                    </div>
-                  </div>
+                <div className="mt-2 text-xs text-muted-foreground px-1">
+                  Current stock: <span className="font-semibold text-foreground">{selectedProduct.stock}</span>
+                  &nbsp;·&nbsp;{selectedProduct.barcode}
                 </div>
               )}
             </div>
-          </Card>
 
-          {/* Quantity and notes */}
-          {selectedProduct && (
-            <Card className="p-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium block mb-1">Quantity to Add</label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={qty}
-                    onChange={e => setQty(e.target.value)}
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Notes (optional)</label>
-                  <Input
-                    placeholder="e.g., Received from supplier, New batch..."
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                  />
-                </div>
-                <Button onClick={addEntry} className="w-full">
-                  <Plus className="h-4 w-4 mr-2" /> Add Entry
-                </Button>
-              </div>
-            </Card>
-          )}
+            {/* Qty */}
+            <div>
+              <Label>Quantity to Add</Label>
+              <Input
+                ref={qtyRef}
+                type="number"
+                min="1"
+                placeholder="0"
+                value={qty}
+                onChange={e => setQty(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addEntry()}
+                className="mt-1"
+              />
+            </div>
 
-          {/* Entries list */}
-          {entries.length > 0 && (
-            <Card className="p-4">
-              <div className="space-y-2">
-                <div className="font-semibold text-sm">Stock Entries ({entries.length})</div>
-                <div className="space-y-2 max-h-48 overflow-auto">
-                  {entries.map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{entry.product_name}</div>
-                        <div className="text-xs text-muted-foreground">+{entry.qty} units</div>
-                        {entry.notes && <div className="text-xs text-muted-foreground italic">{entry.notes}</div>}
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => removeEntry(idx)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
+            {/* Notes */}
+            <div>
+              <Label>Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+              <Input
+                placeholder="e.g. New batch, Supplier..."
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addEntry()}
+                className="mt-1"
+              />
+            </div>
 
-          {/* Submit button */}
-          {entries.length > 0 && (
-            <Button
-              onClick={submitEntries}
-              disabled={processing}
-              className="w-full h-10 text-base"
-              size="lg"
-            >
-              {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Submit {entries.length} {entries.length === 1 ? "Entry" : "Entries"}
-            </Button>
-          )}
-        </div>
+            {/* Add button — full width */}
+            <div className="col-span-2">
+              <Button onClick={addEntry} className="w-full">
+                <Plus className="h-4 w-4 mr-2" /> Add to List
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            💡 Physical barcode scanner works anywhere on this page
+          </p>
+        </Card>
+
+        {/* Entries table */}
+        <Card className="overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/30">
+            <span className="font-semibold text-sm">
+              Entries {entries.length > 0 && `(${entries.length})`}
+            </span>
+            {entries.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                +{entries.reduce((s, e) => s + e.qty, 0)} total units
+              </span>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-3">Product</th>
+                  <th className="text-right px-4 py-3">Current Stock</th>
+                  <th className="text-right px-4 py-3">Adding</th>
+                  <th className="text-left px-4 py-3">Notes</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {entries.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted-foreground py-12">
+                      No entries yet. Fill the form above and click Add to List.
+                    </td>
+                  </tr>
+                ) : (
+                  entries.map((e, idx) => (
+                    <tr key={idx} className="hover:bg-muted/40">
+                      <td className="px-4 py-3 font-medium">{e.product_name}</td>
+                      <td className="px-4 py-3 text-right">{e.current_stock}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeEntry(idx)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {entries.length > 0 && (
+          <Button onClick={submitEntries} disabled={processing} className="w-full" size="lg">
+            {processing
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
+              : <><CheckCircle2 className="h-4 w-4 mr-2" /> Submit {entries.length} Entr{entries.length === 1 ? "y" : "ies"}</>
+            }
+          </Button>
+        )}
       </div>
     </div>
   );
