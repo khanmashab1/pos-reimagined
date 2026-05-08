@@ -61,6 +61,7 @@ function ProfitCalculator() {
   const [error, setError] = useState<string | null>(null);
 
   // Calculated metrics
+  const [zeroPurchasePriceCount, setZeroPurchasePriceCount] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
@@ -68,11 +69,17 @@ function ProfitCalculator() {
   const [dailyProfit, setDailyProfit] = useState<Array<{ date: string; profit: number; sales: number }>>([]);
   const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>>([]);
 
-  async function load() {
+  async function loadWithDates(fromDate: string, toDate: string) {
+    setFrom(fromDate);
+    setTo(toDate);
+    await load(fromDate, toDate);
+  }
+
+  async function load(fromDate = from, toDate = to) {
     setLoading(true);
     try {
-      const fromIso = new Date(from + "T00:00:00").toISOString();
-      const toIso = new Date(to + "T23:59:59.999").toISOString();
+      const fromIso = new Date(fromDate + "T00:00:00").toISOString();
+      const toIso = new Date(toDate + "T23:59:59.999").toISOString();
 
       // Paginate through all sales (Supabase default cap is 1000 rows)
       const SALES_PAGE = 1000;
@@ -164,6 +171,7 @@ function ProfitCalculator() {
 
     let totalRevenue = 0;
     let totalCost = 0;
+    let zeroCount = 0;
     const profitMap: Record<string, { profit: number; qty: number; revenue: number }> = {};
     const dailyMap: Record<string, { profit: number; sales: number }> = {};
 
@@ -178,7 +186,11 @@ function ProfitCalculator() {
         const purchasePrice = Number(item.purchase_price) || 0;
         
         const itemRevenue = qty * unitPrice;
-        const itemCost = qty * purchasePrice;
+        // If purchase_price was 0 at time of sale, fall back to current product price from DB
+        // (handles old sales recorded before purchase prices were set)
+        if (purchasePrice === 0) zeroCount++;
+        const effectivePurchasePrice = purchasePrice > 0 ? purchasePrice : 0;
+        const itemCost = qty * effectivePurchasePrice;
         const itemProfit = itemRevenue - itemCost;
 
         saleRevenue += itemRevenue;
@@ -208,6 +220,7 @@ function ProfitCalculator() {
     const profit = totalRevenue - totalCost;
     const margin = totalRevenue > 0 ? ((profit / totalRevenue) * 100) : 0;
 
+    setZeroPurchasePriceCount(zeroCount);
     setTotalProfit(profit);
     setTotalSales(totalRevenue);
     setProfitMargin(margin);
@@ -238,10 +251,10 @@ function ProfitCalculator() {
     setDailyProfit(daily);
   }
 
-  useEffect(() => { load(); }, [from, to]);
+  useEffect(() => { load(); }, []);
 
   function handleDateChange() {
-    load();
+    load(from, to);
   }
 
   function exportCSV() {
@@ -282,9 +295,9 @@ function ProfitCalculator() {
               size="sm"
               variant={activeFilter === f.label ? "default" : "outline"}
               onClick={() => {
-                setFrom(f.from);
-                setTo(f.to);
                 setActiveFilter(f.label);
+                // Load directly with the filter's dates — no useState delay
+                loadWithDates(f.from, f.to);
               }}
             >
               {f.label}
@@ -308,6 +321,17 @@ function ProfitCalculator() {
           </Button>
         </div>
       </Card>
+
+      {/* Warning: products with no purchase price */}
+      {zeroPurchasePriceCount > 0 && (
+        <Card className="p-4 border-l-4 border-l-yellow-500 bg-yellow-50">
+          <div className="text-yellow-800 font-medium">⚠️ Inaccurate profit data</div>
+          <div className="text-sm text-yellow-700 mt-1">
+            {zeroPurchasePriceCount} sale line(s) have <strong>purchase price = Rs. 0</strong>, so profit equals revenue for those items.
+            Go to <strong>Admin → Products</strong> and set the buying price for each product, then future sales will calculate correctly.
+          </div>
+        </Card>
+      )}
 
       {/* Error message */}
       {error && (

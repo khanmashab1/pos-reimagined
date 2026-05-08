@@ -81,9 +81,12 @@ function PosPage() {
   }, []);
 
   // load products page (server-side search + category filter)
+  // Debounced product fetch — 300ms delay on search, instant on page/cat
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    fetchTimerRef.current = setTimeout(async () => {
       try {
         let q = supabase
           .from("products")
@@ -94,24 +97,14 @@ function PosPage() {
         if (cat !== "all") q = q.eq("category_id", cat);
         if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
         const { data: p, count, error } = await q;
-        
-        if (error) {
-          console.error("Error fetching products:", error);
-          return;
-        }
-        
-        if (!cancelled) {
-          setProducts((p ?? []) as Product[]);
-          setTotalCount(count ?? 0);
-        }
-      } catch (err) {
-        console.error("Products fetch error:", err);
-      }
-    })();
-    return () => { cancelled = true; };
+        if (error) { console.error("Products fetch error:", error); return; }
+        if (!cancelled) { setProducts((p ?? []) as Product[]); setTotalCount(count ?? 0); }
+      } catch (err) { console.error("Products fetch error:", err); }
+    }, search ? 350 : 0);
+    return () => { cancelled = true; if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current); };
   }, [page, search, cat]);
 
-  // reset to page 0 when search or category changes
+  // Reset to page 0 when search or category changes
   useEffect(() => { setPage(0); }, [search, cat]);
 
   useEffect(() => { scanRef.current?.focus(); }, []);
