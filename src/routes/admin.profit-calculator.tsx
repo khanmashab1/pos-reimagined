@@ -39,11 +39,23 @@ interface SaleWithItems {
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function daysAgo(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
 
+const QUICK_FILTERS = [
+  { label: "All Time",   from: "2000-01-01",  to: todayStr() },
+  { label: "Today",      from: todayStr(),     to: todayStr() },
+  { label: "This Week",  from: daysAgo(6),     to: todayStr() },
+  { label: "This Month", from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), to: todayStr() },
+  { label: "Last Month", from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0, 10) },
+  { label: "This Year",  from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10), to: todayStr() },
+  { label: "Last 30d",   from: daysAgo(29),    to: todayStr() },
+  { label: "Last 90d",   from: daysAgo(89),    to: todayStr() },
+];
+
 const COLORS = ["hsl(142 71% 45%)", "hsl(210 90% 56%)", "hsl(38 92% 50%)", "hsl(0 84% 60%)", "hsl(280 85% 65%)"];
 
 function ProfitCalculator() {
-  const [from, setFrom] = useState(daysAgo(30));
+  const [from, setFrom] = useState("2000-01-01");
   const [to, setTo] = useState(todayStr());
+  const [activeFilter, setActiveFilter] = useState("All Time");
   const [sales, setSales] = useState<SaleWithItems[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +238,7 @@ function ProfitCalculator() {
     setDailyProfit(daily);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [from, to]);
 
   function handleDateChange() {
     load();
@@ -261,19 +273,35 @@ function ProfitCalculator() {
         <p className="text-muted-foreground">Analyze revenue, costs, and profitability</p>
       </div>
 
-      {/* Date range filter */}
-      <Card className="p-5">
+      {/* Quick filter buttons */}
+      <Card className="p-4">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {QUICK_FILTERS.map(f => (
+            <Button
+              key={f.label}
+              size="sm"
+              variant={activeFilter === f.label ? "default" : "outline"}
+              onClick={() => {
+                setFrom(f.from);
+                setTo(f.to);
+                setActiveFilter(f.label);
+              }}
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
         <div className="grid md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <div>
             <Label>From</Label>
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+            <Input type="date" value={from} onChange={e => { setFrom(e.target.value); setActiveFilter("Custom"); }} />
           </div>
           <div>
             <Label>To</Label>
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} />
+            <Input type="date" value={to} onChange={e => { setTo(e.target.value); setActiveFilter("Custom"); }} />
           </div>
           <Button onClick={handleDateChange} disabled={loading}>
-            Load
+            {loading ? "Loading..." : "Load"}
           </Button>
           <Button variant="outline" onClick={exportCSV} disabled={!profitByProduct.length}>
             <Download className="h-4 w-4 mr-2" /> Export CSV
