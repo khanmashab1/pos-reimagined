@@ -46,12 +46,13 @@ function ProfitCalculator() {
   const [to, setTo] = useState(todayStr());
   const [sales, setSales] = useState<SaleWithItems[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Calculated metrics
   const [totalProfit, setTotalProfit] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
-  const [profitByProduct, setProfitByProduct] = useState<Array<{ name: string; profit: number; qty: number; margin: number }>>([]);
+  const [profitByProduct, setProfitByProduct] = useState<Array<{ name: string; profit: number; qty: number; margin: number; revenue: number }>>([]);
   const [dailyProfit, setDailyProfit] = useState<Array<{ date: string; profit: number; sales: number }>>([]);
   const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>([]);
 
@@ -61,31 +62,60 @@ function ProfitCalculator() {
       const fromIso = new Date(from + "T00:00:00").toISOString();
       const toIso = new Date(to + "T23:59:59.999").toISOString();
 
-      const { data } = await supabase
+      const { data: salesData, error: salesError } = await supabase
         .from("sales")
         .select("id,bill_no,cashier_name,subtotal,tax_amount,discount,total,created_at")
         .gte("created_at", fromIso)
         .lte("created_at", toIso)
         .order("created_at", { ascending: true });
 
-      if (!data) {
+      if (salesError) {
+        console.error("Sales fetch error:", salesError);
+        setError("Failed to load sales data");
         setSales([]);
         return;
       }
 
-      // Fetch sale items for each sale
-      const salesWithItems = await Promise.all(
-        (data as any[]).map(async (s) => {
-          const { data: items } = await supabase
-            .from("sale_items")
-            .select("product_id,product_name,barcode,qty,unit_price,purchase_price,subtotal")
-            .eq("sale_id", s.id);
-          return { ...s, sale_items: items ?? [] };
-        })
-      );
+      if (!salesData || salesData.length === 0) {
+        setSales([]);
+        calculateMetrics([]);
+        setError(null);
+        return;
+      }
+
+      // Fetch all sale items for the period at once
+      const saleIds = (salesData as any[]).map(s => s.id);
+      const { data: allItems, error: itemsError } = await supabase
+        .from("sale_items")
+        .select("sale_id,product_id,product_name,barcode,qty,unit_price,purchase_price,subtotal")
+        .in("sale_id", saleIds);
+
+      if (itemsError) {
+        console.error("Items fetch error:", itemsError);
+        setError("Failed to load sale items");
+        return;
+      }
+
+      // Group items by sale_id
+      const itemsBySale: Record<string, any[]> = {};
+      (allItems ?? []).forEach((item: any) => {
+        if (!itemsBySale[item.sale_id]) itemsBySale[item.sale_id] = [];
+        itemsBySale[item.sale_id].push(item);
+      });
+
+      // Combine sales with their items
+      const salesWithItems = (salesData as any[]).map(s => ({
+        ...s,
+        sale_items: itemsBySale[s.id] ?? [],
+      }));
 
       setSales(salesWithItems);
       calculateMetrics(salesWithItems);
+      setError(null);
+    } catch (err) {
+      console.error("Load error:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      setSales([]);
     } finally {
       setLoading(false);
     }
@@ -113,20 +143,24 @@ function ProfitCalculator() {
       let saleRevenue = 0;
 
       for (const item of sale.sale_items) {
-        const itemRevenue = item.qty * item.unit_price;
-        const itemCost = item.qty * item.purchase_price;
+        const qty = Number(item.qty) || 0;
+        const unitPrice = Number(item.unit_price) || 0;
+        const purchasePrice = Number(item.purchase_price) || 0;
+        
+        const itemRevenue = qty * unitPrice;
+        const itemCost = qty * purchasePrice;
         const itemProfit = itemRevenue - itemCost;
 
         saleRevenue += itemRevenue;
         saleCost += itemCost;
 
         // Track by product
-        const productKey = item.product_name;
+        const productKey = item.product_name || "Unknown";
         if (!profitMap[productKey]) {
           profitMap[productKey] = { profit: 0, qty: 0, revenue: 0 };
         }
         profitMap[productKey].profit += itemProfit;
-        profitMap[productKey].qty += item.qty;
+        profitMap[productKey].qty += qty;
         profitMap[productKey].revenue += itemRevenue;
       }
 
@@ -154,6 +188,7 @@ function ProfitCalculator() {
         name,
         profit: data.profit,
         qty: data.qty,
+        revenue: data.revenue,
         margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0,
       }))
       .sort((a, b) => b.profit - a.profit);
@@ -185,8 +220,8 @@ function ProfitCalculator() {
       ...profitByProduct.map(p => [
         p.name,
         p.qty,
-        p.margin > 0 ? (p.profit / (p.margin / 100)) : 0,
-        (p.profit / (p.margin / 100)) - p.profit,
+        p.revenue,
+        p.revenue - p.profit,
         p.profit,
         p.margin.toFixed(2),
       ]),
@@ -227,6 +262,14 @@ function ProfitCalculator() {
           </Button>
         </div>
       </Card>
+
+      {/* Error message */}
+      {error && (
+        <Card className="p-4 border-l-4 border-l-red-500 bg-red-50">
+          <div className="text-red-700 font-medium">{error}</div>
+          <div className="text-sm text-red-600 mt-1">Please check the date range and try again.</div>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid md:grid-cols-3 gap-4">
@@ -308,24 +351,20 @@ function ProfitCalculator() {
                   <td colSpan={6} className="text-center py-8 text-muted-foreground">No sales data for selected period</td>
                 </tr>
               ) : (
-                profitByProduct.map((p, i) => {
-                  const revenue = p.margin > 0 ? p.profit / (p.margin / 100) : 0;
-                  const cost = revenue - p.profit;
-                  return (
-                    <tr key={i} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-2 font-medium">{p.name}</td>
-                      <td className="text-right px-4 py-2">{p.qty}</td>
-                      <td className="text-right px-4 py-2">{fmt(revenue)}</td>
-                      <td className="text-right px-4 py-2">{fmt(cost)}</td>
-                      <td className="text-right px-4 py-2 font-semibold text-green-600">{fmt(p.profit)}</td>
-                      <td className="text-right px-4 py-2">
-                        <span className={`font-semibold ${p.margin >= 30 ? "text-green-600" : p.margin >= 15 ? "text-yellow-600" : "text-red-600"}`}>
-                          {p.margin.toFixed(2)}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                profitByProduct.map((p, i) => (
+                  <tr key={i} className="border-b hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-2 font-medium">{p.name}</td>
+                    <td className="text-right px-4 py-2">{p.qty}</td>
+                    <td className="text-right px-4 py-2">{fmt(p.revenue)}</td>
+                    <td className="text-right px-4 py-2">{fmt(p.revenue - p.profit)}</td>
+                    <td className="text-right px-4 py-2 font-semibold text-green-600">{fmt(p.profit)}</td>
+                    <td className="text-right px-4 py-2">
+                      <span className={`font-semibold ${p.margin >= 30 ? "text-green-600" : p.margin >= 15 ? "text-yellow-600" : "text-red-600"}`}>
+                        {p.margin.toFixed(2)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
