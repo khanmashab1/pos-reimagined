@@ -150,58 +150,35 @@ function PosPage() {
     setScan("");
   };
 
+  // Use a ref so onCameraScan never changes reference — prevents BarcodeScanner from restarting
+  const productsRef = useRef<Product[]>([]);
+  useEffect(() => { productsRef.current = products; }, [products]);
+
   const onCameraScan = useCallback(async (code: string) => {
     try {
-      // Normalize barcode: trim, remove special chars, keep only alphanumeric
       const cleanCode = code.trim().replace(/[\s\-]/g, '');
-      console.log("Scanned barcode:", { raw: code, cleaned: cleanCode });
-      
-      let prod: Product | undefined = products.find(p => p.barcode === cleanCode);
+      // Check current page first for speed
+      let prod: Product | undefined = productsRef.current.find(p => p.barcode === cleanCode);
       if (!prod) {
-        // Try exact match first
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .eq("barcode", cleanCode)
-          .eq("is_active", true)
-          .maybeSingle();
-        
-        if (error) {
-          console.error("Database error:", error);
-          toast.error(`Error scanning product: ${error.message}`);
-          return;
-        }
-        
+        // Always fall back to DB — works regardless of pagination
+        const { data } = await supabase
+          .from("products").select("*")
+          .eq("barcode", cleanCode).eq("is_active", true).maybeSingle();
         prod = (data as Product) ?? undefined;
-        
-        // If not found, try case-insensitive search
-        if (!prod) {
-          const { data: fuzzyData, error: fuzzyError } = await supabase
-            .from("products")
-            .select("*")
-            .ilike("barcode", cleanCode)
-            .eq("is_active", true)
-            .maybeSingle();
-          
-          if (!fuzzyError) {
-            prod = (fuzzyData as Product) ?? undefined;
-          }
-        }
       }
-      
-      if (prod) { 
-        addToCart(prod); 
-        toast.success(`Scanned: ${prod.name}`); 
+      if (!prod) {
+        // Try case-insensitive
+        const { data } = await supabase
+          .from("products").select("*")
+          .ilike("barcode", cleanCode).eq("is_active", true).maybeSingle();
+        prod = (data as Product) ?? undefined;
       }
-      else {
-        console.warn("Product not found:", cleanCode);
-        toast.error(`Product not found: ${cleanCode}`);
-      }
-    } catch (error) {
-      console.error("Camera scan error:", error);
-      toast.error(`Error scanning: ${error instanceof Error ? error.message : "Unknown error"}`);
+      if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
+      else toast.error(`Product not found: ${cleanCode}`);
+    } catch (err) {
+      toast.error(`Scan error: ${err instanceof Error ? err.message : "Unknown"}`);
     }
-  }, [products]);
+  }, []); // ← no dependencies — stable reference forever
 
   // Manual search — queries DB globally, not just current page
   useEffect(() => {
