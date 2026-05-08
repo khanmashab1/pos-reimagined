@@ -85,15 +85,23 @@ function ProfitCalculator() {
 
       // Fetch all sale items for the period at once
       const saleIds = (salesData as any[]).map(s => s.id);
-      const { data: allItems, error: itemsError } = await supabase
-        .from("sale_items")
-        .select("sale_id,product_id,product_name,barcode,qty,unit_price,purchase_price,subtotal")
-        .in("sale_id", saleIds);
 
-      if (itemsError) {
-        console.error("Items fetch error:", itemsError);
-        setError("Failed to load sale items");
-        return;
+      // Batch fetch sale_items in chunks of 200 to avoid Supabase .in() URL length limits
+      const CHUNK = 200;
+      let allItems: any[] = [];
+      for (let i = 0; i < saleIds.length; i += CHUNK) {
+        const chunk = saleIds.slice(i, i + CHUNK);
+        const { data: chunkItems, error: itemsError } = await supabase
+          .from("sale_items")
+          .select("sale_id,product_id,product_name,barcode,qty,unit_price,purchase_price,subtotal")
+          .in("sale_id", chunk)
+          .range(0, 9999);
+        if (itemsError) {
+          console.error("Items fetch error:", itemsError);
+          setError("Failed to load sale items");
+          return;
+        }
+        allItems = allItems.concat(chunkItems ?? []);
       }
 
       // Group items by sale_id

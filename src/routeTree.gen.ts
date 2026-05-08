@@ -22,6 +22,7 @@ import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit-calculator'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
@@ -91,6 +92,11 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProfitCalculatorRoute = AdminProfitCalculatorRouteImport.update({
+  id: '/profit-calculator',
+  path: '/profit-calculator',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
+    | '/admin/profit-calculator'
     | '/admin/reports'
     | '/admin/returns'
     | '/admin/settings'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
+    | '/admin/profit-calculator'
     | '/admin/reports'
     | '/admin/returns'
     | '/admin/settings'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/products'
+    | '/admin/profit-calculator'
     | '/admin/reports'
     | '/admin/returns'
     | '/admin/settings'
@@ -321,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/profit-calculator': {
+      id: '/admin/profit-calculator'
+      path: '/profit-calculator'
+      fullPath: '/admin/profit-calculator'
+      preLoaderRoute: typeof AdminProfitCalculatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/products': {
       id: '/admin/products'
       path: '/products'
@@ -349,6 +368,7 @@ interface AdminRouteChildren {
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminProfitCalculatorRoute: typeof AdminProfitCalculatorRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminReturnsRoute: typeof AdminReturnsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -362,6 +382,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminProfitCalculatorRoute: AdminProfitCalculatorRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminReturnsRoute: AdminReturnsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
