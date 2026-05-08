@@ -150,35 +150,17 @@ function PosPage() {
     setScan("");
   };
 
-  // Use a ref so onCameraScan never changes reference — prevents BarcodeScanner from restarting
-  const productsRef = useRef<Product[]>([]);
-  useEffect(() => { productsRef.current = products; }, [products]);
-
-  const onCameraScan = useCallback(async (code: string) => {
-    try {
-      const cleanCode = code.trim().replace(/[\s\-]/g, '');
-      // Check current page first for speed
-      let prod: Product | undefined = productsRef.current.find(p => p.barcode === cleanCode);
-      if (!prod) {
-        // Always fall back to DB — works regardless of pagination
-        const { data } = await supabase
-          .from("products").select("*")
-          .eq("barcode", cleanCode).eq("is_active", true).maybeSingle();
-        prod = (data as Product) ?? undefined;
-      }
-      if (!prod) {
-        // Try case-insensitive
-        const { data } = await supabase
-          .from("products").select("*")
-          .ilike("barcode", cleanCode).eq("is_active", true).maybeSingle();
-        prod = (data as Product) ?? undefined;
-      }
-      if (prod) { addToCart(prod); toast.success(`Scanned: ${prod.name}`); }
-      else toast.error(`Product not found: ${cleanCode}`);
-    } catch (err) {
-      toast.error(`Scan error: ${err instanceof Error ? err.message : "Unknown"}`);
-    }
-  }, []); // ← no dependencies — stable reference forever
+  // Camera scan — always queries DB directly, no stale closure issues
+  const handleCameraScan = async (code: string) => {
+    const clean = code.trim();
+    if (!clean) return;
+    const { data } = await supabase
+      .from("products").select("*")
+      .eq("barcode", clean).eq("is_active", true).maybeSingle();
+    const prod = data as Product | null;
+    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
+    else toast.error(`Product not found: ${clean}`);
+  };
 
   // Manual search — queries DB globally, not just current page
   useEffect(() => {
@@ -522,7 +504,7 @@ function PosPage() {
       </Sheet>
 
       {lastReceipt && <Receipt sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
-      <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={onCameraScan} />
+      <BarcodeScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onScan={handleCameraScan} />
       <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
