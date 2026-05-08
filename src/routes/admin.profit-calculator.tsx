@@ -54,7 +54,7 @@ function ProfitCalculator() {
   const [totalSales, setTotalSales] = useState(0);
   const [profitByProduct, setProfitByProduct] = useState<Array<{ name: string; profit: number; qty: number; margin: number; revenue: number }>>([]);
   const [dailyProfit, setDailyProfit] = useState<Array<{ date: string; profit: number; sales: number }>>([]);
-  const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>([]);
+  const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>>([]);
 
   async function load() {
     setLoading(true);
