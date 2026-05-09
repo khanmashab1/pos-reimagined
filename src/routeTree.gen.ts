@@ -24,6 +24,7 @@ import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit-calculator'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 
@@ -102,6 +103,11 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLowStockRoute = AdminLowStockRouteImport.update({
+  id: '/low-stock',
+  path: '/low-stock',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/stock-entry': typeof StockEntryRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
     | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
+    | '/admin/low-stock'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
+    | '/admin/low-stock'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/stock-entry'
     | '/admin/categories'
     | '/admin/dashboard'
+    | '/admin/low-stock'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -347,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/low-stock': {
+      id: '/admin/low-stock'
+      path: '/low-stock'
+      fullPath: '/admin/low-stock'
+      preLoaderRoute: typeof AdminLowStockRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/dashboard'
@@ -367,6 +386,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminLowStockRoute: typeof AdminLowStockRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminProfitCalculatorRoute: typeof AdminProfitCalculatorRoute
   AdminReportsRoute: typeof AdminReportsRoute
@@ -381,6 +401,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminLowStockRoute: AdminLowStockRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminProfitCalculatorRoute: AdminProfitCalculatorRoute,
   AdminReportsRoute: AdminReportsRoute,
