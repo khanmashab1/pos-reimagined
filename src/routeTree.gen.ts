@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as StockEntryRouteImport } from './routes/stock-entry'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as PosRouteImport } from './routes/pos'
@@ -28,6 +29,11 @@ import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 
+const SuppliersRoute = SuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockEntryRoute = StockEntryRouteImport.update({
   id: '/stock-entry',
   path: '/stock-entry',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
+  '/suppliers': typeof SuppliersRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
+  '/suppliers': typeof SuppliersRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
+  '/suppliers': typeof SuppliersRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/returns'
     | '/stock-entry'
+    | '/suppliers'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/low-stock'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/returns'
     | '/stock-entry'
+    | '/suppliers'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/low-stock'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/returns'
     | '/stock-entry'
+    | '/suppliers'
     | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/low-stock'
@@ -250,10 +262,18 @@ export interface RootRouteChildren {
   PosRoute: typeof PosRoute
   ReturnsRoute: typeof ReturnsRoute
   StockEntryRoute: typeof StockEntryRoute
+  SuppliersRoute: typeof SuppliersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/suppliers': {
+      id: '/suppliers'
+      path: '/suppliers'
+      fullPath: '/suppliers'
+      preLoaderRoute: typeof SuppliersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stock-entry': {
       id: '/stock-entry'
       path: '/stock-entry'
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   PosRoute: PosRoute,
   ReturnsRoute: ReturnsRoute,
   StockEntryRoute: StockEntryRoute,
+  SuppliersRoute: SuppliersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
