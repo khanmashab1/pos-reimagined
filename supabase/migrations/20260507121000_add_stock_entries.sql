@@ -60,3 +60,6 @@ begin
   );
 end;
 $$;
+
+revoke execute on function public.add_stock_entry(uuid, integer, text) from public, anon;
+grant  execute on function public.add_stock_entry(uuid, integer, text) to authenticated;

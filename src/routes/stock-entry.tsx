@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -49,14 +49,14 @@ function StockEntryPage() {
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("products").select("id,barcode,name,stock")
-        .eq("is_active", true).order("name").range(0, 9999);
-      setProducts((data ?? []) as Product[]);
-    })();
+  const fetchProducts = useCallback(async () => {
+    const { data } = await supabase
+      .from("products").select("id,barcode,name,stock")
+      .eq("is_active", true).order("name").range(0, 9999);
+    setProducts((data ?? []) as Product[]);
   }, []);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   // Global barcode scanner
   useEffect(() => {
@@ -138,7 +138,7 @@ function StockEntryPage() {
         }))
       );
       const errors = results.filter(r => r.error);
-      if (errors.length > 0) return toast.error(errors[0].error.message);
+      if (errors.length > 0) return toast.error(errors[0]!.error!.message);
       toast.success(`${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted!`);
       setSummary({ entries: [...entries], submittedAt: new Date().toISOString(), submittedBy: fullName ?? "" });
       setEntries([]);
@@ -221,7 +221,7 @@ function StockEntryPage() {
             </Card>
           )}
           <div className="grid grid-cols-2 gap-3 pb-4">
-            <Button variant="outline" onClick={() => setSummary(null)}>
+            <Button variant="outline" onClick={() => { setSummary(null); fetchProducts(); }}>
               <Plus className="h-4 w-4 mr-2" /> New Entry
             </Button>
             <Button asChild>
