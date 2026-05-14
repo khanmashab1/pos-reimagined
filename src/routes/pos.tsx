@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import {
   Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store,
   LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard,
-  Banknote, RotateCcw, Package, Tag,
+  Banknote, RotateCcw, Package, Tag, Truck,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -257,6 +257,9 @@ function PosPage() {
           </Button>
           <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3">
             <Link to="/returns"><RotateCcw className="h-4 w-4" /><span className="hidden sm:inline ml-1 text-xs">Return</span></Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent">
+            <Link to="/suppliers"><Truck className="h-4 w-4" /><span className="hidden sm:inline ml-1 text-xs">Suppliers</span></Link>
           </Button>
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3">
