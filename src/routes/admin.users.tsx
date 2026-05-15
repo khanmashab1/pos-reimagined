@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createUser } from "@/server/users.functions";
+import { createUser } from "@/lib/users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,

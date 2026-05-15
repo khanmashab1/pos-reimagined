@@ -22,13 +22,11 @@ export const createUser = createServerFn({ method: "POST" })
       throw new Error("Missing Supabase environment variables");
     }
 
-    // Create a Supabase client authenticated as the calling user
     const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       global: { headers: { Authorization: `Bearer ${data.token}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Verify caller is admin
     const { data: claims, error: claimsErr } = await userClient.auth.getUser();
     if (claimsErr || !claims?.user) throw new Error("Unauthorized");
 
@@ -44,7 +42,6 @@ export const createUser = createServerFn({ method: "POST" })
     if (roleErr) throw new Error(roleErr.message);
     if (!roleRow) throw new Error("Only admins can create users");
 
-    // Create the auth user (auto-confirmed so they can sign in immediately)
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -61,8 +58,6 @@ export const createUser = createServerFn({ method: "POST" })
 
     const newUserId = created.user.id;
 
-    // The handle_new_user trigger should create profile + default role.
-    // But ensure they exist as a safety net.
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
       .select("id")
@@ -78,7 +73,6 @@ export const createUser = createServerFn({ method: "POST" })
       });
     }
 
-    // Upsert the requested role
     const { error: roleUpdateErr } = await supabaseAdmin
       .from("user_roles")
       .update({ role: data.role })
@@ -91,7 +85,6 @@ export const createUser = createServerFn({ method: "POST" })
       );
     }
 
-    // Audit log
     const callerName = claims.user.user_metadata?.full_name ?? "Admin";
     await supabaseAdmin.from("user_audit_log").insert({
       actor_id: userId,
