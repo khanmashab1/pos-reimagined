@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart,
   LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList,
-  Truck, TrendingUp, AlertTriangle,
+  Truck, TrendingUp, AlertTriangle, Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ const items = [
   { to: "/admin/reports", label: "Sales Reports", icon: FileBarChart },
   { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
 
