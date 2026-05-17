@@ -91,7 +91,13 @@ export function useBarcodeScanner({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       streamRef.current = stream;
-      if (!videoRef.current) videoRef.current = document.createElement("video");
+      if (!videoRef.current) {
+        videoRef.current = document.createElement("video");
+        videoRef.current.style.width = "100%";
+        videoRef.current.style.height = "100%";
+        videoRef.current.style.objectFit = "cover";
+        videoRef.current.style.display = "block";
+      }
       const video = videoRef.current;
       video.srcObject = stream;
       video.setAttribute("playsinline", "true");
