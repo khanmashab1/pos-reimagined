@@ -45,10 +45,6 @@ async function startFallbackScanner(
     ? { deviceId: { exact: deviceId } }
     : { facingMode: "environment" };
 
-  const container = document.getElementById(elementId);
-  const containerWidth = container?.clientWidth || 300;
-  const qrboxSize = Math.floor(containerWidth * 0.8);
-
   await scanner.start(
     videoConstraints,
     {
@@ -72,8 +68,6 @@ async function startFallbackScanner(
 }
 
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-  const videoElRef = useRef<HTMLVideoElement | null>(null);
   const [fallbackError, setFallbackError] = useState<string | null>(null);
   const html5ScannerRef = useRef<Html5QrcodeScanner | null>(null);
 
@@ -82,40 +76,25 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     setTimeout(() => onScan(code), 200);
   };
 
-  const { videoRef, canvasRef, scanning, error, isSupported, start, stop } = useBarcodeScanner({
+  const { videoRef, scanning, error, isSupported, start, stop } = useBarcodeScanner({
     onScan: handleScan,
     fps: 10,
     facingMode: "environment",
   });
 
-  // Primary: custom canvas-based scanner (Chromium)
   useEffect(() => {
     if (!open || !isSupported) return;
     let cancelled = false;
-    const container = videoContainerRef.current;
     const timer = setTimeout(async () => {
       await start();
-      if (!cancelled && videoRef.current && container) {
-        container.appendChild(videoRef.current);
-        videoElRef.current = videoRef.current;
-      }
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(timer);
       stop();
-      if (videoElRef.current && container) {
-        try {
-          container.removeChild(videoElRef.current);
-        } catch {
-          // element may already be removed
-        }
-        videoElRef.current = null;
-      }
     };
-  }, [open, isSupported, start, stop, videoRef]);
+  }, [open, isSupported, start, stop]);
 
-  // Inject CSS to force video element visible in html5-qrcode
   useEffect(() => {
     if (!isSupported) {
       const style = document.createElement("style");
@@ -156,7 +135,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     }
   }, [isSupported]);
 
-  // Fallback: html5-qrcode for non-Chromium browsers (Firefox, Safari)
   useEffect(() => {
     if (!open || isSupported) return;
     let cancelled = false;
@@ -197,23 +175,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const handleRetry = () => {
     if (isSupported) {
       stop();
-      if (videoElRef.current && videoContainerRef.current) {
-        try {
-          videoContainerRef.current.removeChild(videoElRef.current);
-        } catch {
-          // element may already be removed
-        }
-        videoElRef.current = null;
-      }
       setTimeout(async () => {
         await start();
-        if (videoRef.current && videoContainerRef.current) {
-          videoContainerRef.current.appendChild(videoRef.current);
-          videoElRef.current = videoRef.current;
-        }
       }, 200);
     } else {
-      // Retry fallback scanner
       setFallbackError(null);
       if (html5ScannerRef.current) {
         html5ScannerRef.current.stop().catch(() => {});
@@ -258,10 +223,18 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         </DialogHeader>
         <div className="space-y-3">
           <div
-            ref={videoContainerRef}
             id={!isSupported ? "qr-reader-fallback" : undefined}
-            className="w-full rounded-lg overflow-hidden min-h-[300px] bg-black relative"
+            className="relative w-full h-80 overflow-hidden rounded-lg bg-black"
           >
+            {isSupported && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
             {scanning && isSupported && (
               <div className="absolute inset-0 pointer-events-none z-10">
                 <div className="absolute inset-0 border-2 border-primary/50 rounded-lg" />
@@ -269,7 +242,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               </div>
             )}
             {!currentScanning && !currentError && (
-              <div className="min-h-[300px] flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-sm text-muted-foreground">Starting camera...</span>
               </div>
             )}

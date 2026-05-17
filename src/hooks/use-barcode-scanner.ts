@@ -26,8 +26,8 @@ export function useBarcodeScanner({
 }: UseBarcodeScannerOptions) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastDetectTimeRef = useRef(0);
@@ -91,24 +91,15 @@ export function useBarcodeScanner({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       streamRef.current = stream;
-      if (!videoRef.current) {
-        videoRef.current = document.createElement("video");
-        videoRef.current.style.width = "100%";
-        videoRef.current.style.height = "100%";
-        videoRef.current.style.objectFit = "cover";
-        videoRef.current.style.display = "block";
-        videoRef.current.style.position = "absolute";
-        videoRef.current.style.top = "0";
-        videoRef.current.style.left = "0";
-        videoRef.current.style.zIndex = "1";
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.setAttribute("muted", "true");
-        videoRef.current.setAttribute("autoplay", "true");
-      }
+
+      if (!videoRef.current) return;
       const video = videoRef.current;
       video.srcObject = stream;
-      video.setAttribute("playsinline", "true");
+      video.onloadedmetadata = () => {
+        video.play().catch(() => {});
+      };
       await video.play();
+
       if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
       setScanning(true);
       rafRef.current = requestAnimationFrame(detectFrame);
@@ -142,5 +133,5 @@ export function useBarcodeScanner({
     [stop],
   );
 
-  return { videoRef, canvasRef, scanning, error, isSupported, start, stop };
+  return { videoRef, scanning, error, isSupported, start, stop };
 }
