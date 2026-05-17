@@ -14,6 +14,63 @@ interface Html5QrcodeScanner {
   stop: () => Promise<void>;
 }
 
+async function getBackCameraDeviceId(): Promise<string | null> {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((d) => d.kind === "videoinput");
+    const backCamera = videoDevices.find(
+      (d) =>
+        d.label.toLowerCase().includes("back") ||
+        d.label.toLowerCase().includes("rear") ||
+        d.label.toLowerCase().includes("environment"),
+    );
+    if (backCamera?.deviceId) return backCamera.deviceId;
+    return videoDevices.length > 0 ? videoDevices[videoDevices.length - 1].deviceId : null;
+  } catch {
+    return null;
+  }
+}
+
+async function startFallbackScanner(
+  elementId: string,
+  onCode: (code: string) => void,
+  scannerRef: React.MutableRefObject<Html5QrcodeScanner | null>,
+): Promise<void> {
+  const { Html5Qrcode } = await import("html5-qrcode");
+  const scanner = new Html5Qrcode(elementId);
+  scannerRef.current = scanner;
+
+  const deviceId = await getBackCameraDeviceId();
+  const videoConstraints: MediaTrackConstraints = deviceId
+    ? { deviceId: { exact: deviceId } }
+    : { facingMode: "environment" };
+
+  const container = document.getElementById(elementId);
+  const containerWidth = container?.clientWidth || 300;
+  const qrboxSize = Math.floor(containerWidth * 0.8);
+
+  await scanner.start(
+    videoConstraints,
+    {
+      fps: 10,
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
+        width: Math.min(viewfinderWidth, viewfinderHeight) * 0.7,
+        height: Math.min(viewfinderWidth, viewfinderHeight) * 0.4,
+      }),
+      aspectRatio: 1.777778,
+    },
+    (code: string) => {
+      scanner
+        .stop()
+        .catch(() => {})
+        .finally(() => {
+          onCode(code.trim());
+        });
+    },
+    () => {},
+  );
+}
+
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
@@ -65,24 +122,16 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     setFallbackError(null);
     const timer = setTimeout(async () => {
       try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        const scanner = new Html5Qrcode("qr-reader-fallback");
-        html5ScannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 150 } },
-          (code: string) => {
-            if (cancelled) return;
-            cancelled = true;
-            scanner
-              .stop()
-              .catch(() => {})
-              .finally(() => {
-                onClose();
-                setTimeout(() => onScan(code.trim()), 200);
-              });
+        await startFallbackScanner(
+          "qr-reader-fallback",
+          (code) => {
+            if (!cancelled) {
+              cancelled = true;
+              onClose();
+              setTimeout(() => onScan(code), 200);
+            }
           },
-          () => {},
+          html5ScannerRef,
         );
       } catch (e: unknown) {
         if (!cancelled) {
@@ -131,22 +180,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }
       setTimeout(async () => {
         try {
-          const { Html5Qrcode } = await import("html5-qrcode");
-          const scanner = new Html5Qrcode("qr-reader-fallback");
-          html5ScannerRef.current = scanner;
-          await scanner.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            (code: string) => {
-              scanner
-                .stop()
-                .catch(() => {})
-                .finally(() => {
-                  onClose();
-                  setTimeout(() => onScan(code.trim()), 200);
-                });
+          await startFallbackScanner(
+            "qr-reader-fallback",
+            (code) => {
+              onClose();
+              setTimeout(() => onScan(code), 200);
             },
-            () => {},
+            html5ScannerRef,
           );
         } catch (e: unknown) {
           const msg = (e as Error)?.message?.toLowerCase() || "";
