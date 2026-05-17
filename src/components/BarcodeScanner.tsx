@@ -115,6 +115,47 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     };
   }, [open, isSupported, start, stop, videoRef]);
 
+  // Inject CSS to force video element visible in html5-qrcode
+  useEffect(() => {
+    if (!isSupported) {
+      const style = document.createElement("style");
+      style.id = "scanner-video-fix";
+      style.textContent = `
+        #qr-reader-fallback video,
+        #reader video,
+        #qr-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          display: block !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          z-index: 1 !important;
+          background: black !important;
+          border-radius: 8px;
+        }
+        #qr-reader-fallback,
+        #reader,
+        #qr-reader {
+          min-height: 300px !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+        #qr-reader-fallback > div,
+        #reader > div,
+        #qr-reader > div {
+          position: relative !important;
+          z-index: 2 !important;
+        }
+      `;
+      document.head.appendChild(style);
+      return () => {
+        document.getElementById("scanner-video-fix")?.remove();
+      };
+    }
+  }, [isSupported]);
+
   // Fallback: html5-qrcode for non-Chromium browsers (Firefox, Safari)
   useEffect(() => {
     if (!open || isSupported) return;
@@ -219,7 +260,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           <div
             ref={videoContainerRef}
             id={!isSupported ? "qr-reader-fallback" : undefined}
-            className="w-full rounded-lg overflow-hidden min-h-[200px] bg-muted relative"
+            className="w-full rounded-lg overflow-hidden min-h-[300px] bg-black relative"
           >
             {scanning && isSupported && (
               <div className="absolute inset-0 pointer-events-none z-10">
@@ -228,7 +269,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               </div>
             )}
             {!currentScanning && !currentError && (
-              <div className="min-h-[200px] flex items-center justify-center">
+              <div className="min-h-[300px] flex items-center justify-center">
                 <span className="text-sm text-muted-foreground">Starting camera...</span>
               </div>
             )}
