@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, Search, FileBarChart, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { fmt } from "@/lib/format";
 import { Receipt } from "@/components/Receipt";
 
@@ -27,6 +34,7 @@ function ReportsPage() {
   const [from, setFrom] = useState(daysAgo(7));
   const [to, setTo] = useState(todayStr());
   const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
@@ -49,7 +57,7 @@ function ReportsPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, from, to]);
+  }, [search, from, to, paymentFilter]);
 
   useEffect(() => {
     load();
@@ -57,9 +65,10 @@ function ReportsPage() {
 
   const filtered = sales.filter(
     (s) =>
-      !search ||
-      s.bill_no.toLowerCase().includes(search.toLowerCase()) ||
-      s.cashier_name.toLowerCase().includes(search.toLowerCase()),
+      (!search ||
+        s.bill_no.toLowerCase().includes(search.toLowerCase()) ||
+        s.cashier_name.toLowerCase().includes(search.toLowerCase())) &&
+      (paymentFilter === "all" || s.payment_type === paymentFilter),
   );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -146,7 +155,7 @@ function ReportsPage() {
       </div>
 
       <Card className="p-5">
-        <div className="grid md:grid-cols-[1fr_1fr_2fr_auto_auto] gap-3 items-end">
+        <div className="grid md:grid-cols-[1fr_1fr_1.5fr_1fr_auto_auto] gap-3 items-end">
           <div>
             <Label>From</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -162,6 +171,21 @@ function ReportsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+          <div>
+            <Label>Payment</Label>
+            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="easypasa">EasyPaisa</SelectItem>
+                <SelectItem value="jazzcash">JazzCash</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={load} disabled={loading}>
             <Search className="h-4 w-4 mr-1" /> Apply
