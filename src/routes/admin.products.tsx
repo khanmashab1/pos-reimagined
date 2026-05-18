@@ -141,6 +141,7 @@ function ProductsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loadingItems, setLoadingItems] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [searchScannerOpen, setSearchScannerOpen] = useState(false);
 
   const load = useCallback(
     async (currentPage = page, currentSearch = search, currentFilter = filter) => {
@@ -260,14 +261,25 @@ function ProductsPage() {
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search by name or barcode"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Search by name or barcode"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setSearchScannerOpen(true)}
+              title="Scan barcode to search"
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
           </div>
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-48">
@@ -460,6 +472,14 @@ function ProductsPage() {
         onScan={(code) => {
           setForm((f) => ({ ...f, barcode: code }));
           setScannerOpen(false);
+        }}
+      />
+      <BarcodeScanner
+        open={searchScannerOpen}
+        onClose={() => setSearchScannerOpen(false)}
+        onScan={(code) => {
+          setSearch(code);
+          setSearchScannerOpen(false);
         }}
       />
     </div>
