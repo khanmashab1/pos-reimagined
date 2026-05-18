@@ -205,7 +205,7 @@ function PosPage() {
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
         cashier_name: fullName, created_at: new Date().toISOString(),
       });
-      setCart([]); setCash(""); setDiscount(0);
+      setCart([]); setCash(""); setDiscount(0); setPaymentMethod("cash");
       try {
         let q = supabase.from("products").select("*", { count: "exact" }).eq("is_active", true).order("name")
           .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
