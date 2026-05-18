@@ -10,66 +10,10 @@ interface BarcodeScannerProps {
   onScan: (code: string) => void;
 }
 
-interface Html5QrcodeScanner {
-  stop: () => Promise<void>;
-}
-
-async function getBackCameraDeviceId(): Promise<string | null> {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter((d) => d.kind === "videoinput");
-    const backCamera = videoDevices.find(
-      (d) =>
-        d.label.toLowerCase().includes("back") ||
-        d.label.toLowerCase().includes("rear") ||
-        d.label.toLowerCase().includes("environment"),
-    );
-    if (backCamera?.deviceId) return backCamera.deviceId;
-    return videoDevices.length > 0 ? videoDevices[videoDevices.length - 1].deviceId : null;
-  } catch {
-    return null;
-  }
-}
-
-async function startFallbackScanner(
-  elementId: string,
-  onCode: (code: string) => void,
-  scannerRef: React.MutableRefObject<Html5QrcodeScanner | null>,
-): Promise<void> {
-  const { Html5Qrcode } = await import("html5-qrcode");
-  const scanner = new Html5Qrcode(elementId);
-  scannerRef.current = scanner;
-
-  const deviceId = await getBackCameraDeviceId();
-  const videoConstraints: MediaTrackConstraints = deviceId
-    ? { deviceId: { exact: deviceId } }
-    : { facingMode: "environment" };
-
-  await scanner.start(
-    videoConstraints,
-    {
-      fps: 10,
-      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
-        width: Math.min(viewfinderWidth, viewfinderHeight) * 0.7,
-        height: Math.min(viewfinderWidth, viewfinderHeight) * 0.4,
-      }),
-      aspectRatio: 1.777778,
-    },
-    (code: string) => {
-      scanner
-        .stop()
-        .catch(() => {})
-        .finally(() => {
-          onCode(code.trim());
-        });
-    },
-    () => {},
-  );
-}
-
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [fallbackError, setFallbackError] = useState<string | null>(null);
-  const html5ScannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const [fallbackScanning, setFallbackScanning] = useState(false);
+  const quaggaInitRef = useRef(false);
 
   const handleScan = (code: string) => {
     onClose();
@@ -96,62 +40,68 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   }, [open, isSupported, start, stop]);
 
   useEffect(() => {
-    if (!isSupported) {
-      const style = document.createElement("style");
-      style.id = "scanner-video-fix";
-      style.textContent = `
-        #qr-reader-fallback video,
-        #reader video,
-        #qr-reader video {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: cover !important;
-          display: block !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          z-index: 1 !important;
-          background: black !important;
-          border-radius: 8px;
-        }
-        #qr-reader-fallback,
-        #reader,
-        #qr-reader {
-          min-height: 300px !important;
-          position: relative !important;
-          overflow: hidden !important;
-        }
-        #qr-reader-fallback > div,
-        #reader > div,
-        #qr-reader > div {
-          position: relative !important;
-          z-index: 2 !important;
-        }
-      `;
-      document.head.appendChild(style);
-      return () => {
-        document.getElementById("scanner-video-fix")?.remove();
-      };
-    }
-  }, [isSupported]);
+    if (!open || isSupported || quaggaInitRef.current) return;
 
-  useEffect(() => {
-    if (!open || isSupported) return;
     let cancelled = false;
     setFallbackError(null);
+    quaggaInitRef.current = true;
+
     const timer = setTimeout(async () => {
       try {
-        await startFallbackScanner(
-          "qr-reader-fallback",
-          (code) => {
+        const Quagga = (await import("@ericblade/quagga2")).default;
+
+        Quagga.init(
+          {
+            inputStream: {
+              type: "LiveStream",
+              target: document.getElementById("quagga-container")!,
+              constraints: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            },
+            decoder: {
+              readers: [
+                "ean_reader",
+                "ean_8_reader",
+                "code_128_reader",
+                "code_39_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "i2of5_reader",
+                "codabar_reader",
+              ],
+            },
+            locate: true,
+            frequency: 10,
+          },
+          (err: Error | null) => {
+            if (err) {
+              console.error("Quagga init error:", err);
+              setFallbackError("Camera not available. Please allow camera access.");
+              quaggaInitRef.current = false;
+              return;
+            }
             if (!cancelled) {
-              cancelled = true;
-              onClose();
-              setTimeout(() => onScan(code), 200);
+              setFallbackScanning(true);
+              Quagga.start();
             }
           },
-          html5ScannerRef,
         );
+
+        Quagga.onDetected((result: { codeResult: { code: string } }) => {
+          if (cancelled) return;
+          const code = result.codeResult?.code;
+          if (code) {
+            cancelled = true;
+            Quagga.stop();
+            quaggaInitRef.current = false;
+            setFallbackScanning(false);
+            onClose();
+            setTimeout(() => onScan(code.trim()), 200);
+          }
+        });
       } catch (e: unknown) {
         if (!cancelled) {
           const msg = (e as Error)?.message?.toLowerCase() || "";
@@ -159,16 +109,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             setFallbackError("Camera access denied. Please allow camera permissions.");
           else if (msg.includes("notfound")) setFallbackError("No camera found.");
           else setFallbackError("Camera not available.");
+          quaggaInitRef.current = false;
         }
       }
     }, 300);
+
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      if (html5ScannerRef.current) {
-        html5ScannerRef.current.stop().catch(() => {});
-        html5ScannerRef.current = null;
-      }
+      import("@ericblade/quagga2").then((m) => m.default.stop()).catch(() => {});
+      quaggaInitRef.current = false;
+      setFallbackScanning(false);
     };
   }, [open, isSupported, onClose, onScan]);
 
@@ -180,33 +131,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }, 200);
     } else {
       setFallbackError(null);
-      if (html5ScannerRef.current) {
-        html5ScannerRef.current.stop().catch(() => {});
-        html5ScannerRef.current = null;
-      }
-      setTimeout(async () => {
-        try {
-          await startFallbackScanner(
-            "qr-reader-fallback",
-            (code) => {
-              onClose();
-              setTimeout(() => onScan(code), 200);
-            },
-            html5ScannerRef,
-          );
-        } catch (e: unknown) {
-          const msg = (e as Error)?.message?.toLowerCase() || "";
-          if (msg.includes("permission") || msg.includes("notallowed"))
-            setFallbackError("Camera access denied. Please allow camera permissions.");
-          else if (msg.includes("notfound")) setFallbackError("No camera found.");
-          else setFallbackError("Camera not available.");
-        }
+      import("@ericblade/quagga2").then((m) => m.default.stop()).catch(() => {});
+      quaggaInitRef.current = false;
+      setFallbackScanning(false);
+      setTimeout(() => {
+        setFallbackError(null);
       }, 200);
     }
   };
 
   const currentError = isSupported ? error : fallbackError;
-  const currentScanning = isSupported ? scanning : !currentError && open;
+  const currentScanning = isSupported ? scanning : fallbackScanning;
 
   return (
     <Dialog
@@ -223,7 +158,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         </DialogHeader>
         <div className="space-y-3">
           <div
-            id={!isSupported ? "qr-reader-fallback" : undefined}
+            id={!isSupported ? "quagga-container" : undefined}
             className="relative w-full h-80 overflow-hidden rounded-lg bg-black"
           >
             {isSupported && (
