@@ -51,7 +51,7 @@ export function BarcodeLabel({ product, onClose }: Props) {
     if (!w) return;
 
     const imgTag = barcodeDataUrl
-      ? `<img src="${barcodeDataUrl}" style="width:44mm;height:14mm;" />`
+      ? `<img src="${barcodeDataUrl}" style="width:35mm;height:8mm;" />`
       : `<div style="font-size:8pt;">${product.barcode}</div>`;
 
     const labels = Array.from({ length: copies }).map(() => `
@@ -66,13 +66,13 @@ export function BarcodeLabel({ product, onClose }: Props) {
     w.document.write(`
       <html><head><title>Barcode</title>
       <style>
-        @page { size: 50mm 30mm; margin: 1mm; }
+        @page { size: 37.34mm 25.4mm; margin: 1mm; }
         body { margin: 0; font-family: Arial, sans-serif; }
-        .label { width: 48mm; height: 28mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; padding: 1mm; box-sizing: border-box; }
-        .shop { font-size: 7pt; font-weight: bold; }
-        .name { font-size: 7pt; max-width: 46mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-        .price { font-size: 9pt; font-weight: bold; margin-top: 1mm; }
-        img { width: 44mm; }
+        .label { width: 35.34mm; height: 23.4mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; padding: 1mm; box-sizing: border-box; }
+        .shop { font-size: 6pt; font-weight: bold; }
+        .name { font-size: 6pt; max-width: 34mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+        .price { font-size: 8pt; font-weight: bold; margin-top: 0.5mm; }
+        img { width: 35mm; }
       </style>
       </head><body>${labels}<scr` + `ipt>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);}</scr` + `ipt></body></html>`);
     w.document.close();
