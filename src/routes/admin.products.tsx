@@ -358,8 +358,8 @@ function ProductsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit" : "Add"} Product</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="space-y-4">
+            <div>
               <Label>Product Name</Label>
               <Input
                 value={form.name}
@@ -370,6 +370,7 @@ function ProductsPage() {
               <Label>Barcode</Label>
               <div className="flex gap-2">
                 <Input
+                  className="flex-1 font-mono tracking-wide"
                   value={form.barcode}
                   onChange={(e) => setForm({ ...form, barcode: e.target.value })}
                 />
@@ -406,41 +407,43 @@ function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Purchase Price</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.purchase_price}
-                onChange={(e) => setForm((f) => ({ ...f, purchase_price: +e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Purchase Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.purchase_price}
+                  onChange={(e) => setForm((f) => ({ ...f, purchase_price: +e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Sale Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.sale_price}
+                  onChange={(e) => setForm((f) => ({ ...f, sale_price: +e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Stock</Label>
+                <Input
+                  type="number"
+                  value={form.stock}
+                  onChange={(e) => setForm((f) => ({ ...f, stock: +e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Low Stock Alert</Label>
+                <Input
+                  type="number"
+                  value={form.min_stock_alert}
+                  onChange={(e) => setForm((f) => ({ ...f, min_stock_alert: +e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <Label>Sale Price</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.sale_price}
-                onChange={(e) => setForm((f) => ({ ...f, sale_price: +e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Stock</Label>
-              <Input
-                type="number"
-                value={form.stock}
-                onChange={(e) => setForm((f) => ({ ...f, stock: +e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Low Stock Alert</Label>
-              <Input
-                type="number"
-                value={form.min_stock_alert}
-                onChange={(e) => setForm((f) => ({ ...f, min_stock_alert: +e.target.value }))}
-              />
-            </div>
-            <div className="col-span-2 text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               Profit margin: <span className="font-semibold text-foreground">{marginDisplay}%</span>
             </div>
           </div>
