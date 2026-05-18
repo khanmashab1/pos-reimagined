@@ -5,11 +5,33 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, TrendingUp, Package, Percent } from "lucide-react";
+import { Download, TrendingUp, Package, Percent, AlertTriangle, Loader2, Save } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { fmt } from "@/lib/format";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ComposedChart, Area, AreaChart,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  AreaChart,
 } from "recharts";
 
 export const Route = createFileRoute("/admin/profit-calculator")({
@@ -36,21 +58,47 @@ interface SaleWithItems {
   }>;
 }
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
-function daysAgo(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function daysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
 
 const QUICK_FILTERS = [
-  { label: "All Time",   from: "2000-01-01",  to: todayStr() },
-  { label: "Today",      from: todayStr(),     to: todayStr() },
-  { label: "This Week",  from: daysAgo(6),     to: todayStr() },
-  { label: "This Month", from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), to: todayStr() },
-  { label: "Last Month", from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0, 10) },
-  { label: "This Year",  from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10), to: todayStr() },
-  { label: "Last 30d",   from: daysAgo(29),    to: todayStr() },
-  { label: "Last 90d",   from: daysAgo(89),    to: todayStr() },
+  { label: "All Time", from: "2000-01-01", to: todayStr() },
+  { label: "Today", from: todayStr(), to: todayStr() },
+  { label: "This Week", from: daysAgo(6), to: todayStr() },
+  {
+    label: "This Month",
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+    to: todayStr(),
+  },
+  {
+    label: "Last Month",
+    from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)
+      .toISOString()
+      .slice(0, 10),
+    to: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0, 10),
+  },
+  {
+    label: "This Year",
+    from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
+    to: todayStr(),
+  },
+  { label: "Last 30d", from: daysAgo(29), to: todayStr() },
+  { label: "Last 90d", from: daysAgo(89), to: todayStr() },
 ];
 
-const COLORS = ["hsl(142 71% 45%)", "hsl(210 90% 56%)", "hsl(38 92% 50%)", "hsl(0 84% 60%)", "hsl(280 85% 65%)"];
+const COLORS = [
+  "hsl(142 71% 45%)",
+  "hsl(210 90% 56%)",
+  "hsl(38 92% 50%)",
+  "hsl(0 84% 60%)",
+  "hsl(280 85% 65%)",
+];
 
 function ProfitCalculator() {
   const [from, setFrom] = useState("2000-01-01");
@@ -65,9 +113,21 @@ function ProfitCalculator() {
   const [totalProfit, setTotalProfit] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
-  const [profitByProduct, setProfitByProduct] = useState<Array<{ name: string; profit: number; qty: number; margin: number; revenue: number }>>([]);
-  const [dailyProfit, setDailyProfit] = useState<Array<{ date: string; profit: number; sales: number }>>([]);
+  const [profitByProduct, setProfitByProduct] = useState<
+    Array<{ name: string; profit: number; qty: number; margin: number; revenue: number }>
+  >([]);
+  const [dailyProfit, setDailyProfit] = useState<
+    Array<{ date: string; profit: number; sales: number }>
+  >([]);
   const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>>([]);
+
+  // Zero-cost products dialog
+  const [zeroCostOpen, setZeroCostOpen] = useState(false);
+  const [zeroCostProducts, setZeroCostProducts] = useState<
+    Array<{ id: string; name: string; barcode: string; purchase_price: number; sale_price: number }>
+  >([]);
+  const [zeroCostLoading, setZeroCostLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   async function loadWithDates(fromDate: string, toDate: string) {
     setFrom(fromDate);
@@ -113,7 +173,7 @@ function ProfitCalculator() {
       }
 
       // Fetch all sale items for the period at once
-      const saleIds = (salesData as any[]).map(s => s.id);
+      const saleIds = (salesData as any[]).map((s) => s.id);
 
       // Batch fetch sale_items in chunks of 200 to avoid Supabase .in() URL length limits
       const CHUNK = 200;
@@ -141,7 +201,7 @@ function ProfitCalculator() {
       });
 
       // Combine sales with their items
-      const salesWithItems = (salesData as any[]).map(s => ({
+      const salesWithItems = (salesData as any[]).map((s) => ({
         ...s,
         sale_items: itemsBySale[s.id] ?? [],
       }));
@@ -184,7 +244,7 @@ function ProfitCalculator() {
         const qty = Number(item.qty) || 0;
         const unitPrice = Number(item.unit_price) || 0;
         const purchasePrice = Number(item.purchase_price) || 0;
-        
+
         const itemRevenue = qty * unitPrice;
         // If purchase_price was 0 at time of sale, fall back to current product price from DB
         // (handles old sales recorded before purchase prices were set)
@@ -218,7 +278,7 @@ function ProfitCalculator() {
     }
 
     const profit = totalRevenue - totalCost;
-    const margin = totalRevenue > 0 ? ((profit / totalRevenue) * 100) : 0;
+    const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     setZeroPurchasePriceCount(zeroCount);
     setTotalProfit(profit);
@@ -251,16 +311,55 @@ function ProfitCalculator() {
     setDailyProfit(daily);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function handleDateChange() {
     load(from, to);
   }
 
+  async function loadZeroCostProducts() {
+    setZeroCostLoading(true);
+    setZeroCostOpen(true);
+    try {
+      const { data } = await supabase
+        .from("products")
+        .select("id,name,barcode,purchase_price,sale_price")
+        .eq("purchase_price", 0)
+        .eq("is_active", true)
+        .order("name");
+      setZeroCostProducts((data ?? []) as any[]);
+    } catch (err) {
+      console.error("Error loading zero-cost products:", err);
+    } finally {
+      setZeroCostLoading(false);
+    }
+  }
+
+  async function updatePurchasePrice(id: string, price: number) {
+    setSavingId(id);
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ purchase_price: price })
+        .eq("id", id);
+      if (error) {
+        console.error("Update error:", error);
+        return;
+      }
+      setZeroCostProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Update error:", err);
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   function exportCSV() {
     const rows = [
       ["Product", "Quantity Sold", "Revenue", "Cost", "Profit", "Margin %"],
-      ...profitByProduct.map(p => [
+      ...profitByProduct.map((p) => [
         p.name,
         p.qty,
         p.revenue,
@@ -269,7 +368,9 @@ function ProfitCalculator() {
         p.margin.toFixed(2),
       ]),
     ];
-    const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -282,14 +383,16 @@ function ProfitCalculator() {
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><TrendingUp className="h-7 w-7" /> Profit Calculator</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <TrendingUp className="h-7 w-7" /> Profit Calculator
+        </h1>
         <p className="text-muted-foreground">Analyze revenue, costs, and profitability</p>
       </div>
 
       {/* Quick filter buttons */}
       <Card className="p-4">
         <div className="flex flex-wrap gap-2 mb-4">
-          {QUICK_FILTERS.map(f => (
+          {QUICK_FILTERS.map((f) => (
             <Button
               key={f.label}
               size="sm"
@@ -307,11 +410,25 @@ function ProfitCalculator() {
         <div className="grid md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <div>
             <Label>From</Label>
-            <Input type="date" value={from} onChange={e => { setFrom(e.target.value); setActiveFilter("Custom"); }} />
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                setActiveFilter("Custom");
+              }}
+            />
           </div>
           <div>
             <Label>To</Label>
-            <Input type="date" value={to} onChange={e => { setTo(e.target.value); setActiveFilter("Custom"); }} />
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value);
+                setActiveFilter("Custom");
+              }}
+            />
           </div>
           <Button onClick={handleDateChange} disabled={loading}>
             {loading ? "Loading..." : "Load"}
@@ -325,10 +442,25 @@ function ProfitCalculator() {
       {/* Warning: products with no purchase price */}
       {zeroPurchasePriceCount > 0 && (
         <Card className="p-4 border-l-4 border-l-yellow-500 bg-yellow-50">
-          <div className="text-yellow-800 font-medium">⚠️ Inaccurate profit data</div>
-          <div className="text-sm text-yellow-700 mt-1">
-            {zeroPurchasePriceCount} sale line(s) have <strong>purchase price = Rs. 0</strong>, so profit equals revenue for those items.
-            Go to <strong>Admin → Products</strong> and set the buying price for each product, then future sales will calculate correctly.
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-yellow-800 font-medium">
+                <AlertTriangle className="h-4 w-4" /> Inaccurate profit data
+              </div>
+              <div className="text-sm text-yellow-700 mt-1">
+                {zeroPurchasePriceCount} sale line(s) have <strong>purchase price = Rs. 0</strong>,
+                so profit equals revenue for those items. Set the buying price for affected products
+                to fix future calculations.
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 border-yellow-500 text-yellow-800 hover:bg-yellow-100"
+              onClick={loadZeroCostProducts}
+            >
+              <Package className="h-4 w-4 mr-1" /> Fix Now
+            </Button>
           </div>
         </Card>
       )}
@@ -337,7 +469,9 @@ function ProfitCalculator() {
       {error && (
         <Card className="p-4 border-l-4 border-l-red-500 bg-red-50">
           <div className="text-red-700 font-medium">{error}</div>
-          <div className="text-sm text-red-600 mt-1">Please check the date range and try again.</div>
+          <div className="text-sm text-red-600 mt-1">
+            Please check the date range and try again.
+          </div>
         </Card>
       )}
 
@@ -346,7 +480,9 @@ function ProfitCalculator() {
         <Card className="p-6 space-y-2 border-l-4 border-l-green-500">
           <div className="text-sm font-medium text-muted-foreground">Total Profit</div>
           <div className="text-3xl font-bold text-green-600">{fmt(totalProfit)}</div>
-          <div className="text-xs text-muted-foreground">Period {from} to {to}</div>
+          <div className="text-xs text-muted-foreground">
+            Period {from} to {to}
+          </div>
         </Card>
 
         <Card className="p-6 space-y-2 border-l-4 border-l-blue-500">
@@ -376,8 +512,22 @@ function ProfitCalculator() {
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
                 <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="profit" fill="hsl(142 71% 45%)" stroke="hsl(142 71% 45%)" name="Profit" />
-                <Line yAxisId="right" type="monotone" dataKey="sales" stroke="hsl(210 90% 56%)" strokeWidth={2} name="Revenue" />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="profit"
+                  fill="hsl(142 71% 45%)"
+                  stroke="hsl(142 71% 45%)"
+                  name="Profit"
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="hsl(210 90% 56%)"
+                  strokeWidth={2}
+                  name="Revenue"
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </Card>
@@ -418,7 +568,9 @@ function ProfitCalculator() {
             <tbody>
               {profitByProduct.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-muted-foreground">No sales data for selected period</td>
+                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No sales data for selected period
+                  </td>
                 </tr>
               ) : (
                 profitByProduct.map((p, i) => (
@@ -427,9 +579,13 @@ function ProfitCalculator() {
                     <td className="text-right px-4 py-2">{p.qty}</td>
                     <td className="text-right px-4 py-2">{fmt(p.revenue)}</td>
                     <td className="text-right px-4 py-2">{fmt(p.revenue - p.profit)}</td>
-                    <td className="text-right px-4 py-2 font-semibold text-green-600">{fmt(p.profit)}</td>
+                    <td className="text-right px-4 py-2 font-semibold text-green-600">
+                      {fmt(p.profit)}
+                    </td>
                     <td className="text-right px-4 py-2">
-                      <span className={`font-semibold ${p.margin >= 30 ? "text-green-600" : p.margin >= 15 ? "text-yellow-600" : "text-red-600"}`}>
+                      <span
+                        className={`font-semibold ${p.margin >= 30 ? "text-green-600" : p.margin >= 15 ? "text-yellow-600" : "text-red-600"}`}
+                      >
                         {p.margin.toFixed(2)}%
                       </span>
                     </td>
@@ -440,6 +596,86 @@ function ProfitCalculator() {
           </table>
         </div>
       </Card>
+
+      {/* Zero-cost products dialog */}
+      <Dialog open={zeroCostOpen} onOpenChange={setZeroCostOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Products with No Purchase Price
+            </DialogTitle>
+          </DialogHeader>
+          {zeroCostLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : zeroCostProducts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="font-medium">All products have purchase prices set</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[60vh] overflow-auto">
+              {zeroCostProducts.map((p) => (
+                <div
+                  key={p.id}
+                  data-product-id={p.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{p.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{p.barcode}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground shrink-0">
+                    Sale: <span className="font-semibold text-foreground">{fmt(p.sale_price)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-24 h-8 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      disabled={savingId === p.id}
+                      onClick={(e) => {
+                        const input = e.currentTarget
+                          .closest("[data-product-id]")
+                          ?.querySelector("input") as HTMLInputElement | null;
+                        if (input) {
+                          const val = parseFloat(input.value);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                        }
+                      }}
+                    >
+                      {savingId === p.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setZeroCostOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
