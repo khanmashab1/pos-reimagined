@@ -159,7 +159,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         <div className="space-y-3">
           <div
             id={!isSupported ? "quagga-container" : undefined}
-            className="relative w-full h-80 overflow-hidden rounded-lg bg-black"
+            className="relative w-full h-[70vw] sm:h-80 overflow-hidden rounded-lg bg-black"
           >
             {isSupported && (
               <video
@@ -173,7 +173,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             {scanning && isSupported && (
               <div className="absolute inset-0 pointer-events-none z-10">
                 <div className="absolute inset-0 border-2 border-primary/50 rounded-lg" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-16 border-2 border-primary rounded-md animate-pulse" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-[15vw] sm:h-16 border-2 border-primary rounded-md animate-pulse" />
               </div>
             )}
             {!currentScanning && !currentError && (
