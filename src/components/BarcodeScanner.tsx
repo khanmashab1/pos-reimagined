@@ -90,7 +90,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           },
         );
 
-        Quagga.onDetected((result: { codeResult: { code: string } }) => {
+        Quagga.onDetected((result) => {
           if (cancelled) return;
           const code = result.codeResult?.code;
           if (code) {
