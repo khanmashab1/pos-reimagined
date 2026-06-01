@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
+import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
