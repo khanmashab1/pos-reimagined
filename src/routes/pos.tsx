@@ -144,9 +144,16 @@ function PosPage() {
       const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
       prod = (data as Product) ?? undefined;
     }
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else toast.error("Product not found");
-    setScan("");
+    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); }
+    else {
+      if (confirm(`Product not found for "${code}". Add it now?`)) {
+        setQuickAddBarcode(code);
+        setQuickAddOpen(true);
+      } else {
+        toast.error("Product not found");
+      }
+      setScan("");
+    }
   };
 
   const handleCameraScan = async (code: string) => {
@@ -155,7 +162,14 @@ function PosPage() {
     const { data } = await supabase.from("products").select("*").eq("barcode", clean).eq("is_active", true).maybeSingle();
     const prod = data as Product | null;
     if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else toast.error(`Product not found: ${clean}`);
+    else {
+      if (confirm(`Product not found for "${clean}". Add it now?`)) {
+        setQuickAddBarcode(clean);
+        setQuickAddOpen(true);
+      } else {
+        toast.error(`Product not found: ${clean}`);
+      }
+    }
   };
 
   useEffect(() => {
