@@ -315,10 +315,16 @@ function PosPage() {
                 <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
-            <Button className="w-full mt-2 sm:mt-3 h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => setSearchOpen(true)}>
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> Manual Product Search
-            </Button>
+            <div className="grid grid-cols-2 gap-2 mt-2 sm:mt-3">
+              <Button className="h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => setSearchOpen(true)}>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> Search
+              </Button>
+              <Button variant="outline" className="h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => { setQuickAddBarcode(""); setQuickAddOpen(true); }}>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> New Product
+              </Button>
+            </div>
           </Card>
+
 
           {/* Cart table */}
           <Card className="flex-1 overflow-hidden p-0 min-h-0">
