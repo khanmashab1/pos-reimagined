@@ -394,6 +394,36 @@ export type Database = {
           },
         ]
       }
+      stock_entries: {
+        Row: {
+          cashier_id: string
+          cashier_name: string
+          created_at: string
+          id: string
+          notes: string
+          product_id: string
+          qty: number
+        }
+        Insert: {
+          cashier_id: string
+          cashier_name?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          product_id: string
+          qty: number
+        }
+        Update: {
+          cashier_id?: string
+          cashier_name?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          product_id?: string
+          qty?: number
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           address: string
@@ -610,6 +640,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_stock_entry: {
+        Args: { _notes?: string; _product_id: string; _qty: number }
+        Returns: string
+      }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {

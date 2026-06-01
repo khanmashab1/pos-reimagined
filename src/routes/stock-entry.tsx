@@ -134,7 +134,7 @@ function StockEntryPage() {
     try {
       const results = await Promise.all(
         entries.map(e => supabase.rpc("add_stock_entry", {
-          _product_id: e.product_id, _qty: e.qty, _notes: e.notes || null,
+          _product_id: e.product_id, _qty: e.qty, _notes: e.notes || undefined,
         }))
       );
       const errors = results.filter(r => r.error);
