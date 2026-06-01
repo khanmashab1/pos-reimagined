@@ -700,19 +700,10 @@ function BillSummary({
           </PopoverContent>
         </Popover>
       </div>
-
-      <QuickAddProductDialog
-        open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        initialBarcode={quickAddBarcode}
-        onCreated={(p: QuickAddProduct) => {
-          addToCart(p as Product);
-          toast.success(`Added: ${p.name}`);
-        }}
-      />
     </div>
   );
 }
+
 
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
