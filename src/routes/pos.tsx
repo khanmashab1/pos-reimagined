@@ -63,6 +63,8 @@ function PosPage() {
   const manualSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddBarcode, setQuickAddBarcode] = useState<string>("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
 
