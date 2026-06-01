@@ -527,6 +527,12 @@ function PosPage() {
       <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
+      <QuickAddProductDialog
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        initialBarcode={quickAddBarcode}
+        onCreated={(p) => { addToCart(p as Product); toast.success(`Added: ${p.name}`); }}
+      />
     </div>
   );
 }
