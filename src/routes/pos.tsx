@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
+import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
@@ -62,6 +63,8 @@ function PosPage() {
   const manualSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddBarcode, setQuickAddBarcode] = useState<string>("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
 
@@ -141,9 +144,16 @@ function PosPage() {
       const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
       prod = (data as Product) ?? undefined;
     }
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else toast.error("Product not found");
-    setScan("");
+    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); }
+    else {
+      if (confirm(`Product not found for "${code}". Add it now?`)) {
+        setQuickAddBarcode(code);
+        setQuickAddOpen(true);
+      } else {
+        toast.error("Product not found");
+      }
+      setScan("");
+    }
   };
 
   const handleCameraScan = async (code: string) => {
@@ -152,7 +162,14 @@ function PosPage() {
     const { data } = await supabase.from("products").select("*").eq("barcode", clean).eq("is_active", true).maybeSingle();
     const prod = data as Product | null;
     if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else toast.error(`Product not found: ${clean}`);
+    else {
+      if (confirm(`Product not found for "${clean}". Add it now?`)) {
+        setQuickAddBarcode(clean);
+        setQuickAddOpen(true);
+      } else {
+        toast.error(`Product not found: ${clean}`);
+      }
+    }
   };
 
   useEffect(() => {
@@ -298,10 +315,16 @@ function PosPage() {
                 <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
-            <Button className="w-full mt-2 sm:mt-3 h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => setSearchOpen(true)}>
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> Manual Product Search
-            </Button>
+            <div className="grid grid-cols-2 gap-2 mt-2 sm:mt-3">
+              <Button className="h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => setSearchOpen(true)}>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> Search
+              </Button>
+              <Button variant="outline" className="h-9 sm:h-11 text-sm sm:text-base font-semibold" onClick={() => { setQuickAddBarcode(""); setQuickAddOpen(true); }}>
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" /> New Product
+              </Button>
+            </div>
           </Card>
+
 
           {/* Cart table */}
           <Card className="flex-1 overflow-hidden p-0 min-h-0">
@@ -504,6 +527,12 @@ function PosPage() {
       <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
+      <QuickAddProductDialog
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        initialBarcode={quickAddBarcode}
+        onCreated={(p) => { addToCart(p as Product); toast.success(`Added: ${p.name}`); }}
+      />
     </div>
   );
 }
@@ -680,6 +709,8 @@ function BillSummary({
     </div>
   );
 }
+
+
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
