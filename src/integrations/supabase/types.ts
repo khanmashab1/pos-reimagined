@@ -332,44 +332,6 @@ export type Database = {
           },
         ]
       }
-      stock_entries: {
-        Row: {
-          id: string
-          product_id: string
-          cashier_id: string
-          cashier_name: string
-          qty: number
-          notes: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          product_id: string
-          cashier_id: string
-          cashier_name?: string
-          qty: number
-          notes?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          product_id?: string
-          cashier_id?: string
-          cashier_name?: string
-          qty?: number
-          notes?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_entries_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       sales: {
         Row: {
           bill_no: string
@@ -648,10 +610,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_stock_entry: {
-        Args: { _product_id: string; _qty: number; _notes?: string | null }
-        Returns: Json
-      }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {
