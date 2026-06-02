@@ -27,7 +27,7 @@ import { BarcodeLabel } from "@/components/BarcodeLabel";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ProductUnitsEditor, makeBlankUnit, validateUnits } from "@/components/ProductUnitsEditor";
 import { StockBreakdownBadge } from "@/components/StockBreakdownBadge";
-import { fetchUnitsByProductIds, type ProductUnit, type UnitDraft, greedyBreakdown, formatBreakdown } from "@/lib/units";
+import { fetchUnitsByProductIds, type ProductUnit, type UnitDraft } from "@/lib/units";
 
 export const Route = createFileRoute("/admin/products")({
   component: ProductsPage,
