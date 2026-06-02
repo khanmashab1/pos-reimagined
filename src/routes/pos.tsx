@@ -394,9 +394,9 @@ function PosPage() {
                   {/* Table header */}
                   <div className="sticky top-0 bg-muted/50 backdrop-blur border-b z-10">
                     <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground"
-                      style={{ gridTemplateColumns: "1fr 4rem 6rem 4rem 2rem" }}>
+                      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
                       <div>Product</div>
-                      <div className="text-right hidden sm:block">Price</div>
+                      <div className="text-right hidden sm:block">Unit / Price</div>
                       <div className="text-center">Qty</div>
                       <div className="text-right">Total</div>
                       <div />
