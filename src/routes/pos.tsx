@@ -403,19 +403,48 @@ function PosPage() {
 
                   {/* Rows */}
                   <div className="divide-y">
-                    {cart.map(i => (
-                      <div key={i.id}
+                    {cart.map((i, idx) => {
+                      const updateAt = (patch: Partial<CartItem>) =>
+                        setCart((c) => c.map((it, j) => (j === idx ? { ...it, ...patch } : it)));
+                      const removeAt = () => setCart((c) => c.filter((_, j) => j !== idx));
+                      return (
+                      <div key={`${i.id}-${i.unit_id ?? "base"}-${idx}`}
                         className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
-                        style={{ gridTemplateColumns: "1fr 4rem 6rem 4rem 2rem" }}>
+                        style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
                         <div className="min-w-0">
                           <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
-                          {/* Price shown inline on mobile (below name) */}
-                          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.sale_price)}</div>
+                          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
                         </div>
-                        <div className="text-right text-xs sm:text-sm hidden sm:block">{fmt(i.sale_price)}</div>
+                        <div className="hidden sm:block">
+                          {i.available_units.length > 1 ? (
+                            <Select
+                              value={i.unit_id ?? ""}
+                              onValueChange={(v) => {
+                                const u = i.available_units.find((x) => x.id === v);
+                                if (!u) return;
+                                updateAt({
+                                  unit_id: u.id,
+                                  unit_name: u.name,
+                                  unit_equals_base: u.equals_base,
+                                  unit_sale_price: Number(u.sale_price),
+                                  unit_purchase_price: Number(u.purchase_price),
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {i.available_units.map((u) => (
+                                  <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
+                          )}
+                        </div>
                         <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                           <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}>
+                            onClick={() => updateAt({ qty: Math.max(1, i.qty - 1) })}>
                             <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           </Button>
                           <input
@@ -424,26 +453,27 @@ function PosPage() {
                             value={i.qty}
                             onChange={e => {
                               const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val >= 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: val } : c));
+                              if (!isNaN(val) && val >= 1) updateAt({ qty: val });
                             }}
                             onBlur={e => {
                               const val = parseInt(e.target.value, 10);
-                              if (isNaN(val) || val < 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: 1 } : c));
+                              if (isNaN(val) || val < 1) updateAt({ qty: 1 });
                             }}
                           />
                           <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c))}>
+                            onClick={() => updateAt({ qty: i.qty + 1 })}>
                             <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           </Button>
                         </div>
-                        <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
+                        <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.unit_sale_price))}</div>
                         <button
                           className="flex items-center justify-center h-6 w-6 rounded text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
+                          onClick={removeAt}>
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
