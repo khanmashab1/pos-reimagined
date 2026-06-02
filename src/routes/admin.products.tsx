@@ -384,20 +384,21 @@ function ProductsPage() {
                 <th className="text-right px-4 py-3">Cost</th>
                 <th className="text-right px-4 py-3">Price</th>
                 <th className="text-center px-4 py-3">Stock</th>
+                <th className="text-left px-4 py-3">In Larger Units</th>
                 <th className="text-right px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {loadingItems && (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted-foreground py-10">
+                  <td colSpan={7} className="text-center text-muted-foreground py-10">
                     Loading...
                   </td>
                 </tr>
               )}
               {!loadingItems && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted-foreground py-10">
+                  <td colSpan={7} className="text-center text-muted-foreground py-10">
                     No products found.
                   </td>
                 </tr>
@@ -407,6 +408,7 @@ function ProductsPage() {
                   key={p.id}
                   p={p}
                   cats={cats}
+                  units={unitsByProduct[p.id] ?? []}
                   onOpenEdit={openEdit}
                   onSetPrinting={setPrinting}
                   onRemove={remove}
