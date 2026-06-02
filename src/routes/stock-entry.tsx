@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft, Plus, ScanLine, CheckCircle2, ClipboardList, Package, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/stock-entry")({
   component: StockEntryPage,
@@ -20,6 +22,7 @@ interface Product {
 interface EntryRow {
   product_id: string; product_name: string; barcode: string;
   current_stock: number; qty: number; notes: string;
+  unit_id: string | null; unit_name: string; unit_equals_base: number;
 }
 
 interface SubmitSummary {
@@ -34,6 +37,8 @@ function StockEntryPage() {
   const [search, setSearch] = useState("");
   const [showDrop, setShowDrop] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedUnits, setSelectedUnits] = useState<ProductUnit[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -43,6 +48,8 @@ function StockEntryPage() {
   const scanBuffer = useRef("");
   const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
+
+  const selectedUnit = selectedUnits.find((u) => u.id === selectedUnitId);
 
   useEffect(() => {
     if (loading) return;
@@ -69,7 +76,7 @@ function StockEntryPage() {
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
         const prod = products.find(p => p.barcode === code);
-        if (prod) { setSelectedProduct(prod); setSearch(prod.name); setQty(""); setNotes(""); setTimeout(() => qtyRef.current?.focus(), 50); }
+        if (prod) { selectProduct(prod); }
         else toast.error(`Barcode not found: ${code}`);
         return;
       }
@@ -89,12 +96,17 @@ function StockEntryPage() {
       ).slice(0, 10)
     : [];
 
-  const selectProduct = (p: Product) => {
+  const selectProduct = async (p: Product) => {
     setSelectedProduct(p);
     setSearch(p.name);
     setShowDrop(false);
     setQty("");
     setNotes("");
+    const map = await fetchUnitsByProductIds([p.id]);
+    const units = map[p.id] ?? [];
+    setSelectedUnits(units);
+    const def = pickDefaultUnit(units);
+    setSelectedUnitId(def?.id ?? null);
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
@@ -102,8 +114,12 @@ function StockEntryPage() {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
+    const unit = selectedUnits.find((u) => u.id === selectedUnitId);
+    const unitName = unit?.name ?? "Piece";
+    const unitEquals = unit?.equals_base ?? 1;
 
-    const existing = entries.findIndex(e => e.product_id === selectedProduct.id);
+    const matchKey = (e: EntryRow) => e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
+    const existing = entries.findIndex(matchKey);
     if (existing >= 0) {
       setEntries(prev => prev.map((e, i) =>
         i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e
@@ -117,10 +133,15 @@ function StockEntryPage() {
         current_stock: selectedProduct.stock,
         qty: qtyNum,
         notes,
+        unit_id: unit?.id ?? null,
+        unit_name: unitName,
+        unit_equals_base: unitEquals,
       }]);
       toast.success(`Added: ${selectedProduct.name}`);
     }
     setSelectedProduct(null);
+    setSelectedUnits([]);
+    setSelectedUnitId(null);
     setSearch("");
     setQty("");
     setNotes("");
@@ -133,8 +154,8 @@ function StockEntryPage() {
     setProcessing(true);
     try {
       const results = await Promise.all(
-        entries.map(e => supabase.rpc("add_stock_entry", {
-          _product_id: e.product_id, _qty: e.qty, _notes: e.notes || undefined,
+        entries.map(e => supabase.rpc("add_stock_entry_v2", {
+          _product_id: e.product_id, _unit_id: e.unit_id as string, _qty: e.qty, _notes: e.notes || undefined,
         }))
       );
       const errors = results.filter(r => r.error);
@@ -304,6 +325,27 @@ function StockEntryPage() {
               )}
             </div>
 
+            {/* Unit */}
+            <div>
+              <Label>Unit</Label>
+              <Select
+                value={selectedUnitId ?? ""}
+                onValueChange={(v) => setSelectedUnitId(v)}
+                disabled={!selectedProduct || selectedUnits.length === 0}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={selectedProduct ? "Select unit" : "Pick a product first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedUnits.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} (= {u.equals_base} base)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Qty */}
             <div>
               <Label>Quantity to Add</Label>
@@ -317,6 +359,11 @@ function StockEntryPage() {
                 onKeyDown={e => e.key === "Enter" && addEntry()}
                 className="mt-1"
               />
+              {selectedUnit && Number(qty) > 0 && selectedUnit.equals_base > 1 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  = {Number(qty) * selectedUnit.equals_base} base units
+                </div>
+              )}
             </div>
 
             {/* Notes */}
@@ -378,7 +425,14 @@ function StockEntryPage() {
                     <tr key={idx} className="hover:bg-muted/40">
                       <td className="px-4 py-3 font-medium">{e.product_name}</td>
                       <td className="px-4 py-3 text-right">{e.current_stock}</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">
+                        +{e.qty} {e.unit_name}
+                        {e.unit_equals_base > 1 && (
+                          <div className="text-[10px] font-normal text-muted-foreground">
+                            (= {e.qty * e.unit_equals_base} base)
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeEntry(idx)}>

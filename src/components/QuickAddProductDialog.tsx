@@ -93,8 +93,28 @@ export function QuickAddProductDialog({
         return;
       }
 
+      // Create matching base unit so multi-unit features (POS unit selector, breakdown) work.
+      const created = data as QuickAddProduct;
+      const { data: unitRow } = await supabase
+        .from("product_units")
+        .insert({
+          product_id: created.id,
+          name: "Piece",
+          equals_base: 1,
+          is_base: true,
+          is_default_sale: true,
+          purchase_price: 0,
+          sale_price: price,
+          sort_order: 0,
+        })
+        .select("id")
+        .single();
+      if (unitRow?.id) {
+        await supabase.from("products").update({ base_unit_id: unitRow.id }).eq("id", created.id);
+      }
+
       toast.success("Product added");
-      onCreated(data as QuickAddProduct);
+      onCreated(created);
       onClose();
     } finally {
       setSaving(false);

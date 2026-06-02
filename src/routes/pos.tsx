@@ -19,6 +19,8 @@ import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
@@ -28,7 +30,15 @@ interface Product {
   id: string; barcode: string; name: string; sale_price: number;
   purchase_price: number; stock: number; category_id: string | null;
 }
-interface CartItem extends Product { qty: number; }
+interface CartItem extends Product {
+  qty: number;
+  unit_id: string | null;
+  unit_name: string;
+  unit_equals_base: number;
+  unit_sale_price: number;
+  unit_purchase_price: number;
+  available_units: ProductUnit[];
+}
 
 type PaymentMethod = "cash" | "card" | "easypasa" | "jazzcash";
 
@@ -117,11 +127,29 @@ function PosPage() {
   useEffect(() => { setPage(0); }, [search, cat]);
   useEffect(() => { scanRef.current?.focus(); }, []);
 
-  const addToCart = (p: Product) => {
-    setCart(prev => {
-      const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...p, qty: 1 }];
+  const addToCart = async (p: Product, opts?: { unit?: ProductUnit; qty?: number }) => {
+    // Load units lazily
+    const map = await fetchUnitsByProductIds([p.id]);
+    const units = map[p.id] ?? [];
+    const unit = opts?.unit ?? pickDefaultUnit(units);
+    const addQty = opts?.qty ?? 1;
+    setCart((prev) => {
+      const matchKey = (i: CartItem) => i.id === p.id && i.unit_id === (unit?.id ?? null);
+      const ex = prev.find(matchKey);
+      if (ex) return prev.map((i) => (matchKey(i) ? { ...i, qty: i.qty + addQty } : i));
+      return [
+        ...prev,
+        {
+          ...p,
+          qty: addQty,
+          unit_id: unit?.id ?? null,
+          unit_name: unit?.name ?? "Piece",
+          unit_equals_base: unit?.equals_base ?? 1,
+          unit_sale_price: unit ? Number(unit.sale_price) : Number(p.sale_price),
+          unit_purchase_price: unit ? Number(unit.purchase_price) : Number(p.purchase_price),
+          available_units: units,
+        },
+      ];
     });
   };
 
@@ -139,21 +167,35 @@ function PosPage() {
     e.preventDefault();
     const code = scan.trim().replace(/[\s\-]/g, '');
     if (!code) return;
+    // 1) match product barcode
     let prod: Product | undefined = products.find(p => p.barcode === code);
     if (!prod) {
       const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
       prod = (data as Product) ?? undefined;
     }
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); }
-    else {
-      if (confirm(`Product not found for "${code}". Add it now?`)) {
-        setQuickAddBarcode(code);
-        setQuickAddOpen(true);
-      } else {
-        toast.error("Product not found");
+    if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); return; }
+    // 2) match unit barcode
+    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", code).maybeSingle();
+    if (u) {
+      const anyU = u as any;
+      const parent = anyU.products as Product;
+      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
+      delete (unit as any).products;
+      if (parent?.id) {
+        await addToCart(parent, { unit });
+        toast.success(`Added: ${parent.name} (${unit.name})`);
+        setScan("");
+        return;
       }
-      setScan("");
     }
+    // 3) not found
+    if (confirm(`Product not found for "${code}". Add it now?`)) {
+      setQuickAddBarcode(code);
+      setQuickAddOpen(true);
+    } else {
+      toast.error("Product not found");
+    }
+    setScan("");
   };
 
   const handleCameraScan = async (code: string) => {
@@ -161,16 +203,23 @@ function PosPage() {
     if (!clean) return;
     const { data } = await supabase.from("products").select("*").eq("barcode", clean).eq("is_active", true).maybeSingle();
     const prod = data as Product | null;
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else {
-      if (confirm(`Product not found for "${clean}". Add it now?`)) {
-        setQuickAddBarcode(clean);
-        setQuickAddOpen(true);
-      } else {
-        toast.error(`Product not found: ${clean}`);
-      }
+    if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); return; }
+    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", clean).maybeSingle();
+    if (u) {
+      const anyU = u as any;
+      const parent = anyU.products as Product;
+      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
+      delete (unit as any).products;
+      if (parent?.id) { await addToCart(parent, { unit }); toast.success(`Added: ${parent.name} (${unit.name})`); return; }
+    }
+    if (confirm(`Product not found for "${clean}". Add it now?`)) {
+      setQuickAddBarcode(clean);
+      setQuickAddOpen(true);
+    } else {
+      toast.error(`Product not found: ${clean}`);
     }
   };
+
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -189,7 +238,7 @@ function PosPage() {
 
   const filtered = products;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.sale_price), 0);
+  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
   const taxAmount = Math.max(0, (subtotal - discount) * (taxRate / 100));
   const total = Math.max(0, subtotal - discount + taxAmount);
   const cashNum = Number(cash) || 0;
@@ -201,11 +250,14 @@ function PosPage() {
     if (paymentMethod === "cash" && cash !== "" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     try {
-      const { data, error } = await supabase.rpc("process_sale", {
+      const { data, error } = await supabase.rpc("process_sale_v2", {
         _items: cart.map(i => ({
           product_id: i.id, product_name: i.name, barcode: i.barcode,
-          qty: i.qty, unit_price: i.sale_price, purchase_price: i.purchase_price,
-          subtotal: i.qty * i.sale_price,
+          unit_id: i.unit_id,
+          qty: i.qty,
+          unit_price: i.unit_sale_price,
+          purchase_price: i.unit_purchase_price,
+          subtotal: i.qty * i.unit_sale_price,
         })),
         _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount, _total: total,
         _cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
@@ -216,7 +268,9 @@ function PosPage() {
       toast.success("Sale completed!");
       const result = data as any;
       setLastReceipt({
-        bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
+        bill_no: result.bill_no,
+        items: cart.map((i) => ({ name: `${i.name}${i.unit_name && i.available_units.length > 1 ? ` (${i.unit_name})` : ""}`, barcode: i.barcode, qty: i.qty, sale_price: i.unit_sale_price })),
+        subtotal, tax_amount: taxAmount,
         discount, total,
         cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
@@ -340,9 +394,9 @@ function PosPage() {
                   {/* Table header */}
                   <div className="sticky top-0 bg-muted/50 backdrop-blur border-b z-10">
                     <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground"
-                      style={{ gridTemplateColumns: "1fr 4rem 6rem 4rem 2rem" }}>
+                      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
                       <div>Product</div>
-                      <div className="text-right hidden sm:block">Price</div>
+                      <div className="text-right hidden sm:block">Unit / Price</div>
                       <div className="text-center">Qty</div>
                       <div className="text-right">Total</div>
                       <div />
@@ -351,19 +405,48 @@ function PosPage() {
 
                   {/* Rows */}
                   <div className="divide-y">
-                    {cart.map(i => (
-                      <div key={i.id}
+                    {cart.map((i, idx) => {
+                      const updateAt = (patch: Partial<CartItem>) =>
+                        setCart((c) => c.map((it, j) => (j === idx ? { ...it, ...patch } : it)));
+                      const removeAt = () => setCart((c) => c.filter((_, j) => j !== idx));
+                      return (
+                      <div key={`${i.id}-${i.unit_id ?? "base"}-${idx}`}
                         className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
-                        style={{ gridTemplateColumns: "1fr 4rem 6rem 4rem 2rem" }}>
+                        style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
                         <div className="min-w-0">
                           <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
-                          {/* Price shown inline on mobile (below name) */}
-                          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.sale_price)}</div>
+                          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
                         </div>
-                        <div className="text-right text-xs sm:text-sm hidden sm:block">{fmt(i.sale_price)}</div>
+                        <div className="hidden sm:block">
+                          {i.available_units.length > 1 ? (
+                            <Select
+                              value={i.unit_id ?? ""}
+                              onValueChange={(v) => {
+                                const u = i.available_units.find((x) => x.id === v);
+                                if (!u) return;
+                                updateAt({
+                                  unit_id: u.id,
+                                  unit_name: u.name,
+                                  unit_equals_base: u.equals_base,
+                                  unit_sale_price: Number(u.sale_price),
+                                  unit_purchase_price: Number(u.purchase_price),
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {i.available_units.map((u) => (
+                                  <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
+                          )}
+                        </div>
                         <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                           <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: Math.max(1, c.qty - 1) } : c))}>
+                            onClick={() => updateAt({ qty: Math.max(1, i.qty - 1) })}>
                             <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           </Button>
                           <input
@@ -372,26 +455,27 @@ function PosPage() {
                             value={i.qty}
                             onChange={e => {
                               const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val >= 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: val } : c));
+                              if (!isNaN(val) && val >= 1) updateAt({ qty: val });
                             }}
                             onBlur={e => {
                               const val = parseInt(e.target.value, 10);
-                              if (isNaN(val) || val < 1) setCart(cart.map(c => c.id === i.id ? { ...c, qty: 1 } : c));
+                              if (isNaN(val) || val < 1) updateAt({ qty: 1 });
                             }}
                           />
                           <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => setCart(cart.map(c => c.id === i.id ? { ...c, qty: c.qty + 1 } : c))}>
+                            onClick={() => updateAt({ qty: i.qty + 1 })}>
                             <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           </Button>
                         </div>
-                        <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.sale_price))}</div>
+                        <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.unit_sale_price))}</div>
                         <button
                           className="flex items-center justify-center h-6 w-6 rounded text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => setCart(cart.filter(c => c.id !== i.id))}>
+                          onClick={removeAt}>
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
