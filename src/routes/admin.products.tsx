@@ -143,11 +143,15 @@ const ProductRow = memo(
 function ProductsPage() {
   const [items, setItems] = useState<Product[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
+  const [unitsByProduct, setUnitsByProduct] = useState<Record<string, ProductUnit[]>>({});
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, "id">>(empty);
+  const [units, setUnits] = useState<UnitDraft[]>([]);
+  const [initialStockUnitIdx, setInitialStockUnitIdx] = useState<number>(0);
+  const [initialStockQty, setInitialStockQty] = useState<string>("");
   const [printing, setPrinting] = useState<Product | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -173,9 +177,12 @@ function ProductsPage() {
         query,
         supabase.from("categories").select("id,name").order("name"),
       ]);
-      setItems((p ?? []) as Product[]);
+      const rows = (p ?? []) as Product[];
+      setItems(rows);
       setTotalCount(count ?? 0);
       setCats((c ?? []) as Cat[]);
+      const map = await fetchUnitsByProductIds(rows.map((r) => r.id));
+      setUnitsByProduct(map);
       setLoadingItems(false);
     },
     [page, search, filter],
@@ -195,11 +202,38 @@ function ProductsPage() {
   const openNew = useCallback(() => {
     setForm({ ...empty, barcode: genBarcode() });
     setEditing(null);
+    setUnits([{ name: "Piece", equals_base: 1, is_base: true, is_default_sale: true, sku: "", barcode: "", purchase_price: 0, sale_price: 0, sort_order: 0 }]);
+    setInitialStockQty("");
+    setInitialStockUnitIdx(0);
     setOpen(true);
   }, []);
-  const openEdit = useCallback((p: Product) => {
+  const openEdit = useCallback(async (p: Product) => {
     setForm({ ...p });
     setEditing(p);
+    setInitialStockQty("");
+    setInitialStockUnitIdx(0);
+    const map = await fetchUnitsByProductIds([p.id]);
+    const existing = map[p.id] ?? [];
+    if (existing.length === 0) {
+      setUnits([{ name: "Piece", equals_base: 1, is_base: true, is_default_sale: true, sku: "", barcode: "", purchase_price: p.purchase_price, sale_price: p.sale_price, sort_order: 0 }]);
+    } else {
+      setUnits(
+        existing
+          .sort((a, b) => b.equals_base - a.equals_base)
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            equals_base: u.equals_base,
+            is_base: u.is_base,
+            is_default_sale: u.is_default_sale,
+            sku: u.sku ?? "",
+            barcode: u.barcode ?? "",
+            purchase_price: Number(u.purchase_price),
+            sale_price: Number(u.sale_price),
+            sort_order: u.sort_order,
+          })),
+      );
+    }
     setOpen(true);
   }, []);
   const remove = useCallback(
@@ -216,48 +250,79 @@ function ProductsPage() {
   const save = useCallback(async () => {
     if (!form.name.trim() || !form.barcode.trim())
       return toast.error("Name and barcode are required");
-    const payload = {
-      ...form,
-      purchase_price: Number(form.purchase_price),
-      sale_price: Number(form.sale_price),
-      stock: Number(form.stock),
+    const err = validateUnits(units);
+    if (err) return toast.error(err);
+
+    // Mirror base unit prices onto the product row for backward compat
+    const baseUnit = units.find((u) => u.is_base)!;
+    const productPayload = {
+      id: editing?.id,
+      name: form.name.trim(),
+      barcode: form.barcode.trim(),
+      category_id: form.category_id,
+      purchase_price: Number(baseUnit.purchase_price),
+      sale_price: Number(baseUnit.sale_price),
       min_stock_alert: Number(form.min_stock_alert),
+      is_active: form.is_active,
     };
-    if (editing) {
-      const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
-      if (error) return toast.error(error.message);
-      toast.success("Product updated");
-    } else {
-      const { data: existing } = await supabase
-        .from("products")
-        .select("*")
-        .eq("barcode", payload.barcode)
-        .maybeSingle();
-      if (existing) {
-        if (confirm(`Barcode already used by "${existing.name}". Open it for editing instead?`)) {
-          setForm(existing as Product);
-          setEditing(existing as Product);
-        }
-        return;
+
+    const unitsPayload = units.map((u, idx) => ({
+      id: u.id,
+      name: u.name.trim(),
+      equals_base: u.equals_base,
+      is_base: u.is_base,
+      is_default_sale: u.is_default_sale,
+      sku: u.sku || null,
+      barcode: u.barcode || null,
+      purchase_price: u.purchase_price,
+      sale_price: u.sale_price,
+      sort_order: idx,
+    }));
+
+    const initialStock =
+      !editing && Number(initialStockQty) > 0 && units[initialStockUnitIdx]
+        ? { unit_id: units[initialStockUnitIdx].id ?? null, qty: Number(initialStockQty) }
+        : null;
+    // For new products the unit IDs aren't known yet; pass index as "_initial_unit_index" workaround:
+    // we'll do an extra call after save if needed.
+
+    const { data, error } = await supabase.rpc("save_product_with_units", {
+      _product: productPayload,
+      _units: unitsPayload,
+      _initial_stock: initialStock && initialStock.unit_id ? initialStock : null,
+    });
+    if (error) return toast.error(error.message);
+
+    // If creating new product with initial stock, do a second call now that we have unit IDs
+    if (!editing && Number(initialStockQty) > 0) {
+      const pid = data as unknown as string;
+      const map = await fetchUnitsByProductIds([pid]);
+      const created = map[pid] ?? [];
+      const target = created.sort((a, b) => b.equals_base - a.equals_base)[initialStockUnitIdx];
+      if (target) {
+        const { error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
+          _product_id: pid,
+          _unit_id: target.id,
+          _qty: Number(initialStockQty),
+          _notes: "Initial stock",
+        });
+        if (stkErr) toast.error(stkErr.message);
       }
-      const { error } = await supabase.from("products").insert(payload);
-      if (error) {
-        if (error.message.includes("duplicate") || error.code === "23505") {
-          return toast.error("This barcode is already in use. Use 'Gen' to create a new one.");
-        }
-        return toast.error(error.message);
-      }
-      toast.success("Product added");
     }
+
+    toast.success(editing ? "Product updated" : "Product added");
     setOpen(false);
     load(page, search, filter);
-  }, [form, editing, load, page, search, filter]);
+  }, [form, units, editing, initialStockQty, initialStockUnitIdx, load, page, search, filter]);
 
-  const marginDisplay = useMemo(() => {
-    return form.sale_price > 0
-      ? (((form.sale_price - form.purchase_price) / form.sale_price) * 100).toFixed(1)
-      : "0";
-  }, [form.sale_price, form.purchase_price]);
+  const baseUnitForm = units.find((u) => u.is_base);
+  const totalInitialBase = useMemo(() => {
+    const n = Number(initialStockQty);
+    const u = units[initialStockUnitIdx];
+    if (!n || !u) return 0;
+    return n * u.equals_base;
+  }, [initialStockQty, initialStockUnitIdx, units]);
+
 
   return (
     <div className="p-6 md:p-8 space-y-6">
