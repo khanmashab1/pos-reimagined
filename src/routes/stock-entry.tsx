@@ -6,8 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2, ArrowLeft, Plus, ScanLine, CheckCircle2, ClipboardList, Package, Trash2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Loader2,
+  ArrowLeft,
+  Plus,
+  ScanLine,
+  CheckCircle2,
+  ClipboardList,
+  Package,
+  Trash2,
+  Clock,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
@@ -16,17 +32,29 @@ export const Route = createFileRoute("/stock-entry")({
 });
 
 interface Product {
-  id: string; barcode: string; name: string; stock: number;
+  id: string;
+  barcode: string;
+  name: string;
+  stock: number;
 }
 
 interface EntryRow {
-  product_id: string; product_name: string; barcode: string;
-  current_stock: number; qty: number; notes: string;
-  unit_id: string | null; unit_name: string; unit_equals_base: number;
+  product_id: string;
+  product_name: string;
+  barcode: string;
+  current_stock: number;
+  qty: number;
+  notes: string;
+  unit_id: string | null;
+  unit_name: string;
+  unit_equals_base: number;
 }
 
 interface SubmitSummary {
-  entries: EntryRow[]; submittedAt: string; submittedBy: string;
+  entries: EntryRow[];
+  submittedAt: string;
+  submittedBy: string;
+  status: string; // pending | approved | rejected
 }
 
 function StockEntryPage() {
@@ -58,12 +86,17 @@ function StockEntryPage() {
 
   const fetchProducts = useCallback(async () => {
     const { data } = await supabase
-      .from("products").select("id,barcode,name,stock")
-      .eq("is_active", true).order("name").range(0, 9999);
+      .from("products")
+      .select("id,barcode,name,stock")
+      .eq("is_active", true)
+      .order("name")
+      .range(0, 9999);
     setProducts((data ?? []) as Product[]);
   }, []);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Global barcode scanner
   useEffect(() => {
@@ -75,26 +108,33 @@ function StockEntryPage() {
         scanBuffer.current = "";
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
-        const prod = products.find(p => p.barcode === code);
-        if (prod) { selectProduct(prod); }
-        else toast.error(`Barcode not found: ${code}`);
+        const prod = products.find((p) => p.barcode === code);
+        if (prod) {
+          selectProduct(prod);
+        } else toast.error(`Barcode not found: ${code}`);
         return;
       }
       if (e.key.length === 1) {
         scanBuffer.current += e.key;
         if (scanTimer.current) clearTimeout(scanTimer.current);
-        scanTimer.current = setTimeout(() => { scanBuffer.current = ""; }, 300);
+        scanTimer.current = setTimeout(() => {
+          scanBuffer.current = "";
+        }, 300);
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [products]);
 
-  const filtered = search.trim() && !selectedProduct
-    ? products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search)
-      ).slice(0, 10)
-    : [];
+  const filtered =
+    search.trim() && !selectedProduct
+      ? products
+          .filter(
+            (p) =>
+              p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search),
+          )
+          .slice(0, 10)
+      : [];
 
   const selectProduct = async (p: Product) => {
     setSelectedProduct(p);
@@ -118,25 +158,31 @@ function StockEntryPage() {
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
 
-    const matchKey = (e: EntryRow) => e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
+    const matchKey = (e: EntryRow) =>
+      e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
     const existing = entries.findIndex(matchKey);
     if (existing >= 0) {
-      setEntries(prev => prev.map((e, i) =>
-        i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e
-      ));
+      setEntries((prev) =>
+        prev.map((e, i) =>
+          i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e,
+        ),
+      );
       toast.success(`Updated: ${selectedProduct.name}`);
     } else {
-      setEntries(prev => [...prev, {
-        product_id: selectedProduct.id,
-        product_name: selectedProduct.name,
-        barcode: selectedProduct.barcode,
-        current_stock: selectedProduct.stock,
-        qty: qtyNum,
-        notes,
-        unit_id: unit?.id ?? null,
-        unit_name: unitName,
-        unit_equals_base: unitEquals,
-      }]);
+      setEntries((prev) => [
+        ...prev,
+        {
+          product_id: selectedProduct.id,
+          product_name: selectedProduct.name,
+          barcode: selectedProduct.barcode,
+          current_stock: selectedProduct.stock,
+          qty: qtyNum,
+          notes,
+          unit_id: unit?.id ?? null,
+          unit_name: unitName,
+          unit_equals_base: unitEquals,
+        },
+      ]);
       toast.success(`Added: ${selectedProduct.name}`);
     }
     setSelectedProduct(null);
@@ -147,21 +193,33 @@ function StockEntryPage() {
     setNotes("");
   };
 
-  const removeEntry = (idx: number) => setEntries(e => e.filter((_, i) => i !== idx));
+  const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
 
   const submitEntries = async () => {
     if (entries.length === 0) return toast.error("No entries to submit");
     setProcessing(true);
     try {
       const results = await Promise.all(
-        entries.map(e => supabase.rpc("add_stock_entry_v2", {
-          _product_id: e.product_id, _unit_id: e.unit_id as string, _qty: e.qty, _notes: e.notes || undefined,
-        }))
+        entries.map((e) =>
+          supabase.rpc("add_stock_entry_v2", {
+            _product_id: e.product_id,
+            _unit_id: e.unit_id as string,
+            _qty: e.qty,
+            _notes: e.notes || undefined,
+          }),
+        ),
       );
-      const errors = results.filter(r => r.error);
+      const errors = results.filter((r) => r.error);
       if (errors.length > 0) return toast.error(errors[0]!.error!.message);
-      toast.success(`${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted!`);
-      setSummary({ entries: [...entries], submittedAt: new Date().toISOString(), submittedBy: fullName ?? "" });
+      toast.success(
+        `${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted for admin approval`,
+      );
+      setSummary({
+        entries: [...entries],
+        submittedAt: new Date().toISOString(),
+        submittedBy: fullName ?? "",
+        status: "pending",
+      });
       setEntries([]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unknown error");
@@ -170,9 +228,12 @@ function StockEntryPage() {
     }
   };
 
-  if (loading) return (
-    <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-  );
+  if (loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
 
   // ── SUMMARY SCREEN ───────────────────────────────────────────────────
   if (summary) {
@@ -184,7 +245,7 @@ function StockEntryPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" /> Submitted
+              <Clock className="h-5 w-5 text-amber-500" /> Pending Approval
             </h1>
             <p className="text-xs text-muted-foreground">
               {summary.submittedBy} · {new Date(summary.submittedAt).toLocaleString()}
@@ -193,13 +254,15 @@ function StockEntryPage() {
         </header>
         <div className="flex-1 overflow-auto p-4 max-w-3xl mx-auto w-full space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Card className="p-4 border-l-4 border-l-green-500">
-              <div className="text-xs text-muted-foreground">Products Restocked</div>
-              <div className="text-3xl font-bold text-green-600">{summary.entries.length}</div>
+            <Card className="p-4 border-l-4 border-l-amber-500">
+              <div className="text-xs text-muted-foreground">Products Submitted</div>
+              <div className="text-3xl font-bold">{summary.entries.length}</div>
             </Card>
             <Card className="p-4 border-l-4 border-l-blue-500">
-              <div className="text-xs text-muted-foreground">Total Units Added</div>
-              <div className="text-3xl font-bold text-blue-600">{summary.entries.reduce((s, e) => s + e.qty, 0)}</div>
+              <div className="text-xs text-muted-foreground">Total Units Pending</div>
+              <div className="text-3xl font-bold text-blue-600">
+                {summary.entries.reduce((s, e) => s + e.qty, 0)}
+              </div>
             </Card>
           </div>
           <Card className="overflow-hidden">
@@ -209,9 +272,8 @@ function StockEntryPage() {
                   <tr>
                     <th className="text-left px-4 py-3">Product</th>
                     <th className="text-left px-4 py-3">Barcode</th>
-                    <th className="text-right px-4 py-3">Before</th>
-                    <th className="text-right px-4 py-3">Added</th>
-                    <th className="text-right px-4 py-3">After</th>
+                    <th className="text-right px-4 py-3">Units</th>
+                    <th className="text-left px-4 py-3">Status</th>
                     <th className="text-left px-4 py-3">Notes</th>
                   </tr>
                 </thead>
@@ -220,9 +282,12 @@ function StockEntryPage() {
                     <tr key={i} className="hover:bg-muted/40">
                       <td className="px-4 py-3 font-medium">{e.product_name}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.barcode}</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{e.current_stock}</td>
                       <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
-                      <td className="px-4 py-3 text-right font-bold">{e.current_stock + e.qty}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                          Pending
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
                     </tr>
                   ))}
@@ -234,19 +299,31 @@ function StockEntryPage() {
             <Card className="p-4 border-l-4 border-l-purple-500 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-sm">Full Stock Entry History</div>
-                <div className="text-xs text-muted-foreground">View all entries from all cashiers</div>
+                <div className="text-xs text-muted-foreground">
+                  View all entries from all cashiers
+                </div>
               </div>
               <Button asChild size="sm">
-                <Link to="/admin/stock-summary"><ClipboardList className="h-4 w-4 mr-2" /> View</Link>
+                <Link to="/admin/stock-summary">
+                  <ClipboardList className="h-4 w-4 mr-2" /> View
+                </Link>
               </Button>
             </Card>
           )}
           <div className="grid grid-cols-2 gap-3 pb-4">
-            <Button variant="outline" onClick={() => { setSummary(null); fetchProducts(); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSummary(null);
+                fetchProducts();
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" /> New Entry
             </Button>
             <Button asChild>
-              <Link to="/pos"><ArrowLeft className="h-4 w-4 mr-2" /> Back to POS</Link>
+              <Link to="/pos">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to POS
+              </Link>
             </Button>
           </div>
         </div>
@@ -261,7 +338,9 @@ function StockEntryPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="icon">
-              <Link to="/pos"><ArrowLeft className="h-5 w-5" /></Link>
+              <Link to="/pos">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
             </Button>
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
@@ -272,19 +351,19 @@ function StockEntryPage() {
           </div>
           {role === "admin" && (
             <Button asChild variant="outline" size="sm">
-              <Link to="/admin/stock-summary"><ClipboardList className="h-4 w-4 mr-2" /> History</Link>
+              <Link to="/admin/stock-summary">
+                <ClipboardList className="h-4 w-4 mr-2" /> History
+              </Link>
             </Button>
           )}
         </div>
       </header>
 
       <div className="flex-1 overflow-auto p-6 max-w-2xl mx-auto w-full space-y-6">
-
         {/* Add stock form — styled like admin Add Product */}
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Add Stock</h2>
           <div className="grid grid-cols-2 gap-4">
-
             {/* Product search — full width */}
             <div className="col-span-2 relative">
               <Label>Product</Label>
@@ -294,7 +373,7 @@ function StockEntryPage() {
                   className="pl-9"
                   placeholder="Search by name or scan barcode..."
                   value={search}
-                  onChange={e => {
+                  onChange={(e) => {
                     setSearch(e.target.value);
                     setSelectedProduct(null);
                     setShowDrop(true);
@@ -304,14 +383,16 @@ function StockEntryPage() {
                 />
                 {showDrop && filtered.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-20 max-h-52 overflow-auto">
-                    {filtered.map(p => (
+                    {filtered.map((p) => (
                       <button
                         key={p.id}
                         onMouseDown={() => selectProduct(p)}
                         className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors border-b last:border-0"
                       >
                         <div className="font-medium text-sm">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">Stock: {p.stock} · {p.barcode}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Stock: {p.stock} · {p.barcode}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -319,7 +400,8 @@ function StockEntryPage() {
               </div>
               {selectedProduct && (
                 <div className="mt-2 text-xs text-muted-foreground px-1">
-                  Current stock: <span className="font-semibold text-foreground">{selectedProduct.stock}</span>
+                  Current stock:{" "}
+                  <span className="font-semibold text-foreground">{selectedProduct.stock}</span>
                   &nbsp;·&nbsp;{selectedProduct.barcode}
                 </div>
               )}
@@ -334,7 +416,9 @@ function StockEntryPage() {
                 disabled={!selectedProduct || selectedUnits.length === 0}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={selectedProduct ? "Select unit" : "Pick a product first"} />
+                  <SelectValue
+                    placeholder={selectedProduct ? "Select unit" : "Pick a product first"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedUnits.map((u) => (
@@ -355,8 +439,8 @@ function StockEntryPage() {
                 min="1"
                 placeholder="0"
                 value={qty}
-                onChange={e => setQty(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addEntry()}
+                onChange={(e) => setQty(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addEntry()}
                 className="mt-1"
               />
               {selectedUnit && Number(qty) > 0 && selectedUnit.equals_base > 1 && (
@@ -368,12 +452,14 @@ function StockEntryPage() {
 
             {/* Notes */}
             <div>
-              <Label>Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+              <Label>
+                Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+              </Label>
               <Input
                 placeholder="e.g. New batch, Supplier..."
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addEntry()}
+                onChange={(e) => setNotes(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addEntry()}
                 className="mt-1"
               />
             </div>
@@ -435,7 +521,12 @@ function StockEntryPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeEntry(idx)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => removeEntry(idx)}
+                        >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </td>
@@ -449,10 +540,16 @@ function StockEntryPage() {
 
         {entries.length > 0 && (
           <Button onClick={submitEntries} disabled={processing} className="w-full" size="lg">
-            {processing
-              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
-              : <><CheckCircle2 className="h-4 w-4 mr-2" /> Submit {entries.length} Entr{entries.length === 1 ? "y" : "ies"}</>
-            }
+            {processing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Submit {entries.length} Entr
+                {entries.length === 1 ? "y" : "ies"}
+              </>
+            )}
           </Button>
         )}
       </div>
