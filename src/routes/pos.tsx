@@ -220,9 +220,6 @@ function PosPage() {
     }
   };
 
-  const filtered = products;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
 
   useEffect(() => {
     if (!searchOpen) return;
