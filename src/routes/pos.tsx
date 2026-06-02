@@ -238,7 +238,7 @@ function PosPage() {
 
   const filtered = products;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.sale_price), 0);
+  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
   const taxAmount = Math.max(0, (subtotal - discount) * (taxRate / 100));
   const total = Math.max(0, subtotal - discount + taxAmount);
   const cashNum = Number(cash) || 0;
@@ -250,11 +250,14 @@ function PosPage() {
     if (paymentMethod === "cash" && cash !== "" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     try {
-      const { data, error } = await supabase.rpc("process_sale", {
+      const { data, error } = await supabase.rpc("process_sale_v2", {
         _items: cart.map(i => ({
           product_id: i.id, product_name: i.name, barcode: i.barcode,
-          qty: i.qty, unit_price: i.sale_price, purchase_price: i.purchase_price,
-          subtotal: i.qty * i.sale_price,
+          unit_id: i.unit_id,
+          qty: i.qty,
+          unit_price: i.unit_sale_price,
+          purchase_price: i.unit_purchase_price,
+          subtotal: i.qty * i.unit_sale_price,
         })),
         _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount, _total: total,
         _cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
