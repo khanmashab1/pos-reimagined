@@ -127,11 +127,29 @@ function PosPage() {
   useEffect(() => { setPage(0); }, [search, cat]);
   useEffect(() => { scanRef.current?.focus(); }, []);
 
-  const addToCart = (p: Product) => {
-    setCart(prev => {
-      const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...p, qty: 1 }];
+  const addToCart = async (p: Product, opts?: { unit?: ProductUnit; qty?: number }) => {
+    // Load units lazily
+    const map = await fetchUnitsByProductIds([p.id]);
+    const units = map[p.id] ?? [];
+    const unit = opts?.unit ?? pickDefaultUnit(units);
+    const addQty = opts?.qty ?? 1;
+    setCart((prev) => {
+      const matchKey = (i: CartItem) => i.id === p.id && i.unit_id === (unit?.id ?? null);
+      const ex = prev.find(matchKey);
+      if (ex) return prev.map((i) => (matchKey(i) ? { ...i, qty: i.qty + addQty } : i));
+      return [
+        ...prev,
+        {
+          ...p,
+          qty: addQty,
+          unit_id: unit?.id ?? null,
+          unit_name: unit?.name ?? "Piece",
+          unit_equals_base: unit?.equals_base ?? 1,
+          unit_sale_price: unit ? Number(unit.sale_price) : Number(p.sale_price),
+          unit_purchase_price: unit ? Number(unit.purchase_price) : Number(p.purchase_price),
+          available_units: units,
+        },
+      ];
     });
   };
 
