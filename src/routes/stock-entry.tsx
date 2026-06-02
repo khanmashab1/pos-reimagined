@@ -37,6 +37,8 @@ function StockEntryPage() {
   const [search, setSearch] = useState("");
   const [showDrop, setShowDrop] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedUnits, setSelectedUnits] = useState<ProductUnit[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -46,6 +48,8 @@ function StockEntryPage() {
   const scanBuffer = useRef("");
   const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
+
+  const selectedUnit = selectedUnits.find((u) => u.id === selectedUnitId);
 
   useEffect(() => {
     if (loading) return;
