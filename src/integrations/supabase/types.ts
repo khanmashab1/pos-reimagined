@@ -92,9 +92,126 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          notes: string
+          product_id: string
+          qty_in_base: number
+          qty_in_unit: number
+          ref_id: string | null
+          unit_id: string | null
+          unit_name: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          notes?: string
+          product_id: string
+          qty_in_base: number
+          qty_in_unit: number
+          ref_id?: string | null
+          unit_id?: string | null
+          unit_name?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          notes?: string
+          product_id?: string
+          qty_in_base?: number
+          qty_in_unit?: number
+          ref_id?: string | null
+          unit_id?: string | null
+          unit_name?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_units: {
+        Row: {
+          barcode: string | null
+          created_at: string
+          equals_base: number
+          id: string
+          is_base: boolean
+          is_default_sale: boolean
+          name: string
+          product_id: string
+          purchase_price: number
+          sale_price: number
+          sku: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string
+          equals_base: number
+          id?: string
+          is_base?: boolean
+          is_default_sale?: boolean
+          name: string
+          product_id: string
+          purchase_price?: number
+          sale_price?: number
+          sku?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string
+          equals_base?: number
+          id?: string
+          is_base?: boolean
+          is_default_sale?: boolean
+          name?: string
+          product_id?: string
+          purchase_price?: number
+          sale_price?: number
+          sku?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_units_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string
+          base_unit_id: string | null
           category_id: string | null
           created_at: string
           id: string
@@ -109,6 +226,7 @@ export type Database = {
         }
         Insert: {
           barcode: string
+          base_unit_id?: string | null
           category_id?: string | null
           created_at?: string
           id?: string
@@ -123,6 +241,7 @@ export type Database = {
         }
         Update: {
           barcode?: string
+          base_unit_id?: string | null
           category_id?: string | null
           created_at?: string
           id?: string
@@ -136,6 +255,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_base_unit_id_fkey"
+            columns: ["base_unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_category_id_fkey"
             columns: ["category_id"]
@@ -289,8 +415,11 @@ export type Database = {
           product_name: string
           purchase_price: number
           qty: number
+          qty_in_unit: number | null
           sale_id: string
           subtotal: number
+          unit_id: string | null
+          unit_name: string | null
           unit_price: number
         }
         Insert: {
@@ -300,8 +429,11 @@ export type Database = {
           product_name: string
           purchase_price?: number
           qty: number
+          qty_in_unit?: number | null
           sale_id: string
           subtotal: number
+          unit_id?: string | null
+          unit_name?: string | null
           unit_price: number
         }
         Update: {
@@ -311,8 +443,11 @@ export type Database = {
           product_name?: string
           purchase_price?: number
           qty?: number
+          qty_in_unit?: number | null
           sale_id?: string
           subtotal?: number
+          unit_id?: string | null
+          unit_name?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -328,6 +463,13 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
             referencedColumns: ["id"]
           },
         ]
@@ -644,6 +786,15 @@ export type Database = {
         Args: { _notes?: string; _product_id: string; _qty: number }
         Returns: string
       }
+      add_stock_entry_v2: {
+        Args: {
+          _notes?: string
+          _product_id: string
+          _qty: number
+          _unit_id: string
+        }
+        Returns: string
+      }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {
@@ -653,6 +804,7 @@ export type Database = {
       get_admin_inventory_summary: { Args: never; Returns: Json }
       get_open_session: { Args: never; Returns: Json }
       get_suppliers_summary: { Args: never; Returns: Json }
+      get_unit_breakdown: { Args: { _product_id: string }; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -682,6 +834,23 @@ export type Database = {
           _total: number
         }
         Returns: Json
+      }
+      process_sale_v2: {
+        Args: {
+          _cash_received: number
+          _change_returned: number
+          _discount: number
+          _items: Json
+          _payment_type: string
+          _subtotal: number
+          _tax_amount: number
+          _total: number
+        }
+        Returns: Json
+      }
+      save_product_with_units: {
+        Args: { _initial_stock?: Json; _product: Json; _units: Json }
+        Returns: string
       }
       void_return: {
         Args: { _reason: string; _return_id: string }
