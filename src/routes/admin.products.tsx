@@ -77,12 +77,14 @@ const ProductRow = memo(
   ({
     p,
     cats,
+    units,
     onOpenEdit,
     onSetPrinting,
     onRemove,
   }: {
     p: Product;
     cats: Cat[];
+    units: ProductUnit[];
     onOpenEdit: (p: Product) => void;
     onSetPrinting: (p: Product) => void;
     onRemove: (id: string) => void;
@@ -91,6 +93,7 @@ const ProductRow = memo(
       () => cats.find((c) => c.id === p.category_id)?.name ?? "—",
       [cats, p.category_id],
     );
+    const baseName = units.find((u) => u.is_base)?.name ?? "Piece";
     return (
       <tr className="hover:bg-muted/30">
         <td className="px-4 py-3">
@@ -101,7 +104,13 @@ const ProductRow = memo(
         <td className="px-4 py-3 text-right">{fmt(p.purchase_price)}</td>
         <td className="px-4 py-3 text-right font-semibold">{fmt(p.sale_price)}</td>
         <td className="px-4 py-3 text-center">
-          <StockBadge stock={p.stock} minStockAlert={p.min_stock_alert} />
+          <div className="flex flex-col items-center gap-1">
+            <StockBadge stock={p.stock} minStockAlert={p.min_stock_alert} />
+            <span className="text-[10px] text-muted-foreground">{p.stock} {baseName}</span>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <StockBreakdownBadge stock={p.stock} units={units} />
         </td>
         <td className="px-4 py-3 text-right">
           <div className="inline-flex gap-1">
