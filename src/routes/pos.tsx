@@ -268,7 +268,9 @@ function PosPage() {
       toast.success("Sale completed!");
       const result = data as any;
       setLastReceipt({
-        bill_no: result.bill_no, items: cart, subtotal, tax_amount: taxAmount,
+        bill_no: result.bill_no,
+        items: cart.map((i) => ({ name: `${i.name}${i.unit_name && i.available_units.length > 1 ? ` (${i.unit_name})` : ""}`, barcode: i.barcode, qty: i.qty, sale_price: i.unit_sale_price })),
+        subtotal, tax_amount: taxAmount,
         discount, total,
         cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
