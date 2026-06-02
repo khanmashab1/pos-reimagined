@@ -76,7 +76,7 @@ function StockEntryPage() {
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
         const prod = products.find(p => p.barcode === code);
-        if (prod) { setSelectedProduct(prod); setSearch(prod.name); setQty(""); setNotes(""); setTimeout(() => qtyRef.current?.focus(), 50); }
+        if (prod) { selectProduct(prod); }
         else toast.error(`Barcode not found: ${code}`);
         return;
       }
