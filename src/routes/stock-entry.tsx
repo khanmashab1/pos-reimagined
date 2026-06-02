@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft, Plus, ScanLine, CheckCircle2, ClipboardList, Package, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/stock-entry")({
   component: StockEntryPage,
@@ -20,6 +22,7 @@ interface Product {
 interface EntryRow {
   product_id: string; product_name: string; barcode: string;
   current_stock: number; qty: number; notes: string;
+  unit_id: string | null; unit_name: string; unit_equals_base: number;
 }
 
 interface SubmitSummary {
