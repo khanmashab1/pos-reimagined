@@ -96,12 +96,17 @@ function StockEntryPage() {
       ).slice(0, 10)
     : [];
 
-  const selectProduct = (p: Product) => {
+  const selectProduct = async (p: Product) => {
     setSelectedProduct(p);
     setSearch(p.name);
     setShowDrop(false);
     setQty("");
     setNotes("");
+    const map = await fetchUnitsByProductIds([p.id]);
+    const units = map[p.id] ?? [];
+    setSelectedUnits(units);
+    const def = pickDefaultUnit(units);
+    setSelectedUnitId(def?.id ?? null);
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
@@ -109,8 +114,12 @@ function StockEntryPage() {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
+    const unit = selectedUnits.find((u) => u.id === selectedUnitId);
+    const unitName = unit?.name ?? "Piece";
+    const unitEquals = unit?.equals_base ?? 1;
 
-    const existing = entries.findIndex(e => e.product_id === selectedProduct.id);
+    const matchKey = (e: EntryRow) => e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
+    const existing = entries.findIndex(matchKey);
     if (existing >= 0) {
       setEntries(prev => prev.map((e, i) =>
         i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e
@@ -124,10 +133,15 @@ function StockEntryPage() {
         current_stock: selectedProduct.stock,
         qty: qtyNum,
         notes,
+        unit_id: unit?.id ?? null,
+        unit_name: unitName,
+        unit_equals_base: unitEquals,
       }]);
       toast.success(`Added: ${selectedProduct.name}`);
     }
     setSelectedProduct(null);
+    setSelectedUnits([]);
+    setSelectedUnitId(null);
     setSearch("");
     setQty("");
     setNotes("");
@@ -140,8 +154,8 @@ function StockEntryPage() {
     setProcessing(true);
     try {
       const results = await Promise.all(
-        entries.map(e => supabase.rpc("add_stock_entry", {
-          _product_id: e.product_id, _qty: e.qty, _notes: e.notes || undefined,
+        entries.map(e => supabase.rpc("add_stock_entry_v2", {
+          _product_id: e.product_id, _unit_id: e.unit_id, _qty: e.qty, _notes: e.notes || undefined,
         }))
       );
       const errors = results.filter(r => r.error);
