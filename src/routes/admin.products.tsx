@@ -445,104 +445,133 @@ function ProductsPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit" : "Add"} Product</DialogTitle>
+            <DialogTitle className="text-center text-xl">{editing ? "Edit" : "Add"} Product</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Product Name</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Product Name</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>Barcode (Base Unit)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1 font-mono"
+                    value={form.barcode}
+                    onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                  />
+                  <Button type="button" variant="outline" onClick={() => setForm((f) => ({ ...f, barcode: genBarcode() }))}>
+                    Gen
+                  </Button>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setScannerOpen(true)}>
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Barcode</Label>
-              <div className="flex gap-2">
-                <Input
-                  className="flex-1 font-mono tracking-wide"
-                  value={form.barcode}
-                  onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setForm((f) => ({ ...f, barcode: genBarcode() }))}
+
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-start">
+              <div>
+                <Label>Category</Label>
+                <Select
+                  value={form.category_id ?? "none"}
+                  onValueChange={(v) => setForm((f) => ({ ...f, category_id: v === "none" ? null : v }))}
                 >
-                  Gen
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setScannerOpen(true)}>
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <Label>Category</Label>
-              <Select
-                value={form.category_id ?? "none"}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, category_id: v === "none" ? null : v }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— None —</SelectItem>
-                  {cats.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Purchase Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.purchase_price}
-                  onChange={(e) => setForm((f) => ({ ...f, purchase_price: +e.target.value }))}
-                />
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label>Sale Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.sale_price}
-                  onChange={(e) => setForm((f) => ({ ...f, sale_price: +e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Stock</Label>
-                <Input
-                  type="number"
-                  value={form.stock}
-                  onChange={(e) => setForm((f) => ({ ...f, stock: +e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Low Stock Alert</Label>
+                <Label>Low Stock Alert (Base Unit)</Label>
                 <Input
                   type="number"
                   value={form.min_stock_alert}
                   onChange={(e) => setForm((f) => ({ ...f, min_stock_alert: +e.target.value }))}
                 />
               </div>
+              <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3 min-w-[180px]">
+                <div className="text-xs font-semibold flex items-center gap-2">
+                  Base Unit
+                  <span className="px-1.5 py-0.5 rounded bg-green-600 text-white text-[10px]">
+                    {baseUnitForm?.name || "—"}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  All inventory is stored in base unit ({baseUnitForm?.name || "—"}).
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Profit margin: <span className="font-semibold text-foreground">{marginDisplay}%</span>
+
+            <ProductUnitsEditor units={units} onChange={setUnits} />
+
+            {!editing && units.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-lg border p-4">
+                  <div className="font-semibold text-sm">Initial Stock <span className="text-xs text-muted-foreground font-normal">(any unit)</span></div>
+                  <div className="flex gap-2 mt-2">
+                    <Select
+                      value={String(initialStockUnitIdx)}
+                      onValueChange={(v) => setInitialStockUnitIdx(Number(v))}
+                    >
+                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {units.map((u, i) => (
+                          <SelectItem key={i} value={String(i)}>{u.name || `Unit ${i + 1}`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={initialStockQty}
+                      onChange={(e) => setInitialStockQty(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="mt-3 rounded-md bg-green-50 dark:bg-green-950/30 p-2 text-center">
+                    <div className="text-xs text-muted-foreground">Total ({baseUnitForm?.name || "Base"})</div>
+                    <div className="text-lg font-bold text-green-600">{totalInitialBase}</div>
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4 col-span-1 md:col-span-2">
+                  <div className="font-semibold text-sm">Example Conversions</div>
+                  <div className="mt-2 space-y-1 text-sm">
+                    {units.map((u, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="font-medium">1 {u.name || "—"}</span>
+                        <span>=</span>
+                        <span>{u.equals_base} {baseUnitForm?.name || "Base"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 p-3 text-xs space-y-1">
+              <div className="font-semibold flex items-center gap-1">💡 Validation Rules</div>
+              <ul className="ml-4 list-disc text-muted-foreground space-y-0.5">
+                <li>Stock is always stored in the base unit.</li>
+                <li>Unit names must be unique per product.</li>
+                <li>Conversion value must be greater than 0.</li>
+                <li>Purchase and sale prices cannot be negative.</li>
+                <li>Exactly one unit must be marked as base.</li>
+              </ul>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={save}>Save</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save}>Save Product</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {printing && <BarcodeLabel product={printing} onClose={() => setPrinting(null)} />}
       <BarcodeScanner
