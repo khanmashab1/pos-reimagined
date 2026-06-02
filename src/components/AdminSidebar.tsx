@@ -20,6 +20,7 @@ const items = [
   { to: "/admin/profit-calculator", label: "Profit Calculator", icon: TrendingUp },
   { to: "/admin/reports", label: "Sales Reports", icon: FileBarChart },
   { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
+  { to: "/admin/stock-summary", label: "Stock Summary", icon: Package },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
