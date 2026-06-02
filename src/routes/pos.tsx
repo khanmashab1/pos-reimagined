@@ -167,21 +167,35 @@ function PosPage() {
     e.preventDefault();
     const code = scan.trim().replace(/[\s\-]/g, '');
     if (!code) return;
+    // 1) match product barcode
     let prod: Product | undefined = products.find(p => p.barcode === code);
     if (!prod) {
       const { data } = await supabase.from("products").select("*").eq("barcode", code).eq("is_active", true).maybeSingle();
       prod = (data as Product) ?? undefined;
     }
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); }
-    else {
-      if (confirm(`Product not found for "${code}". Add it now?`)) {
-        setQuickAddBarcode(code);
-        setQuickAddOpen(true);
-      } else {
-        toast.error("Product not found");
+    if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); return; }
+    // 2) match unit barcode
+    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", code).maybeSingle();
+    if (u) {
+      const anyU = u as any;
+      const parent = anyU.products as Product;
+      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
+      delete (unit as any).products;
+      if (parent?.id) {
+        await addToCart(parent, { unit });
+        toast.success(`Added: ${parent.name} (${unit.name})`);
+        setScan("");
+        return;
       }
-      setScan("");
     }
+    // 3) not found
+    if (confirm(`Product not found for "${code}". Add it now?`)) {
+      setQuickAddBarcode(code);
+      setQuickAddOpen(true);
+    } else {
+      toast.error("Product not found");
+    }
+    setScan("");
   };
 
   const handleCameraScan = async (code: string) => {
@@ -189,16 +203,26 @@ function PosPage() {
     if (!clean) return;
     const { data } = await supabase.from("products").select("*").eq("barcode", clean).eq("is_active", true).maybeSingle();
     const prod = data as Product | null;
-    if (prod) { addToCart(prod); toast.success(`Added: ${prod.name}`); }
-    else {
-      if (confirm(`Product not found for "${clean}". Add it now?`)) {
-        setQuickAddBarcode(clean);
-        setQuickAddOpen(true);
-      } else {
-        toast.error(`Product not found: ${clean}`);
-      }
+    if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); return; }
+    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", clean).maybeSingle();
+    if (u) {
+      const anyU = u as any;
+      const parent = anyU.products as Product;
+      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
+      delete (unit as any).products;
+      if (parent?.id) { await addToCart(parent, { unit }); toast.success(`Added: ${parent.name} (${unit.name})`); return; }
+    }
+    if (confirm(`Product not found for "${clean}". Add it now?`)) {
+      setQuickAddBarcode(clean);
+      setQuickAddOpen(true);
+    } else {
+      toast.error(`Product not found: ${clean}`);
     }
   };
+
+  const filtered = products;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
 
   useEffect(() => {
     if (!searchOpen) return;
