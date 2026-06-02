@@ -19,6 +19,8 @@ import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/pos")({
   component: PosPage,
@@ -28,7 +30,15 @@ interface Product {
   id: string; barcode: string; name: string; sale_price: number;
   purchase_price: number; stock: number; category_id: string | null;
 }
-interface CartItem extends Product { qty: number; }
+interface CartItem extends Product {
+  qty: number;
+  unit_id: string | null;
+  unit_name: string;
+  unit_equals_base: number;
+  unit_sale_price: number;
+  unit_purchase_price: number;
+  available_units: ProductUnit[];
+}
 
 type PaymentMethod = "cash" | "card" | "easypasa" | "jazzcash";
 
