@@ -425,7 +425,14 @@ function StockEntryPage() {
                     <tr key={idx} className="hover:bg-muted/40">
                       <td className="px-4 py-3 font-medium">{e.product_name}</td>
                       <td className="px-4 py-3 text-right">{e.current_stock}</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">
+                        +{e.qty} {e.unit_name}
+                        {e.unit_equals_base > 1 && (
+                          <div className="text-[10px] font-normal text-muted-foreground">
+                            (= {e.qty * e.unit_equals_base} base)
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeEntry(idx)}>
