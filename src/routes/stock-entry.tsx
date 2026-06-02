@@ -325,6 +325,27 @@ function StockEntryPage() {
               )}
             </div>
 
+            {/* Unit */}
+            <div>
+              <Label>Unit</Label>
+              <Select
+                value={selectedUnitId ?? ""}
+                onValueChange={(v) => setSelectedUnitId(v)}
+                disabled={!selectedProduct || selectedUnits.length === 0}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={selectedProduct ? "Select unit" : "Pick a product first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedUnits.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} (= {u.equals_base} base)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Qty */}
             <div>
               <Label>Quantity to Add</Label>
@@ -338,6 +359,11 @@ function StockEntryPage() {
                 onKeyDown={e => e.key === "Enter" && addEntry()}
                 className="mt-1"
               />
+              {selectedUnit && Number(qty) > 0 && selectedUnit.equals_base > 1 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  = {Number(qty) * selectedUnit.equals_base} base units
+                </div>
+              )}
             </div>
 
             {/* Notes */}
