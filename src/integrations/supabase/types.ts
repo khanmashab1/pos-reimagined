@@ -34,12 +34,14 @@ export type Database = {
       }
       cash_sessions: {
         Row: {
+          cash_paid_out: number
           cash_sales: number
           closed_at: string | null
           closing_cash: number | null
           difference: number | null
           expected_cash: number
           id: string
+          online_sales: number
           opened_at: string
           opening_cash: number
           status: string
@@ -47,12 +49,14 @@ export type Database = {
           user_name: string
         }
         Insert: {
+          cash_paid_out?: number
           cash_sales?: number
           closed_at?: string | null
           closing_cash?: number | null
           difference?: number | null
           expected_cash?: number
           id?: string
+          online_sales?: number
           opened_at?: string
           opening_cash?: number
           status?: string
@@ -60,12 +64,14 @@ export type Database = {
           user_name?: string
         }
         Update: {
+          cash_paid_out?: number
           cash_sales?: number
           closed_at?: string | null
           closing_cash?: number | null
           difference?: number | null
           expected_cash?: number
           id?: string
+          online_sales?: number
           opened_at?: string
           opening_cash?: number
           status?: string
@@ -612,6 +618,7 @@ export type Database = {
           method: string
           notes: string
           payment_date: string
+          session_id: string | null
           supplier_id: string
         }
         Insert: {
@@ -623,6 +630,7 @@ export type Database = {
           method?: string
           notes?: string
           payment_date?: string
+          session_id?: string | null
           supplier_id: string
         }
         Update: {
@@ -634,6 +642,7 @@ export type Database = {
           method?: string
           notes?: string
           payment_date?: string
+          session_id?: string | null
           supplier_id?: string
         }
         Relationships: [
@@ -642,6 +651,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -795,6 +811,20 @@ export type Database = {
         }
         Returns: string
       }
+      admin_update_shift: {
+        Args: {
+          _session_id: string
+          _opening_cash?: number
+          _closing_cash?: number | null
+          _cash_sales?: number
+          _expected_cash?: number
+          _difference?: number | null
+          _user_name?: string
+          _online_sales?: number
+          _cash_paid_out?: number
+        }
+        Returns: Json
+      }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {
@@ -845,6 +875,16 @@ export type Database = {
           _subtotal: number
           _tax_amount: number
           _total: number
+        }
+        Returns: Json
+      }
+      record_supplier_payment: {
+        Args: {
+          _supplier_id: string
+          _amount: number
+          _method?: string
+          _notes?: string
+          _payment_date?: string
         }
         Returns: Json
       }

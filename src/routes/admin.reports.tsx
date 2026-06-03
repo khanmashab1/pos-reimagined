@@ -33,6 +33,8 @@ export const Route = createFileRoute("/admin/reports")({
   component: ReportsPage,
 });
 
+const isCashPay = (v: string | null | undefined) => (v ?? "cash").trim().toLowerCase() === "cash";
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -100,10 +102,12 @@ function ReportsPage() {
   const totals = filtered.reduce(
     (acc, s) => ({
       total: acc.total + Number(s.total),
+      cash: acc.cash + (isCashPay(s.payment_type) ? Number(s.total) : 0),
+      online: acc.online + (isCashPay(s.payment_type) ? 0 : Number(s.total)),
       bills: acc.bills + 1,
       items: acc.items + Number(s.items_count),
     }),
-    { total: 0, bills: 0, items: 0 },
+    { total: 0, cash: 0, online: 0, bills: 0, items: 0 },
   );
 
   // Unit-wise sales & profit-per-unit (respects date range + payment filter)
@@ -254,8 +258,10 @@ function ReportsPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mt-5">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5">
           <Stat label="Total Sales" value={fmt(totals.total)} />
+          <Stat label="Cash Payments" value={fmt(totals.cash)} accent="text-green-600" />
+          <Stat label="Online Payments" value={fmt(totals.online)} accent="text-blue-600" />
           <Stat label="Bills" value={String(totals.bills)} />
           <Stat label="Items Sold" value={String(totals.items)} />
         </div>
@@ -352,14 +358,15 @@ function ReportsPage() {
                 <th className="text-left p-3">Payment</th>
                 <th className="text-right p-3">Items</th>
                 <th className="text-right p-3">Discount</th>
-                <th className="text-right p-3">Total</th>
+                <th className="text-right p-3">Cash</th>
+                <th className="text-right p-3">Online</th>
                 <th className="text-right p-3"></th>
               </tr>
             </thead>
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     No sales in this range.
                   </td>
                 </tr>
@@ -396,7 +403,12 @@ function ReportsPage() {
                     </td>
                     <td className="text-right p-3">{s.items_count}</td>
                     <td className="text-right p-3">{fmt(s.discount)}</td>
-                    <td className="text-right p-3 font-semibold">{fmt(s.total)}</td>
+                    <td className="text-right p-3 font-semibold text-green-700">
+                      {isCashPay(s.payment_type) ? fmt(s.total) : "—"}
+                    </td>
+                    <td className="text-right p-3 font-semibold text-blue-700">
+                      {isCashPay(s.payment_type) ? "—" : fmt(s.total)}
+                    </td>
                     <td className="text-right p-3">
                       <Button variant="ghost" size="sm" onClick={() => viewInvoice(s)}>
                         <Eye className="h-4 w-4" />

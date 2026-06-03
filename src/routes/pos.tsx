@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,86 @@ interface CartItem extends Product {
 
 type PaymentMethod = "cash" | "card" | "easypasa" | "jazzcash";
 
+/** One cart row. Memoized so editing/adding one item doesn't re-render every other row. */
+const CartItemRow = memo(function CartItemRow({
+  i,
+  idx,
+  onUpdate,
+  onRemove,
+}: {
+  i: CartItem;
+  idx: number;
+  onUpdate: (idx: number, patch: Partial<CartItem>) => void;
+  onRemove: (idx: number) => void;
+}) {
+  return (
+    <div
+      className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
+      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
+      <div className="min-w-0">
+        <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
+        <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
+      </div>
+      <div className="hidden sm:block">
+        {i.available_units.length > 1 ? (
+          <Select
+            value={i.unit_id ?? ""}
+            onValueChange={(v) => {
+              const u = i.available_units.find((x) => x.id === v);
+              if (!u) return;
+              onUpdate(idx, {
+                unit_id: u.id,
+                unit_name: u.name,
+                unit_equals_base: u.equals_base,
+                unit_sale_price: Number(u.sale_price),
+                unit_purchase_price: Number(u.purchase_price),
+              });
+            }}
+          >
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {i.available_units.map((u) => (
+                <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
+        )}
+      </div>
+      <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+        <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
+          onClick={() => onUpdate(idx, { qty: Math.max(1, i.qty - 1) })}>
+          <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+        </Button>
+        <input
+          type="number" min={1}
+          className="w-7 sm:w-10 text-center text-xs sm:text-sm font-semibold bg-transparent border border-border rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          value={i.qty}
+          onChange={e => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val) && val >= 1) onUpdate(idx, { qty: val });
+          }}
+          onBlur={e => {
+            const val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 1) onUpdate(idx, { qty: 1 });
+          }}
+        />
+        <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
+          onClick={() => onUpdate(idx, { qty: i.qty + 1 })}>
+          <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+        </Button>
+      </div>
+      <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.unit_sale_price))}</div>
+      <button
+        className="flex items-center justify-center h-6 w-6 rounded text-red-500 hover:text-red-700 hover:bg-red-100"
+        onClick={() => onRemove(idx)}>
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+});
+
 function PosPage() {
   const { loading, user, role, signOut, fullName } = useAuth();
   const navigate = useNavigate();
@@ -77,6 +157,9 @@ function PosPage() {
   const [quickAddBarcode, setQuickAddBarcode] = useState<string>("");
   const isMobile = useIsMobile();
   const scanRef = useRef<HTMLInputElement>(null);
+  // In-memory cache of product units, keyed by product id, so adding to cart is instant
+  // (no per-click DB round-trip). A ref avoids re-renders since nothing renders from it.
+  const unitsCache = useRef<Record<string, ProductUnit[]>>({});
 
   const refreshSession = useCallback(async () => {
     const { data } = await supabase.rpc("get_open_session");
@@ -85,6 +168,24 @@ function PosPage() {
   }, []);
 
   useEffect(() => { if (user) refreshSession(); }, [user, refreshSession]);
+
+  // Batch-prefetch units for the products currently on screen, merging into the cache.
+  const prefetchUnits = useCallback(async (list: { id: string }[]) => {
+    const missing = list.map((p) => p.id).filter((id) => !(id in unitsCache.current));
+    if (missing.length === 0) return;
+    const map = await fetchUnitsByProductIds(missing);
+    const next = { ...unitsCache.current };
+    for (const id of missing) next[id] = map[id] ?? [];
+    unitsCache.current = next;
+  }, []);
+
+  // Stable cart mutators so memoized rows don't re-render from new callback identities.
+  const updateCartItem = useCallback((idx: number, patch: Partial<CartItem>) => {
+    setCart((c) => c.map((it, j) => (j === idx ? { ...it, ...patch } : it)));
+  }, []);
+  const removeCartItem = useCallback((idx: number) => {
+    setCart((c) => c.filter((_, j) => j !== idx));
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -127,10 +228,15 @@ function PosPage() {
   useEffect(() => { setPage(0); }, [search, cat]);
   useEffect(() => { scanRef.current?.focus(); }, []);
 
-  const addToCart = async (p: Product, opts?: { unit?: ProductUnit; qty?: number }) => {
-    // Load units lazily
-    const map = await fetchUnitsByProductIds([p.id]);
-    const units = map[p.id] ?? [];
+  const addToCart = useCallback(async (p: Product, opts?: { unit?: ProductUnit; qty?: number }) => {
+    // Read units from the prefetched cache (instant). Only hit the network on a cache miss —
+    // e.g. a scanned product that isn't on the current screen.
+    let units = unitsCache.current[p.id];
+    if (units === undefined) {
+      const map = await fetchUnitsByProductIds([p.id]);
+      units = map[p.id] ?? [];
+      unitsCache.current = { ...unitsCache.current, [p.id]: units };
+    }
     const unit = opts?.unit ?? pickDefaultUnit(units);
     const addQty = opts?.qty ?? 1;
     setCart((prev) => {
@@ -151,7 +257,7 @@ function PosPage() {
         },
       ];
     });
-  };
+  }, []);
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -236,6 +342,10 @@ function PosPage() {
     return () => { if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current); };
   }, [manualSearch, searchOpen]);
 
+  // Warm the units cache for whatever products are on screen so clicks add to cart instantly.
+  useEffect(() => { void prefetchUnits(products); }, [products, prefetchUnits]);
+  useEffect(() => { void prefetchUnits(manualResults); }, [manualResults, prefetchUnits]);
+
   const filtered = products;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
@@ -276,16 +386,13 @@ function PosPage() {
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
         cashier_name: fullName, created_at: new Date().toISOString(),
       });
+      // Decrement stock locally for sold items instead of re-querying the whole catalog after every sale.
+      const soldBase = new Map<string, number>();
+      for (const it of cart) soldBase.set(it.id, (soldBase.get(it.id) ?? 0) + it.qty * (it.unit_equals_base || 1));
+      setProducts((prev) =>
+        prev.map((p) => (soldBase.has(p.id) ? { ...p, stock: p.stock - (soldBase.get(p.id) ?? 0) } : p)),
+      );
       setCart([]); setCash(""); setDiscount(0); setPaymentMethod("cash");
-      try {
-        let q = supabase.from("products").select("*", { count: "exact" }).eq("is_active", true).order("name")
-          .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-        if (cat !== "all") q = q.eq("category_id", cat);
-        if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
-        const { data: p, count, error: fetchError } = await q;
-        if (fetchError) console.error("Error refetching products:", fetchError);
-        else { setProducts((p ?? []) as Product[]); setTotalCount(count ?? 0); }
-      } catch (refetchErr) { console.error("Refetch error:", refetchErr); }
       await refreshSession();
     } finally { setProcessing(false); }
   };
@@ -405,77 +512,15 @@ function PosPage() {
 
                   {/* Rows */}
                   <div className="divide-y">
-                    {cart.map((i, idx) => {
-                      const updateAt = (patch: Partial<CartItem>) =>
-                        setCart((c) => c.map((it, j) => (j === idx ? { ...it, ...patch } : it)));
-                      const removeAt = () => setCart((c) => c.filter((_, j) => j !== idx));
-                      return (
-                      <div key={`${i.id}-${i.unit_id ?? "base"}-${idx}`}
-                        className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
-                        style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
-                        <div className="min-w-0">
-                          <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
-                          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
-                        </div>
-                        <div className="hidden sm:block">
-                          {i.available_units.length > 1 ? (
-                            <Select
-                              value={i.unit_id ?? ""}
-                              onValueChange={(v) => {
-                                const u = i.available_units.find((x) => x.id === v);
-                                if (!u) return;
-                                updateAt({
-                                  unit_id: u.id,
-                                  unit_name: u.name,
-                                  unit_equals_base: u.equals_base,
-                                  unit_sale_price: Number(u.sale_price),
-                                  unit_purchase_price: Number(u.purchase_price),
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {i.available_units.map((u) => (
-                                  <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
-                          <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => updateAt({ qty: Math.max(1, i.qty - 1) })}>
-                            <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          </Button>
-                          <input
-                            type="number" min={1}
-                            className="w-7 sm:w-10 text-center text-xs sm:text-sm font-semibold bg-transparent border border-border rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            value={i.qty}
-                            onChange={e => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val >= 1) updateAt({ qty: val });
-                            }}
-                            onBlur={e => {
-                              const val = parseInt(e.target.value, 10);
-                              if (isNaN(val) || val < 1) updateAt({ qty: 1 });
-                            }}
-                          />
-                          <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
-                            onClick={() => updateAt({ qty: i.qty + 1 })}>
-                            <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          </Button>
-                        </div>
-                        <div className="text-right text-xs sm:text-sm font-semibold">{fmt(i.qty * Number(i.unit_sale_price))}</div>
-                        <button
-                          className="flex items-center justify-center h-6 w-6 rounded text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={removeAt}>
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      );
-                    })}
+                    {cart.map((i, idx) => (
+                      <CartItemRow
+                        key={`${i.id}-${i.unit_id ?? "base"}-${idx}`}
+                        i={i}
+                        idx={idx}
+                        onUpdate={updateCartItem}
+                        onRemove={removeCartItem}
+                      />
+                    ))}
                   </div>
                 </div>
               )}

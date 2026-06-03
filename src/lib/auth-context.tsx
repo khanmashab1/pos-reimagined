@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -65,12 +65,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
-  };
+  }, []);
 
-  return <Ctx.Provider value={{ user, session, role, fullName, loading, signOut }}>{children}</Ctx.Provider>;
+  // Memoize so consumers don't re-render from a new object identity on every provider render.
+  const value = useMemo(
+    () => ({ user, session, role, fullName, loading, signOut }),
+    [user, session, role, fullName, loading, signOut],
+  );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);

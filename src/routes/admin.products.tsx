@@ -97,23 +97,19 @@ const StockBadge = ({ stock, minStockAlert }: { stock: number; minStockAlert: nu
 const ProductRow = memo(
   ({
     p,
-    cats,
+    catName,
     units,
     onOpenEdit,
     onSetPrinting,
     onRemove,
   }: {
     p: Product;
-    cats: Cat[];
+    catName: string;
     units: ProductUnit[];
     onOpenEdit: (p: Product) => void;
     onSetPrinting: (p: Product) => void;
     onRemove: (id: string) => void;
   }) => {
-    const catName = useMemo(
-      () => cats.find((c) => c.id === p.category_id)?.name ?? "—",
-      [cats, p.category_id],
-    );
     const baseName = units.find((u) => u.is_base)?.name ?? "Piece";
     return (
       <tr className="hover:bg-muted/30">
@@ -222,7 +218,7 @@ function ProductsPage() {
   const [searchScannerOpen, setSearchScannerOpen] = useState(false);
 
   const load = useCallback(
-    async (currentPage = page, currentSearch = search, currentFilter = filter) => {
+    async (currentPage: number, currentSearch: string, currentFilter: string) => {
       setLoadingItems(true);
       let query = supabase
         .from("products")
@@ -247,19 +243,21 @@ function ProductsPage() {
       setUnitsByProduct(map);
       setLoadingItems(false);
     },
-    [page, search, filter],
+    [],
   );
 
-  useEffect(() => {
-    load(0, search, filter);
-    setPage(0);
-  }, [search, filter, load]);
-  useEffect(() => {
-    load(page, search, filter);
-  }, [page, load]);
+  // Reset to the first page when the query changes, then load exactly once per page/search/filter change.
+  useEffect(() => { setPage(0); }, [search, filter]);
+  useEffect(() => { load(page, search, filter); }, [page, search, filter, load]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const filtered = items;
+  // O(1) category-name lookup built once per category change, instead of a .find() per row.
+  const catMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of cats) m.set(c.id, c.name);
+    return m;
+  }, [cats]);
 
   const openNew = useCallback(() => {
     setForm({ ...empty, barcode: genBarcode() });
@@ -524,7 +522,7 @@ function ProductsPage() {
                 <ProductRow
                   key={p.id}
                   p={p}
-                  cats={cats}
+                  catName={(p.category_id && catMap.get(p.category_id)) || "—"}
                   units={unitsByProduct[p.id] ?? []}
                   onOpenEdit={openEdit}
                   onSetPrinting={setPrinting}

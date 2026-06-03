@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -84,19 +84,23 @@ function StockEntryPage() {
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
-  const fetchProducts = useCallback(async () => {
-    const { data } = await supabase
-      .from("products")
-      .select("id,barcode,name,stock")
-      .eq("is_active", true)
-      .order("name")
-      .range(0, 9999);
-    setProducts((data ?? []) as Product[]);
-  }, []);
-
+  // Debounced server-side product search — avoids loading the entire catalog up front.
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    if (selectedProduct) return;
+    const term = search.trim();
+    if (!term) { setProducts([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id,barcode,name,stock")
+        .eq("is_active", true)
+        .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
+        .order("name")
+        .limit(20);
+      setProducts((data ?? []) as Product[]);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, selectedProduct]);
 
   // Global barcode scanner
   useEffect(() => {
@@ -108,10 +112,16 @@ function StockEntryPage() {
         scanBuffer.current = "";
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
-        const prod = products.find((p) => p.barcode === code);
-        if (prod) {
-          selectProduct(prod);
-        } else toast.error(`Barcode not found: ${code}`);
+        void (async () => {
+          const { data } = await supabase
+            .from("products")
+            .select("id,barcode,name,stock")
+            .eq("barcode", code)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (data) selectProduct(data as Product);
+          else toast.error(`Barcode not found: ${code}`);
+        })();
         return;
       }
       if (e.key.length === 1) {
@@ -124,17 +134,11 @@ function StockEntryPage() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const filtered =
-    search.trim() && !selectedProduct
-      ? products
-          .filter(
-            (p) =>
-              p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search),
-          )
-          .slice(0, 10)
-      : [];
+  // `products` already holds the server-side search results, so just cap the dropdown length.
+  const filtered = search.trim() && !selectedProduct ? products.slice(0, 10) : [];
 
   const selectProduct = async (p: Product) => {
     setSelectedProduct(p);
@@ -313,10 +317,7 @@ function StockEntryPage() {
           <div className="grid grid-cols-2 gap-3 pb-4">
             <Button
               variant="outline"
-              onClick={() => {
-                setSummary(null);
-                fetchProducts();
-              }}
+              onClick={() => setSummary(null)}
             >
               <Plus className="h-4 w-4 mr-2" /> New Entry
             </Button>

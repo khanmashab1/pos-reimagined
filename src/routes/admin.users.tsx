@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2 } from "lucide-react";
+import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createUser } from "@/lib/users.functions";
+import { createUser, updateUser, deleteUser } from "@/lib/users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,
@@ -33,8 +33,27 @@ function UsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editTarget, setEditTarget] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
+
+  async function removeUser(u: UserRow) {
+    if (u.id === user?.id) { toast.error("You cannot delete yourself"); return; }
+    if (!confirm(`Delete ${u.full_name || u.username}? This permanently removes their login and cannot be undone.`)) return;
+    setDeleting(u.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+      await deleteUser({ data: { user_id: u.id, token: session.access_token } });
+      toast.success(`Deleted ${u.full_name || u.username}`);
+      load();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to delete user");
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -117,6 +136,7 @@ function UsersPage() {
                       <th className="text-left p-3 w-40">Role</th>
                       <th className="text-center p-3">Status</th>
                       <th className="text-center p-3">Active</th>
+                      <th className="text-right p-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -144,6 +164,22 @@ function UsersPage() {
                         </td>
                         <td className="p-3 text-center">
                           <Switch checked={u.is_active} onCheckedChange={() => toggleActive(u)} disabled={u.id === user?.id} />
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditTarget(u)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive"
+                            disabled={u.id === user?.id || deleting === u.id}
+                            onClick={() => removeUser(u)}
+                          >
+                            {deleting === u.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -189,7 +225,84 @@ function UsersPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditUserDialog target={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />
     </div>
+  );
+}
+
+function EditUserDialog({ target, onClose, onSaved }: {
+  target: UserRow | null; onClose: () => void; onSaved: () => void;
+}) {
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!target) return;
+    setFullName(target.full_name || "");
+    setUsername(target.username || "");
+    setPassword("");
+  }, [target]);
+
+  async function save() {
+    if (!target) return;
+    if (!fullName.trim()) return toast.error("Full name is required");
+    if (!username.trim()) return toast.error("Username is required");
+    if (password && password.length < 6) return toast.error("Password must be at least 6 characters");
+    setBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+      await updateUser({
+        data: {
+          user_id: target.id,
+          full_name: fullName.trim(),
+          username: username.trim(),
+          password: password || undefined,
+          token: session.access_token,
+        },
+      });
+      toast.success("User updated");
+      onClose();
+      onSaved();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update user");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Edit user</DialogTitle></DialogHeader>
+        {target && (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="eu-name">Full name</Label>
+              <Input id="eu-name" value={fullName} onChange={e => setFullName(e.target.value)} maxLength={100} />
+            </div>
+            <div>
+              <Label htmlFor="eu-username">Username</Label>
+              <Input id="eu-username" value={username} onChange={e => setUsername(e.target.value)} maxLength={50} />
+            </div>
+            <div>
+              <Label htmlFor="eu-pwd">New password</Label>
+              <Input id="eu-pwd" type="password" value={password} onChange={e => setPassword(e.target.value)} maxLength={128} placeholder="Leave blank to keep current" />
+              <p className="text-xs text-muted-foreground mt-1">Optional — set only to reset their password (min 6 characters).</p>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button onClick={save} disabled={busy}>
+            {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
