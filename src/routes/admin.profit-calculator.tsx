@@ -137,10 +137,54 @@ function ProfitCalculator() {
 
   async function load(fromDate = from, toDate = to) {
     setLoading(true);
+    const fromIso = new Date(fromDate + "T00:00:00").toISOString();
+    const toIso = new Date(toDate + "T23:59:59.999").toISOString();
     try {
-      const fromIso = new Date(fromDate + "T00:00:00").toISOString();
-      const toIso = new Date(toDate + "T23:59:59.999").toISOString();
+      // Fast path: aggregate server-side and fetch a tiny summary payload.
+      const { data, error: rpcError } = await supabase.rpc("get_profit_report", {
+        _from: fromIso,
+        _to: toIso,
+      });
+      if (rpcError) throw rpcError;
+      applyReport(data as any);
+      setError(null);
+    } catch (rpcErr: any) {
+      // Fallback: the get_profit_report function isn't deployed yet — aggregate client-side.
+      console.warn("get_profit_report unavailable, using client aggregation:", rpcErr?.message);
+      await legacyLoad(fromIso, toIso);
+    } finally {
+      setLoading(false);
+    }
+  }
 
+  /** Map the pre-aggregated server payload into the chart/table state. */
+  function applyReport(r: any) {
+    const products = ((r?.by_product ?? []) as any[]).map((p) => ({
+      name: p.name,
+      profit: Number(p.profit) || 0,
+      qty: Number(p.qty) || 0,
+      revenue: Number(p.revenue) || 0,
+      margin: Number(p.margin) || 0,
+    }));
+    const daily = ((r?.daily ?? []) as any[]).map((d) => ({
+      date: d.date,
+      profit: Number(d.profit) || 0,
+      sales: Number(d.sales) || 0,
+    }));
+    const revenue = Number(r?.total_revenue) || 0;
+    const profit = Number(r?.total_profit) || 0;
+    setSales([]); // raw rows aren't needed when the DB does the aggregation
+    setZeroPurchasePriceCount(Number(r?.zero_count) || 0);
+    setTotalSales(revenue);
+    setTotalProfit(profit);
+    setProfitMargin(revenue > 0 ? (profit / revenue) * 100 : 0);
+    setProfitByProduct(products);
+    setTopProducts(products.slice(0, 5));
+    setDailyProfit(daily);
+  }
+
+  async function legacyLoad(fromIso: string, toIso: string) {
+    try {
       // Paginate through all sales (Supabase default cap is 1000 rows)
       const SALES_PAGE = 1000;
       let salesData: any[] = [];
@@ -213,8 +257,6 @@ function ProfitCalculator() {
       console.error("Load error:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
       setSales([]);
-    } finally {
-      setLoading(false);
     }
   }
 

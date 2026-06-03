@@ -369,6 +369,8 @@ export function validateUnits(units: UnitDraft[]): string | null {
     if (u.equals_base <= 0) return `Conversion for "${u.name}" must be greater than 0`;
     if (Number(u.purchase_price) < 0 || Number(u.sale_price) < 0)
       return `Prices for "${u.name}" cannot be negative`;
+    if (Number(u.purchase_price) > Number(u.sale_price))
+      return `Cost price cannot be greater than sale price for "${u.name}"`;
   }
   return null;
 }
