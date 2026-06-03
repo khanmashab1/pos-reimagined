@@ -1,12 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Search, FileBarChart, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Download,
+  Search,
+  FileBarChart,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  TrendingUp,
+  Boxes,
+  Box,
+} from "lucide-react";
+import { pluralize } from "@/lib/units";
 import {
   Select,
   SelectContent,
@@ -36,6 +48,7 @@ function ReportsPage() {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [sales, setSales] = useState<any[]>([]);
+  const [itemRows, setItemRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [page, setPage] = useState(0);
@@ -45,13 +58,23 @@ function ReportsPage() {
     setLoading(true);
     const fromIso = new Date(from + "T00:00:00").toISOString();
     const toIso = new Date(to + "T23:59:59.999").toISOString();
-    const { data } = await supabase
-      .from("sales")
-      .select("*")
-      .gte("created_at", fromIso)
-      .lte("created_at", toIso)
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: items }] = await Promise.all([
+      supabase
+        .from("sales")
+        .select("*")
+        .gte("created_at", fromIso)
+        .lte("created_at", toIso)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("sale_items")
+        .select(
+          "unit_name, qty, qty_in_unit, unit_price, purchase_price, subtotal, sales!inner(payment_type, created_at)",
+        )
+        .gte("sales.created_at", fromIso)
+        .lte("sales.created_at", toIso),
+    ]);
     setSales(data ?? []);
+    setItemRows(items ?? []);
     setLoading(false);
   }
 
@@ -82,6 +105,42 @@ function ReportsPage() {
     }),
     { total: 0, bills: 0, items: 0 },
   );
+
+  // Unit-wise sales & profit-per-unit (respects date range + payment filter)
+  const unitStats = useMemo(() => {
+    const rows = itemRows.filter(
+      (r) => paymentFilter === "all" || r.sales?.payment_type === paymentFilter,
+    );
+    const map = new Map<
+      string,
+      { unit: string; qty: number; pieces: number; revenue: number; cost: number }
+    >();
+    let pieces = 0,
+      revenue = 0,
+      cost = 0;
+    for (const r of rows) {
+      const unit = (r.unit_name || "Base").toString().trim() || "Base";
+      const qtyBase = Number(r.qty) || 0;
+      const qtyUnit = r.qty_in_unit != null ? Number(r.qty_in_unit) : qtyBase;
+      const rev = Number(r.subtotal) || 0;
+      // purchase_price is stored per selling-unit (matched by qty_in_unit); legacy rows store it
+      // per base unit with qty_in_unit null, in which case qtyUnit falls back to the base qty.
+      const cst = (Number(r.purchase_price) || 0) * qtyUnit;
+      const cur = map.get(unit) ?? { unit, qty: 0, pieces: 0, revenue: 0, cost: 0 };
+      cur.qty += qtyUnit;
+      cur.pieces += qtyBase;
+      cur.revenue += rev;
+      cur.cost += cst;
+      map.set(unit, cur);
+      pieces += qtyBase;
+      revenue += rev;
+      cost += cst;
+    }
+    const list = Array.from(map.values())
+      .map((u) => ({ ...u, profit: u.revenue - u.cost }))
+      .sort((a, b) => b.revenue - a.revenue);
+    return { list, pieces, revenue, cost, profit: revenue - cost };
+  }, [itemRows, paymentFilter]);
 
   function exportCSV() {
     const rows = [
@@ -202,6 +261,86 @@ function ReportsPage() {
         </div>
       </Card>
 
+      {/* Unit-wise sales & profit */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Boxes className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Sales by Unit</h2>
+          <span className="text-xs text-muted-foreground">
+            {paymentFilter === "all" ? "all payments" : paymentFilter} · {from} → {to}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <Stat
+            label="Total Pieces Sold"
+            value={unitStats.pieces.toLocaleString()}
+            icon={<Package className="h-4 w-4" />}
+          />
+          <Stat label="Total Value" value={fmt(unitStats.revenue)} />
+          <Stat label="Total Cost" value={fmt(unitStats.cost)} />
+          <Stat
+            label="Gross Profit"
+            value={fmt(unitStats.profit)}
+            icon={<TrendingUp className="h-4 w-4" />}
+            accent={unitStats.profit >= 0 ? "text-emerald-600" : "text-destructive"}
+          />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted text-xs uppercase">
+              <tr>
+                <th className="text-left p-3">Unit</th>
+                <th className="text-right p-3">Qty Sold</th>
+                <th className="text-right p-3">Pieces</th>
+                <th className="text-right p-3">Revenue</th>
+                <th className="text-right p-3">Cost</th>
+                <th className="text-right p-3">Profit</th>
+                <th className="text-right p-3">Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unitStats.list.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    No unit sales in this range.
+                  </td>
+                </tr>
+              ) : (
+                unitStats.list.map((u) => {
+                  const margin = u.revenue > 0 ? (u.profit / u.revenue) * 100 : 0;
+                  return (
+                    <tr key={u.unit} className="border-t hover:bg-muted/40">
+                      <td className="p-3 font-medium">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Box className="h-3.5 w-3.5 text-primary" />
+                          {u.unit}
+                        </span>
+                      </td>
+                      <td className="text-right p-3">
+                        {u.qty.toLocaleString()} {pluralize(u.unit, u.qty)}
+                      </td>
+                      <td className="text-right p-3 text-muted-foreground">
+                        {u.pieces.toLocaleString()}
+                      </td>
+                      <td className="text-right p-3">{fmt(u.revenue)}</td>
+                      <td className="text-right p-3 text-muted-foreground">{fmt(u.cost)}</td>
+                      <td
+                        className={`text-right p-3 font-semibold ${u.profit >= 0 ? "text-emerald-600" : "text-destructive"}`}
+                      >
+                        {fmt(u.profit)}
+                      </td>
+                      <td className="text-right p-3 text-muted-foreground">{margin.toFixed(1)}%</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <Card className="p-5">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -302,11 +441,24 @@ function ReportsPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+  accent?: string;
+}) {
   return (
     <div className="rounded-lg border p-3">
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-      <div className="text-xl font-bold mt-1">{value}</div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+        {icon}
+        {label}
+      </div>
+      <div className={`text-xl font-bold mt-1 ${accent ?? ""}`}>{value}</div>
     </div>
   );
 }

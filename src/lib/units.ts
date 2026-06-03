@@ -48,13 +48,16 @@ export function greedyBreakdown(
   for (const u of sorted) {
     const c = Math.floor(rem / u.equals_base);
     rem -= c * u.equals_base;
-    if (c > 0 || u.equals_base === 1) out.push({ id: u.id, name: u.name, equals_base: u.equals_base, count: c });
+    if (c > 0 || u.equals_base === 1)
+      out.push({ id: u.id, name: u.name, equals_base: u.equals_base, count: c });
   }
   return out;
 }
 
 export function formatBreakdown(rows: { name: string; count: number }[]): string {
-  const parts = rows.filter((r) => r.count > 0).map((r) => `${r.count} ${pluralize(r.name, r.count)}`);
+  const parts = rows
+    .filter((r) => r.count > 0)
+    .map((r) => `${r.count} ${pluralize(r.name, r.count)}`);
   return parts.length ? parts.join(" + ") : "0";
 }
 
@@ -66,7 +69,9 @@ export function pluralize(name: string, n: number): string {
   return name + "s";
 }
 
-export async function fetchUnitsByProductIds(ids: string[]): Promise<Record<string, ProductUnit[]>> {
+export async function fetchUnitsByProductIds(
+  ids: string[],
+): Promise<Record<string, ProductUnit[]>> {
   if (ids.length === 0) return {};
   const { data } = await supabase
     .from("product_units")
@@ -83,3 +88,53 @@ export async function fetchUnitsByProductIds(ids: string[]): Promise<Record<stri
 export function pickDefaultUnit(units: ProductUnit[]): ProductUnit | undefined {
   return units.find((u) => u.is_default_sale) ?? units.find((u) => u.is_base) ?? units[0];
 }
+
+/** Stable colour theme per unit row — keeps icons/chips consistent across editor, summary & preview. */
+export interface UnitColor {
+  icon: string;
+  chipBg: string;
+  chipText: string;
+  ring: string;
+  soft: string;
+}
+
+export const UNIT_COLORS: UnitColor[] = [
+  {
+    icon: "text-emerald-600",
+    chipBg: "bg-emerald-50 dark:bg-emerald-950/40",
+    chipText: "text-emerald-700 dark:text-emerald-300",
+    ring: "border-emerald-200 dark:border-emerald-900",
+    soft: "bg-emerald-100 dark:bg-emerald-900/40",
+  },
+  {
+    icon: "text-amber-600",
+    chipBg: "bg-amber-50 dark:bg-amber-950/40",
+    chipText: "text-amber-700 dark:text-amber-300",
+    ring: "border-amber-200 dark:border-amber-900",
+    soft: "bg-amber-100 dark:bg-amber-900/40",
+  },
+  {
+    icon: "text-blue-600",
+    chipBg: "bg-blue-50 dark:bg-blue-950/40",
+    chipText: "text-blue-700 dark:text-blue-300",
+    ring: "border-blue-200 dark:border-blue-900",
+    soft: "bg-blue-100 dark:bg-blue-900/40",
+  },
+  {
+    icon: "text-violet-600",
+    chipBg: "bg-violet-50 dark:bg-violet-950/40",
+    chipText: "text-violet-700 dark:text-violet-300",
+    ring: "border-violet-200 dark:border-violet-900",
+    soft: "bg-violet-100 dark:bg-violet-900/40",
+  },
+  {
+    icon: "text-rose-600",
+    chipBg: "bg-rose-50 dark:bg-rose-950/40",
+    chipText: "text-rose-700 dark:text-rose-300",
+    ring: "border-rose-200 dark:border-rose-900",
+    soft: "bg-rose-100 dark:bg-rose-900/40",
+  },
+];
+
+export const unitColor = (i: number): UnitColor =>
+  UNIT_COLORS[((i % UNIT_COLORS.length) + UNIT_COLORS.length) % UNIT_COLORS.length];
