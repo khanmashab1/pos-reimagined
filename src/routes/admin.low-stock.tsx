@@ -8,11 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Search, Download, Pencil, PackageX } from "lucide-react";
 import { fmt } from "@/lib/format";
+import { fetchUnitsByProductIds, greedyBreakdown, type ProductUnit } from "@/lib/units";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/low-stock")({
   component: LowStockPage,
 });
+
+/** "10 box, 9 Piece" — only for multi-unit products with positive stock; "" otherwise. */
+function breakdownLabel(stock: number, units: ProductUnit[] | undefined): string {
+  if (!units || units.length < 2 || stock <= 0) return "";
+  const parts = greedyBreakdown(stock, units).filter((p) => p.count > 0);
+  if (!parts.some((p) => p.equals_base > 1)) return "";
+  return parts.map((p) => `${p.count} ${p.name}`).join(", ");
+}
 
 interface LowStockProduct {
   id: string;
@@ -31,6 +40,7 @@ type SortKey = "severity" | "name" | "stock";
 
 function LowStockPage() {
   const [items, setItems] = useState<LowStockProduct[]>([]);
+  const [unitsByProduct, setUnitsByProduct] = useState<Record<string, ProductUnit[]>>({});
   const [cats, setCats] = useState<Cat[]>([]);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string>("all");
@@ -63,6 +73,10 @@ function LowStockPage() {
       setItems(lowOnly);
       setCats((c ?? []) as Cat[]);
       setLoading(false);
+      // Fetch units for the low-stock products so we can show stock in boxes.
+      if (lowOnly.length > 0) {
+        setUnitsByProduct(await fetchUnitsByProductIds(lowOnly.map((r) => r.id)));
+      }
     })();
   }, []);
 
@@ -254,8 +268,13 @@ function LowStockPage() {
                     <div className="text-xs text-muted-foreground">{catName(p.category_id)}</div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{p.barcode}</td>
-                  <td className={`px-4 py-3 text-center font-bold ${p.stock === 0 ? "text-destructive" : "text-warning"}`}>
-                    {p.stock}
+                  <td className={`px-4 py-3 text-center ${p.stock === 0 ? "text-destructive" : "text-warning"}`}>
+                    <div className="font-bold">{p.stock} <span className="text-[10px] font-normal text-muted-foreground">pcs</span></div>
+                    {breakdownLabel(p.stock, unitsByProduct[p.id]) && (
+                      <div className="text-[10px] font-normal text-muted-foreground">
+                        ({breakdownLabel(p.stock, unitsByProduct[p.id])})
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center text-muted-foreground">{p.min_stock_alert}</td>
                   <td className="px-4 py-3 text-center"><StatusBadge p={p} /></td>

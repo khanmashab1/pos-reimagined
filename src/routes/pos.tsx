@@ -281,16 +281,14 @@ function PosPage() {
       prod = (data as Product) ?? undefined;
     }
     if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); setScan(""); return; }
-    // 2) match unit barcode
-    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", code).maybeSingle();
-    if (u) {
-      const anyU = u as any;
-      const parent = anyU.products as Product;
-      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
-      delete (unit as any).products;
-      if (parent?.id) {
-        await addToCart(parent, { unit });
-        toast.success(`Added: ${parent.name} (${unit.name})`);
+    // 2) match unit barcode (two queries: avoid the ambiguous product_units<->products embed)
+    const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
+    if (unitRow) {
+      const unit = unitRow as unknown as ProductUnit;
+      const { data: parent } = await supabase.from("products").select("*").eq("id", unit.product_id).eq("is_active", true).maybeSingle();
+      if (parent) {
+        await addToCart(parent as Product, { unit });
+        toast.success(`Added: ${(parent as Product).name} (${unit.name})`);
         setScan("");
         return;
       }
@@ -311,13 +309,11 @@ function PosPage() {
     const { data } = await supabase.from("products").select("*").eq("barcode", clean).eq("is_active", true).maybeSingle();
     const prod = data as Product | null;
     if (prod) { await addToCart(prod); toast.success(`Added: ${prod.name}`); return; }
-    const { data: u } = await supabase.from("product_units").select("*, products!inner(*)").eq("barcode", clean).maybeSingle();
-    if (u) {
-      const anyU = u as any;
-      const parent = anyU.products as Product;
-      const unit = { ...anyU, product_id: parent.id } as ProductUnit;
-      delete (unit as any).products;
-      if (parent?.id) { await addToCart(parent, { unit }); toast.success(`Added: ${parent.name} (${unit.name})`); return; }
+    const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", clean).maybeSingle();
+    if (unitRow) {
+      const unit = unitRow as unknown as ProductUnit;
+      const { data: parent } = await supabase.from("products").select("*").eq("id", unit.product_id).eq("is_active", true).maybeSingle();
+      if (parent) { await addToCart(parent as Product, { unit }); toast.success(`Added: ${(parent as Product).name} (${unit.name})`); return; }
     }
     if (confirm(`Product not found for "${clean}". Add it now?`)) {
       setQuickAddBarcode(clean);
