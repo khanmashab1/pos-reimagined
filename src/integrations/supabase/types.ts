@@ -835,6 +835,7 @@ export type Database = {
         Returns: Json
       }
       get_admin_inventory_summary: { Args: never; Returns: Json }
+      get_online_by_method: { Args: { _from: string; _to: string }; Returns: Json }
       get_open_session: { Args: never; Returns: Json }
       get_profit_report: { Args: { _from: string; _to: string }; Returns: Json }
       get_suppliers_summary: { Args: never; Returns: Json }

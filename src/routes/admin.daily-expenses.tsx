@@ -73,8 +73,30 @@ function DailyExpensesPage() {
   const [year, setYear] = useState(thisYear);
   const [month, setMonth] = useState("all");
   const [search, setSearch] = useState("");
+  // Online payments pulled from POS sales for the scope: card+easypaisa -> Junaid, jazzcash -> Usama.
+  const [online, setOnline] = useState({ junaid: 0, usama: 0 });
 
   useEffect(() => { load(); }, []);
+
+  // Fetch online payments by method for the selected Year + Month and attribute to people.
+  useEffect(() => {
+    let active = true;
+    const from = `${year}-${month === "all" ? "01" : month}-01`;
+    const lastDay = month === "all" ? 31 : new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month === "all" ? "12" : month}-${String(month === "all" ? 31 : lastDay).padStart(2, "0")}`;
+    const fromIso = new Date(from + "T00:00:00").toISOString();
+    const toIso = new Date(to + "T23:59:59.999").toISOString();
+    supabase.rpc("get_online_by_method" as any, { _from: fromIso, _to: toIso }).then(({ data, error }) => {
+      if (!active) return;
+      if (error) { setOnline({ junaid: 0, usama: 0 }); return; } // RPC not deployed yet → 0
+      const d = (data ?? {}) as Record<string, number>;
+      setOnline({
+        junaid: num(d.card) + num(d.easypasa),
+        usama: num(d.jazzcash),
+      });
+    });
+    return () => { active = false; };
+  }, [year, month]);
 
   async function load() {
     setLoading(true);
@@ -120,10 +142,17 @@ function DailyExpensesPage() {
     return Array.from(set).sort().reverse();
   }, [computed, thisYear]);
 
-  // Yearly summary cards = sum of daily values for the selected year
-  const cards = useMemo(() => {
-    const yr = computed.filter((r) => r.entry_date.slice(0, 4) === year);
-    return yr.reduce(
+  // Rows in the selected Year + Month — the date filter that drives every summary.
+  const scoped = useMemo(
+    () => computed.filter((r) =>
+      r.entry_date.slice(0, 4) === year && (month === "all" || r.entry_date.slice(5, 7) === month),
+    ),
+    [computed, year, month],
+  );
+
+  // Summary cards = sum of daily values for the selected Year + Month.
+  const cards = useMemo(
+    () => scoped.reduce(
       (a, r) => ({
         sales: a.sales + r.sale,
         profit: a.profit + (r.sale - num(r.today_expenses)),
@@ -131,15 +160,8 @@ function DailyExpensesPage() {
         cash: a.cash + r.totalCash,
       }),
       { sales: 0, profit: 0, expenses: 0, cash: 0 },
-    );
-  }, [computed, year]);
-
-  // Rows in the selected Year + Month (the date filter); drives the per-person totals.
-  const scoped = useMemo(
-    () => computed.filter((r) =>
-      r.entry_date.slice(0, 4) === year && (month === "all" || r.entry_date.slice(5, 7) === month),
     ),
-    [computed, year, month],
+    [scoped],
   );
 
   const personTotals = useMemo(
@@ -242,23 +264,61 @@ function DailyExpensesPage() {
         </p>
       </div>
 
-      {/* Summary cards (yearly) */}
+      {/* Filters — control all summary cards and the table */}
+      <Card className="p-4">
+        <div className="grid grid-cols-2 md:grid-cols-[160px_200px_1fr_auto] gap-3 items-end">
+          <Field label="Year">
+            <Select value={year} onValueChange={setYear}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          <Field label="Month">
+            <Select value={month} onValueChange={setMonth}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{MONTHS.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          <Field label="Search">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-8" placeholder="Date (YYYY-MM-DD) or SR.No" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+          </Field>
+          <Button variant="outline" onClick={exportCSV} disabled={display.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Export to Excel
+          </Button>
+        </div>
+      </Card>
+
+      {/* Summary cards (respect the Year + Month filter) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <SummaryCard label={`Total Sales (${year})`} value={fmt(cards.sales)} icon={TrendingUp} color="var(--info)" />
-        <SummaryCard label={`Total Profit (${year})`} value={fmt(cards.profit)} icon={Coins} color="var(--success)"
+        <SummaryCard label={`Total Sales (${scopeLabel})`} value={fmt(cards.sales)} icon={TrendingUp} color="var(--info)" />
+        <SummaryCard label={`Total Profit (${scopeLabel})`} value={fmt(cards.profit)} icon={Coins} color="var(--success)"
           accent={cards.profit < 0 ? "text-destructive" : "text-green-600"} />
-        <SummaryCard label={`Total Expenses (${year})`} value={fmt(cards.expenses)} icon={Receipt} color="var(--warning)" />
-        <SummaryCard label={`Total Cash (${year})`} value={fmt(cards.cash)} icon={Wallet} color="var(--accent)" />
+        <SummaryCard label={`Total Expenses (${scopeLabel})`} value={fmt(cards.expenses)} icon={Receipt} color="var(--warning)" />
+        <SummaryCard label={`Total Cash (${scopeLabel})`} value={fmt(cards.cash)} icon={Wallet} color="var(--accent)" />
       </div>
 
-      {/* Per-person totals (respect the Year + Month date filter) */}
+      {/* Per-person totals (respect the Year + Month date filter).
+          Junaid also includes Card + EasyPaisa; Usama also includes JazzCash (from POS sales). */}
       <div className="space-y-2">
         <div className="text-xs font-semibold uppercase text-muted-foreground">
-          Cash by Person · {scopeLabel}
+          By Person · {scopeLabel}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard label="Total Junaid" value={fmt(personTotals.junaid)} icon={User} color="var(--info)" />
-          <SummaryCard label="Total Usama" value={fmt(personTotals.usama)} icon={User} color="var(--success)" />
+          <SummaryCard
+            label="Total Junaid"
+            value={fmt(personTotals.junaid + online.junaid)}
+            sub={`Cash ${fmt(personTotals.junaid)} · Card+EasyPaisa ${fmt(online.junaid)}`}
+            icon={User} color="var(--info)"
+          />
+          <SummaryCard
+            label="Total Usama"
+            value={fmt(personTotals.usama + online.usama)}
+            sub={`Cash ${fmt(personTotals.usama)} · JazzCash ${fmt(online.usama)}`}
+            icon={User} color="var(--success)"
+          />
           <SummaryCard label="Total others" value={fmt(personTotals.others)} icon={Users} color="var(--warning)" />
         </div>
       </div>
@@ -302,33 +362,6 @@ function DailyExpensesPage() {
               {form.id ? "Update" : "Add Entry"}
             </Button>
           </div>
-        </div>
-      </Card>
-
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-[160px_200px_1fr_auto] gap-3 items-end">
-          <Field label="Year">
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Month">
-            <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{MONTHS.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Search">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-8" placeholder="Date (YYYY-MM-DD) or SR.No" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
-          </Field>
-          <Button variant="outline" onClick={exportCSV} disabled={display.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Export to Excel
-          </Button>
         </div>
       </Card>
 
@@ -396,9 +429,9 @@ function DailyExpensesPage() {
   );
 }
 
-function SummaryCard({ label, value, icon: Icon, color, accent }: {
+function SummaryCard({ label, value, icon: Icon, color, accent, sub }: {
   label: string; value: string; icon: React.ComponentType<{ className?: string; style?: any }>;
-  color: string; accent?: string;
+  color: string; accent?: string; sub?: string;
 }) {
   return (
     <Card className="p-4 shadow-[var(--shadow-card)]">
@@ -406,6 +439,7 @@ function SummaryCard({ label, value, icon: Icon, color, accent }: {
         <div className="min-w-0 flex-1">
           <div className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</div>
           <div className={`mt-1 text-base sm:text-xl font-bold break-words leading-tight ${accent ?? ""}`}>{value}</div>
+          {sub && <div className="mt-0.5 text-[11px] text-muted-foreground break-words">{sub}</div>}
         </div>
         <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg">
           <div className="absolute inset-0 rounded-lg opacity-15" style={{ background: color }} />
