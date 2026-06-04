@@ -12,7 +12,7 @@ import {
 import { fmt, today } from "@/lib/format";
 import {
   BookText, Download, Search, Plus, Pencil, Trash2, Loader2, X,
-  TrendingUp, Wallet, Receipt, Coins,
+  TrendingUp, Wallet, Receipt, Coins, User, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,15 +134,33 @@ function DailyExpensesPage() {
     );
   }, [computed, year]);
 
+  // Rows in the selected Year + Month (the date filter); drives the per-person totals.
+  const scoped = useMemo(
+    () => computed.filter((r) =>
+      r.entry_date.slice(0, 4) === year && (month === "all" || r.entry_date.slice(5, 7) === month),
+    ),
+    [computed, year, month],
+  );
+
+  const personTotals = useMemo(
+    () => scoped.reduce(
+      (a, r) => ({
+        junaid: a.junaid + num(r.cash_junaid),
+        usama: a.usama + num(r.cash_usama),
+        others: a.others + num(r.others),
+      }),
+      { junaid: 0, usama: 0, others: 0 },
+    ),
+    [scoped],
+  );
+
+  const scopeLabel = month === "all" ? year : `${MONTHS.find((m) => m.v === month)?.label} ${year}`;
+
   const display = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return computed.filter((r) => {
-      if (r.entry_date.slice(0, 4) !== year) return false;
-      if (month !== "all" && r.entry_date.slice(5, 7) !== month) return false;
-      if (q && !(r.entry_date.toLowerCase().includes(q) || String(r.sr) === q)) return false;
-      return true;
-    });
-  }, [computed, year, month, search]);
+    if (!q) return scoped;
+    return scoped.filter((r) => r.entry_date.toLowerCase().includes(q) || String(r.sr) === q);
+  }, [scoped, search]);
 
   async function save() {
     if (!form.entry_date) return toast.error("Date is required");
@@ -231,6 +249,18 @@ function DailyExpensesPage() {
           accent={cards.profit < 0 ? "text-destructive" : "text-green-600"} />
         <SummaryCard label={`Total Expenses (${year})`} value={fmt(cards.expenses)} icon={Receipt} color="var(--warning)" />
         <SummaryCard label={`Total Cash (${year})`} value={fmt(cards.cash)} icon={Wallet} color="var(--accent)" />
+      </div>
+
+      {/* Per-person totals (respect the Year + Month date filter) */}
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase text-muted-foreground">
+          Cash by Person · {scopeLabel}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <SummaryCard label="Total Junaid" value={fmt(personTotals.junaid)} icon={User} color="var(--info)" />
+          <SummaryCard label="Total Usama" value={fmt(personTotals.usama)} icon={User} color="var(--success)" />
+          <SummaryCard label="Total others" value={fmt(personTotals.others)} icon={Users} color="var(--warning)" />
+        </div>
       </div>
 
       {/* Data entry form */}
