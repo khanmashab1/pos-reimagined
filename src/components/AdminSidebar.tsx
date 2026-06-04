@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart,
   LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList,
-  Truck, TrendingUp, AlertTriangle, Database,
+  Truck, TrendingUp, AlertTriangle, Database, BookText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ const items = [
   { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
   { to: "/admin/cashier-report", label: "Cashier Report", icon: Users },
   { to: "/admin/stock-summary", label: "Stock Summary", icon: Package },
+  { to: "/admin/daily-expenses", label: "Daily Expenses Report", icon: BookText },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },

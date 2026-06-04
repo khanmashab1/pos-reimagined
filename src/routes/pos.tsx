@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import {
   Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store,
   LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard,
-  Banknote, RotateCcw, Package, Tag, Truck,
+  Banknote, RotateCcw, Package, Tag, Truck, HandCoins,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,7 +17,7 @@ import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
-import { StartShiftDialog, CloseShiftDialog, type OpenSession } from "@/components/ShiftDialog";
+import { StartShiftDialog, CloseShiftDialog, ExpenseDialog, type OpenSession } from "@/components/ShiftDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
@@ -146,6 +146,7 @@ function PosPage() {
   const [shiftLoading, setShiftLoading] = useState(true);
   const [startOpen, setStartOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualResults, setManualResults] = useState<Product[]>([]);
@@ -430,6 +431,12 @@ function PosPage() {
               <span className="hidden sm:inline ml-1 text-xs">Start Shift</span>
             </Button>
           )}
+          {session && (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={() => setExpenseOpen(true)}>
+              <HandCoins className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1 text-xs">Expense</span>
+            </Button>
+          )}
           <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3">
             <Link to="/stock-entry"><Package className="h-4 w-4" /><span className="hidden sm:inline ml-1 text-xs">Stock</span></Link>
           </Button>
@@ -656,6 +663,7 @@ function PosPage() {
       <StartShiftDialog open={startOpen} onOpenChange={setStartOpen} onStarted={s => setSession(s)} />
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
+      <ExpenseDialog open={expenseOpen} onOpenChange={setExpenseOpen} onRecorded={() => refreshSession()} />
       <QuickAddProductDialog
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}

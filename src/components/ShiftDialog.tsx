@@ -12,6 +12,7 @@ export interface OpenSession {
   cash_sales: number;
   online_sales: number;
   cash_paid_out: number;
+  expenses: number;
   expected_cash: number;
   opened_at: string;
 }
@@ -93,6 +94,64 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
         <DialogFooter>
           <Button onClick={submit} disabled={busy} className="w-full">
             {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Close Shift
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Records an expense (cash handed out from the drawer) against the open shift.
+ * The amount is subtracted from expected drawer cash at close.
+ */
+export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
+  open: boolean; onOpenChange: (v: boolean) => void; onRecorded: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (open) { setAmount(""); setDescription(""); } }, [open]);
+
+  const submit = async () => {
+    const amt = Number(amount);
+    if (!(amt > 0)) return toast.error("Enter a valid amount");
+    setBusy(true);
+    const { error } = await supabase.rpc("record_expense" as any, {
+      _amount: amt,
+      _description: description.trim(),
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Expense recorded — deducted from drawer");
+    onRecorded();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <label className="text-sm font-medium">Amount</label>
+            <Input type="number" autoFocus value={amount} onChange={e => setAmount(e.target.value)}
+              placeholder="0" onKeyDown={e => e.key === "Enter" && submit()} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Given to / Reason</label>
+            <Input value={description} onChange={e => setDescription(e.target.value)}
+              placeholder="e.g. tea, electricity bill, staff advance"
+              onKeyDown={e => e.key === "Enter" && submit()} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            This cash leaves the drawer and is subtracted from your expected cash at shift close.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={busy} className="w-full">
+            {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Record Expense
           </Button>
         </DialogFooter>
       </DialogContent>

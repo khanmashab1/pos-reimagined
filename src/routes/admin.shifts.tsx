@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { fmt } from "@/lib/format";
-import { Loader2, Pencil, Eye, Truck } from "lucide-react";
+import { Loader2, Pencil, Eye, Truck, HandCoins } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -29,6 +29,7 @@ interface Session {
   cash_sales: number;
   online_sales: number;
   cash_paid_out: number;
+  expenses: number;
   closing_cash: number | null;
   expected_cash: number;
   difference: number | null;
@@ -46,6 +47,14 @@ interface Payout {
   created_at: string;
   created_by_name: string | null;
   suppliers: { name: string } | null;
+}
+
+interface Expense {
+  id: string;
+  amount: number;
+  description: string | null;
+  created_at: string;
+  cashier_name: string | null;
 }
 
 /**
@@ -228,7 +237,7 @@ function ShiftsPage() {
     const { data } = await supabase
       .from("cash_sessions")
       .select(
-        "id,user_name,opening_cash,cash_sales,online_sales,cash_paid_out,closing_cash,expected_cash,difference,status,opened_at,closed_at",
+        "id,user_name,opening_cash,cash_sales,online_sales,cash_paid_out,expenses,closing_cash,expected_cash,difference,status,opened_at,closed_at",
       )
       .order("opened_at", { ascending: false })
       .limit(200);
@@ -403,26 +412,35 @@ function ShiftDetailDialog({
   onClose: () => void;
 }) {
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!target) return;
     setLoading(true);
-    supabase
-      .from("supplier_payments" as any)
-      .select("id,amount,method,notes,payment_date,created_at,created_by_name,suppliers(name)")
-      .eq("session_id", target.id)
-      .order("created_at", { ascending: true })
-      .then(({ data }) => {
-        setPayouts((data ?? []) as unknown as Payout[]);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase
+        .from("supplier_payments" as any)
+        .select("id,amount,method,notes,payment_date,created_at,created_by_name,suppliers(name)")
+        .eq("session_id", target.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("shift_expenses" as any)
+        .select("id,amount,description,created_at,cashier_name")
+        .eq("session_id", target.id)
+        .order("created_at", { ascending: true }),
+    ]).then(([p, e]) => {
+      setPayouts((p.data ?? []) as unknown as Payout[]);
+      setExpenses((e.data ?? []) as unknown as Expense[]);
+      setLoading(false);
+    });
   }, [target]);
 
   const isCash = (m: string | null) => (m ?? "").trim().toLowerCase() === "cash";
   const cashTotal = payouts
     .filter((p) => isCash(p.method))
     .reduce((s, p) => s + Number(p.amount || 0), 0);
+  const expensesTotal = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -442,6 +460,7 @@ function ShiftDetailDialog({
               <DRow label="Cash Sales" value={fmt(target.cash_sales)} />
               <DRow label="Online Sales" value={fmt(target.online_sales)} />
               <DRow label="Cash Paid to Suppliers" value={fmt(target.cash_paid_out)} />
+              <DRow label="Expenses" value={fmt(target.expenses)} />
               <DRow label="Expected Cash" value={fmt(target.expected_cash)} bold />
               <DRow
                 label="Closing Cash"
@@ -496,6 +515,41 @@ function ShiftDetailDialog({
                 <div className="flex justify-between pt-3 mt-2 border-t font-semibold text-sm">
                   <span>Total cash from drawer</span>
                   <span>{fmt(cashTotal)}</span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
+                <HandCoins className="h-3.5 w-3.5" /> Expenses
+              </div>
+              {loading ? (
+                <div className="py-6 flex justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : expenses.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No expenses during this shift.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {expenses.map((e) => (
+                    <div key={e.id} className="flex items-start justify-between gap-2 p-3 border rounded-lg text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium">{e.description || "Expense"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {e.cashier_name || "—"} · {new Date(e.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="font-semibold shrink-0">{fmt(e.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {expenses.length > 0 && (
+                <div className="flex justify-between pt-3 mt-2 border-t font-semibold text-sm">
+                  <span>Total expenses</span>
+                  <span>{fmt(expensesTotal)}</span>
                 </div>
               )}
             </div>

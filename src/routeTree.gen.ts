@@ -27,6 +27,7 @@ import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-expenses'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminCashierReportRouteImport } from './routes/admin.cashier-report'
 import { Route as AdminBackupRouteImport } from './routes/admin.backup'
@@ -121,6 +122,11 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDailyExpensesRoute = AdminDailyExpensesRouteImport.update({
+  id: '/daily-expenses',
+  path: '/daily-expenses',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/products': typeof AdminProductsRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
+    | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
     | '/admin/products'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
+    | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
     | '/admin/products'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
+    | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
     | '/admin/products'
@@ -417,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/daily-expenses': {
+      id: '/admin/daily-expenses'
+      path: '/daily-expenses'
+      fullPath: '/admin/daily-expenses'
+      preLoaderRoute: typeof AdminDailyExpensesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/categories': {
       id: '/admin/categories'
       path: '/categories'
@@ -445,6 +464,7 @@ interface AdminRouteChildren {
   AdminBackupRoute: typeof AdminBackupRoute
   AdminCashierReportRoute: typeof AdminCashierReportRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminDailyExpensesRoute: typeof AdminDailyExpensesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminLowStockRoute: typeof AdminLowStockRoute
   AdminProductsRoute: typeof AdminProductsRoute
@@ -462,6 +482,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBackupRoute: AdminBackupRoute,
   AdminCashierReportRoute: AdminCashierReportRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminDailyExpensesRoute: AdminDailyExpensesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminLowStockRoute: AdminLowStockRoute,
   AdminProductsRoute: AdminProductsRoute,

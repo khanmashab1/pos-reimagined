@@ -40,6 +40,7 @@ export type Database = {
           closing_cash: number | null
           difference: number | null
           expected_cash: number
+          expenses: number
           id: string
           online_sales: number
           opened_at: string
@@ -55,6 +56,7 @@ export type Database = {
           closing_cash?: number | null
           difference?: number | null
           expected_cash?: number
+          expenses?: number
           id?: string
           online_sales?: number
           opened_at?: string
@@ -70,6 +72,7 @@ export type Database = {
           closing_cash?: number | null
           difference?: number | null
           expected_cash?: number
+          expenses?: number
           id?: string
           online_sales?: number
           opened_at?: string
@@ -877,6 +880,10 @@ export type Database = {
           _tax_amount: number
           _total: number
         }
+        Returns: Json
+      }
+      record_expense: {
+        Args: { _amount: number; _description?: string }
         Returns: Json
       }
       record_supplier_payment: {
