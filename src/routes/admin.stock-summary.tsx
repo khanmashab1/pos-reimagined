@@ -82,9 +82,7 @@ function AdminStockSummary() {
         )
         .order("created_at", { ascending: false });
 
-      if (tab !== "all") {
-        q = q.eq("status", tab);
-      }
+      q = q.eq("status", tab);
 
       if (dateFrom) {
         q = q.gte("created_at", `${dateFrom}T00:00:00`);
