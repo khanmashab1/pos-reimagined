@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { EXPENSE_RECIPIENTS } from "@/lib/expense-recipients";
 
 export interface OpenSession {
   id: string;
@@ -109,18 +111,22 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
   open: boolean; onOpenChange: (v: boolean) => void; onRecorded: () => void;
 }) {
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [customName, setCustomName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (open) { setAmount(""); setDescription(""); } }, [open]);
+  useEffect(() => { if (open) { setAmount(""); setRecipient(""); setCustomName(""); } }, [open]);
 
   const submit = async () => {
     const amt = Number(amount);
     if (!(amt > 0)) return toast.error("Enter a valid amount");
+    if (!recipient) return toast.error("Select who received the cash");
+    const givenTo = recipient === "Other" ? customName.trim() : recipient;
+    if (recipient === "Other" && !givenTo) return toast.error("Mention the name");
     setBusy(true);
     const { error } = await supabase.rpc("record_expense" as any, {
       _amount: amt,
-      _description: description.trim(),
+      _description: givenTo,
     });
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -140,11 +146,22 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
               placeholder="0" onKeyDown={e => e.key === "Enter" && submit()} />
           </div>
           <div>
-            <label className="text-sm font-medium">Given to / Reason</label>
-            <Input value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="e.g. tea, electricity bill, staff advance"
-              onKeyDown={e => e.key === "Enter" && submit()} />
+            <label className="text-sm font-medium">Given to</label>
+            <Select value={recipient} onValueChange={setRecipient}>
+              <SelectTrigger><SelectValue placeholder="Select name" /></SelectTrigger>
+              <SelectContent>
+                {EXPENSE_RECIPIENTS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                <SelectItem value="Other">Other…</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {recipient === "Other" && (
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input autoFocus value={customName} onChange={e => setCustomName(e.target.value)}
+                placeholder="Mention the name" onKeyDown={e => e.key === "Enter" && submit()} />
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             This cash leaves the drawer and is subtracted from your expected cash at shift close.
           </p>
