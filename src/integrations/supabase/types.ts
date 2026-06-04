@@ -101,6 +101,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_expenses: {
+        Row: {
+          cash_junaid: number
+          cash_usama: number
+          counter_cash: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          entry_date: string
+          id: string
+          others: number
+          today_expenses: number
+          updated_at: string
+        }
+        Insert: {
+          cash_junaid?: number
+          cash_usama?: number
+          counter_cash?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          entry_date: string
+          id?: string
+          others?: number
+          today_expenses?: number
+          updated_at?: string
+        }
+        Update: {
+          cash_junaid?: number
+          cash_usama?: number
+          counter_cash?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          entry_date?: string
+          id?: string
+          others?: number
+          today_expenses?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -545,8 +587,49 @@ export type Database = {
           },
         ]
       }
+      shift_expenses: {
+        Row: {
+          amount: number
+          cashier_id: string | null
+          cashier_name: string
+          created_at: string
+          description: string
+          id: string
+          session_id: string | null
+        }
+        Insert: {
+          amount?: number
+          cashier_id?: string | null
+          cashier_name?: string
+          created_at?: string
+          description?: string
+          id?: string
+          session_id?: string | null
+        }
+        Update: {
+          amount?: number
+          cashier_id?: string | null
+          cashier_name?: string
+          created_at?: string
+          description?: string
+          id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_expenses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_entries: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string | null
           cashier_id: string
           cashier_name: string
           created_at: string
@@ -554,8 +637,16 @@ export type Database = {
           notes: string
           product_id: string
           qty: number
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_by_name: string | null
+          rejection_reason: string | null
+          status: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
           cashier_id: string
           cashier_name?: string
           created_at?: string
@@ -563,8 +654,16 @@ export type Database = {
           notes?: string
           product_id: string
           qty: number
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_by_name?: string | null
+          rejection_reason?: string | null
+          status?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
           cashier_id?: string
           cashier_name?: string
           created_at?: string
@@ -572,6 +671,11 @@ export type Database = {
           notes?: string
           product_id?: string
           qty?: number
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_by_name?: string | null
+          rejection_reason?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -650,17 +754,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "supplier_payments_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "supplier_payments_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -803,7 +907,7 @@ export type Database = {
     Functions: {
       add_stock_entry: {
         Args: { _notes?: string; _product_id: string; _qty: number }
-        Returns: string
+        Returns: Json
       }
       add_stock_entry_v2: {
         Args: {
@@ -814,28 +918,45 @@ export type Database = {
         }
         Returns: string
       }
-      admin_update_shift: {
-        Args: {
-          _session_id: string
-          _opening_cash?: number
-          _closing_cash?: number | null
-          _cash_sales?: number
-          _expected_cash?: number
-          _difference?: number | null
-          _user_name?: string
-          _online_sales?: number
-          _cash_paid_out?: number
-        }
-        Returns: Json
-      }
+      admin_update_shift:
+        | {
+            Args: {
+              _cash_sales?: number
+              _closing_cash?: number
+              _difference?: number
+              _expected_cash?: number
+              _opening_cash?: number
+              _session_id: string
+              _user_name?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _cash_paid_out?: number
+              _cash_sales?: number
+              _closing_cash?: number
+              _difference?: number
+              _expected_cash?: number
+              _online_sales?: number
+              _opening_cash?: number
+              _session_id: string
+              _user_name?: string
+            }
+            Returns: Json
+          }
       approve_return: { Args: { _return_id: string }; Returns: Json }
+      approve_stock_entry: { Args: { _entry_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary: {
         Args: { _days: number; _start_at: string }
         Returns: Json
       }
       get_admin_inventory_summary: { Args: never; Returns: Json }
-      get_online_by_method: { Args: { _from: string; _to: string }; Returns: Json }
+      get_online_by_method: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
       get_open_session: { Args: never; Returns: Json }
       get_profit_report: { Args: { _from: string; _to: string }; Returns: Json }
       get_suppliers_summary: { Args: never; Returns: Json }
@@ -889,12 +1010,16 @@ export type Database = {
       }
       record_supplier_payment: {
         Args: {
-          _supplier_id: string
           _amount: number
           _method?: string
           _notes?: string
           _payment_date?: string
+          _supplier_id: string
         }
+        Returns: Json
+      }
+      reject_stock_entry: {
+        Args: { _entry_id: string; _reason: string }
         Returns: Json
       }
       save_product_with_units: {

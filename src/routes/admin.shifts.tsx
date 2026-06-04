@@ -101,12 +101,12 @@ function EditShiftDialog({
     const { error } = await supabase.rpc("admin_update_shift", {
       _session_id: target.id,
       _opening_cash: Number(form.opening_cash),
-      _closing_cash: form.closing_cash === "" ? null : Number(form.closing_cash),
+      _closing_cash: form.closing_cash === "" ? undefined : Number(form.closing_cash),
       _cash_sales: Number(form.cash_sales),
       _online_sales: Number(form.online_sales),
       _cash_paid_out: Number(form.cash_paid_out),
       _expected_cash: Number(form.expected_cash),
-      _difference: form.difference === "" ? null : Number(form.difference),
+      _difference: form.difference === "" ? undefined : Number(form.difference),
       _user_name: form.user_name,
     });
     setSaving(false);
