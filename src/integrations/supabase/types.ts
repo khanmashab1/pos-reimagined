@@ -637,11 +637,14 @@ export type Database = {
           notes: string
           product_id: string
           qty: number
+          qty_in_unit: number | null
           rejected_at: string | null
           rejected_by: string | null
           rejected_by_name: string | null
           rejection_reason: string | null
           status: string
+          unit_id: string | null
+          unit_name: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -654,11 +657,14 @@ export type Database = {
           notes?: string
           product_id: string
           qty: number
+          qty_in_unit?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejected_by_name?: string | null
           rejection_reason?: string | null
           status?: string
+          unit_id?: string | null
+          unit_name?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -671,13 +677,24 @@ export type Database = {
           notes?: string
           product_id?: string
           qty?: number
+          qty_in_unit?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejected_by_name?: string | null
           rejection_reason?: string | null
           status?: string
+          unit_id?: string | null
+          unit_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_entries_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_settings: {
         Row: {
