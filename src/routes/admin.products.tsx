@@ -429,8 +429,8 @@ function ProductsPage() {
     [units],
   );
 
-  // Stock we expect after saving: existing stock when editing, otherwise the initial-stock entry.
-  const projectedBase = editing ? Number(form.stock) : totalInitialBase;
+  // Stock we expect after saving: existing stock + add-stock when editing, otherwise the initial-stock entry.
+  const projectedBase = editing ? Number(form.stock) + totalInitialBase : totalInitialBase;
 
   // Live "if you sell …" preview.
   const previewUnit = units[previewUnitIdx] ?? baseUnitForm;
