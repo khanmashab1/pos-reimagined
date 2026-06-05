@@ -757,16 +757,39 @@ function ProductsPage() {
                 ) : (
                   <div className="rounded-xl border p-4 space-y-3">
                     <div className="font-semibold text-sm flex items-center gap-2">
-                      <Box className="h-4 w-4 text-primary" /> Current Stock
+                      <Box className="h-4 w-4 text-primary" /> Add Stock
+                      <span className="text-xs text-muted-foreground font-normal">
+                        (current: {Number(form.stock)} {pluralize(baseName, Number(form.stock))})
+                      </span>
                     </div>
-                    <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-center">
-                      <div className="text-xs text-muted-foreground">In base unit</div>
-                      <div className="text-2xl font-bold text-primary">
-                        {projectedBase} {pluralize(baseName, projectedBase)}
-                      </div>
+                    <div className="flex gap-2">
+                      <Select
+                        value={String(initialStockUnitIdx)}
+                        onValueChange={(v) => setInitialStockUnitIdx(Number(v))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {units.map((u, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {u.name || `Unit ${i + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={initialStockQty}
+                        onChange={(e) => setInitialStockQty(e.target.value)}
+                        placeholder="0"
+                      />
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Use <span className="font-medium">Stock Entry</span> to add or adjust stock.
+                      {totalInitialBase > 0
+                        ? `Adds +${totalInitialBase} ${pluralize(baseName, totalInitialBase)} on save (auto-approved).`
+                        : "Enter a quantity to add stock when you save."}
                     </p>
                   </div>
                 )}
