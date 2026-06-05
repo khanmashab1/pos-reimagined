@@ -399,6 +399,29 @@ function ProductsPage() {
       }
     }
 
+    // If editing and admin entered an "Add Stock" qty, create + auto-approve the entry.
+    if (editing && Number(initialStockQty) > 0) {
+      const pid = editing.id;
+      const map = await fetchUnitsByProductIds([pid]);
+      const refreshed = map[pid] ?? [];
+      const target = refreshed.sort((a, b) => b.equals_base - a.equals_base)[initialStockUnitIdx];
+      if (target) {
+        const { data: entryId, error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
+          _product_id: pid,
+          _unit_id: target.id,
+          _qty: Number(initialStockQty),
+          _notes: "Admin edit — direct add",
+        });
+        if (stkErr) toast.error(stkErr.message);
+        else if (entryId) {
+          const { error: appErr } = await supabase.rpc("approve_stock_entry", {
+            _entry_id: entryId as unknown as string,
+          });
+          if (appErr) toast.error(appErr.message);
+        }
+      }
+    }
+
     toast.success(editing ? "Product updated" : "Product added");
     setOpen(false);
     load(page, search, filter);
@@ -429,8 +452,8 @@ function ProductsPage() {
     [units],
   );
 
-  // Stock we expect after saving: existing stock when editing, otherwise the initial-stock entry.
-  const projectedBase = editing ? Number(form.stock) : totalInitialBase;
+  // Stock we expect after saving: existing stock + add-stock when editing, otherwise the initial-stock entry.
+  const projectedBase = editing ? Number(form.stock) + totalInitialBase : totalInitialBase;
 
   // Live "if you sell …" preview.
   const previewUnit = units[previewUnitIdx] ?? baseUnitForm;
@@ -757,16 +780,39 @@ function ProductsPage() {
                 ) : (
                   <div className="rounded-xl border p-4 space-y-3">
                     <div className="font-semibold text-sm flex items-center gap-2">
-                      <Box className="h-4 w-4 text-primary" /> Current Stock
+                      <Box className="h-4 w-4 text-primary" /> Add Stock
+                      <span className="text-xs text-muted-foreground font-normal">
+                        (current: {Number(form.stock)} {pluralize(baseName, Number(form.stock))})
+                      </span>
                     </div>
-                    <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 text-center">
-                      <div className="text-xs text-muted-foreground">In base unit</div>
-                      <div className="text-2xl font-bold text-primary">
-                        {projectedBase} {pluralize(baseName, projectedBase)}
-                      </div>
+                    <div className="flex gap-2">
+                      <Select
+                        value={String(initialStockUnitIdx)}
+                        onValueChange={(v) => setInitialStockUnitIdx(Number(v))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {units.map((u, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {u.name || `Unit ${i + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={initialStockQty}
+                        onChange={(e) => setInitialStockQty(e.target.value)}
+                        placeholder="0"
+                      />
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Use <span className="font-medium">Stock Entry</span> to add or adjust stock.
+                      {totalInitialBase > 0
+                        ? `Adds +${totalInitialBase} ${pluralize(baseName, totalInitialBase)} on save (auto-approved).`
+                        : "Enter a quantity to add stock when you save."}
                     </p>
                   </div>
                 )}
