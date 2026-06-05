@@ -30,6 +30,8 @@ interface StockEntry {
   product_name: string;
   barcode: string;
   qty: number;
+  unit_name: string | null;
+  qty_in_unit: number | null;
   notes: string;
   status: string;
   created_at: string;
@@ -51,6 +53,13 @@ interface StockSummary {
 }
 
 type Tab = "pending" | "approved" | "rejected";
+
+function fmtQty(entry: StockEntry): string {
+  if (entry.qty_in_unit != null && entry.unit_name) {
+    return `+${entry.qty_in_unit} ${entry.unit_name}`;
+  }
+  return `+${entry.qty}`;
+}
 
 function AdminStockSummary() {
   const { loading, user, role } = useAuth();
@@ -78,7 +87,7 @@ function AdminStockSummary() {
       let q = supabase
         .from("stock_entries")
         .select(
-          "id, product_id, cashier_id, cashier_name, qty, notes, status, created_at, approved_by_name, approved_at, rejected_by_name, rejected_at, rejection_reason",
+          "id, product_id, cashier_id, cashier_name, qty, unit_name, qty_in_unit, notes, status, created_at, approved_by_name, approved_at, rejected_by_name, rejected_at, rejection_reason",
         )
         .order("created_at", { ascending: false });
 
@@ -153,7 +162,7 @@ function AdminStockSummary() {
       toast.error(error.message);
       return;
     }
-    toast.success(`${entry.product_name} +${entry.qty} approved · stock updated`);
+    toast.success(`${entry.product_name} ${fmtQty(entry)} approved · stock updated`);
     fetchData();
   };
 
@@ -271,7 +280,7 @@ function AdminStockSummary() {
           {rejectTarget && (
             <div className="space-y-3 py-2">
               <p className="text-sm">
-                <strong>{rejectTarget.product_name}</strong> +{rejectTarget.qty}
+                <strong>{rejectTarget.product_name}</strong> {fmtQty(rejectTarget)}
                 <span className="text-muted-foreground ml-2">by {rejectTarget.cashier_name}</span>
               </p>
               <div>
@@ -377,8 +386,8 @@ function PendingView({
                     <td className="p-3 font-medium">{entry.product_name}</td>
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
-                    <td className="p-3 text-right font-bold text-green-600">+{entry.qty}</td>
-                    <td className="p-3 text-xs text-muted-foreground max-w-[150px] truncate">
+                    <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-xs text-muted-foreground truncate max-w-[120px]" title={entry.notes || undefined}>
                       {entry.notes || "-"}
                     </td>
                     <td className="p-3 text-right whitespace-nowrap">
@@ -503,7 +512,7 @@ function HistoryView({
                     <td className="p-3 font-medium">{entry.product_name}</td>
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
-                    <td className="p-3 text-right font-bold text-green-600">+{entry.qty}</td>
+                    <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
                     <td className="p-3">
                       {entry.status === "approved" ? (
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">

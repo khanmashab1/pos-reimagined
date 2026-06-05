@@ -629,7 +629,13 @@ function PosPage() {
                       <div className="font-semibold text-xs sm:text-sm line-clamp-2 flex-1">{p.name}</div>
                       <div className="mt-1.5 sm:mt-2 flex items-center justify-between gap-1">
                         <span className="font-bold text-primary text-xs sm:text-sm">{fmt(p.sale_price)}</span>
-                        <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full shrink-0 ${p.stock === 0 ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{p.stock}</span>
+                        <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full shrink-0 ${p.stock === 0 ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
+                          {(() => {
+                            const pu = unitsCache.current[p.id] ?? [];
+                            const bu = pu.find(u => u.is_base);
+                            return bu ? `${p.stock} ${bu.name}` : p.stock;
+                          })()}
+                        </span>
                       </div>
                     </button>
                   ))}

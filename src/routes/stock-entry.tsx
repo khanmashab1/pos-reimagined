@@ -286,7 +286,7 @@ function StockEntryPage() {
                     <tr key={i} className="hover:bg-muted/40">
                       <td className="px-4 py-3 font-medium">{e.product_name}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.barcode}</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty} {e.unit_name}</td>
                       <td className="px-4 py-3">
                         <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
                           Pending
