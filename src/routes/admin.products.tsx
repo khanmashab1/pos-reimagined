@@ -399,6 +399,29 @@ function ProductsPage() {
       }
     }
 
+    // If editing and admin entered an "Add Stock" qty, create + auto-approve the entry.
+    if (editing && Number(initialStockQty) > 0) {
+      const pid = editing.id;
+      const map = await fetchUnitsByProductIds([pid]);
+      const refreshed = map[pid] ?? [];
+      const target = refreshed.sort((a, b) => b.equals_base - a.equals_base)[initialStockUnitIdx];
+      if (target) {
+        const { data: entryId, error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
+          _product_id: pid,
+          _unit_id: target.id,
+          _qty: Number(initialStockQty),
+          _notes: "Admin edit — direct add",
+        });
+        if (stkErr) toast.error(stkErr.message);
+        else if (entryId) {
+          const { error: appErr } = await supabase.rpc("approve_stock_entry", {
+            _entry_id: entryId as unknown as string,
+          });
+          if (appErr) toast.error(appErr.message);
+        }
+      }
+    }
+
     toast.success(editing ? "Product updated" : "Product added");
     setOpen(false);
     load(page, search, filter);
