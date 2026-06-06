@@ -34,7 +34,10 @@ import {
   ShoppingCart,
   CheckCircle2,
   ShieldCheck,
+  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fmt } from "@/lib/format";
 import { BarcodeLabel } from "@/components/BarcodeLabel";
