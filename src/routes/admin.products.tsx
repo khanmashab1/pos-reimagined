@@ -211,6 +211,8 @@ function ProductsPage() {
   const [units, setUnits] = useState<UnitDraft[]>([]);
   const [initialStockUnitIdx, setInitialStockUnitIdx] = useState<number>(0);
   const [initialStockQty, setInitialStockQty] = useState<string>("");
+  const [editStockCounts, setEditStockCounts] = useState<Record<string, string>>({});
+  const [editStockReason, setEditStockReason] = useState<string>("");
   const [previewUnitIdx, setPreviewUnitIdx] = useState<number>(0);
   const [previewQty, setPreviewQty] = useState<string>("1");
   const [printing, setPrinting] = useState<Product | null>(null);
