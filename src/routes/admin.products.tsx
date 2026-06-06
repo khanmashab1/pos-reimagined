@@ -34,7 +34,10 @@ import {
   ShoppingCart,
   CheckCircle2,
   ShieldCheck,
+  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fmt } from "@/lib/format";
 import { BarcodeLabel } from "@/components/BarcodeLabel";
@@ -208,6 +211,8 @@ function ProductsPage() {
   const [units, setUnits] = useState<UnitDraft[]>([]);
   const [initialStockUnitIdx, setInitialStockUnitIdx] = useState<number>(0);
   const [initialStockQty, setInitialStockQty] = useState<string>("");
+  const [editStockCounts, setEditStockCounts] = useState<Record<string, string>>({});
+  const [editStockReason, setEditStockReason] = useState<string>("");
   const [previewUnitIdx, setPreviewUnitIdx] = useState<number>(0);
   const [previewQty, setPreviewQty] = useState<string>("1");
   const [printing, setPrinting] = useState<Product | null>(null);
@@ -277,6 +282,8 @@ function ProductsPage() {
     ]);
     setInitialStockQty("");
     setInitialStockUnitIdx(0);
+    setEditStockCounts({});
+    setEditStockReason("");
     setPreviewUnitIdx(0);
     setPreviewQty("1");
     setOpen(true);
@@ -286,6 +293,7 @@ function ProductsPage() {
     setEditing(p);
     setInitialStockQty("");
     setInitialStockUnitIdx(0);
+    setEditStockReason("");
     setPreviewUnitIdx(0);
     setPreviewQty("1");
     const map = await fetchUnitsByProductIds([p.id]);
@@ -304,6 +312,7 @@ function ProductsPage() {
           sort_order: 0,
         },
       ]);
+      setEditStockCounts({ "0": String(p.stock) });
     } else {
       const sorted = existing
         .sort((a, b) => b.equals_base - a.equals_base)
@@ -322,6 +331,16 @@ function ProductsPage() {
       setUnits(sorted);
       const di = sorted.findIndex((u) => u.is_default_sale);
       setPreviewUnitIdx(di >= 0 ? di : 0);
+      // Pre-fill breakdown from current stock (greedy largest→smallest).
+      const breakdown = greedyBreakdown(
+        p.stock,
+        sorted.map((u, i) => ({ id: String(i), name: u.name, equals_base: u.equals_base })),
+      );
+      const seed: Record<string, string> = {};
+      breakdown.forEach((b) => {
+        seed[b.id] = String(b.count);
+      });
+      setEditStockCounts(seed);
     }
     setOpen(true);
   }, []);
@@ -399,25 +418,42 @@ function ProductsPage() {
       }
     }
 
-    // If editing and admin entered an "Add Stock" qty, create + auto-approve the entry.
-    if (editing && Number(initialStockQty) > 0) {
-      const pid = editing.id;
-      const map = await fetchUnitsByProductIds([pid]);
-      const refreshed = map[pid] ?? [];
-      const target = refreshed.sort((a, b) => b.equals_base - a.equals_base)[initialStockUnitIdx];
-      if (target) {
-        const { data: entryId, error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
-          _product_id: pid,
-          _unit_id: target.id,
-          _qty: Number(initialStockQty),
-          _notes: "Admin edit — direct add",
-        });
-        if (stkErr) toast.error(stkErr.message);
-        else if (entryId) {
-          const { error: appErr } = await supabase.rpc("approve_stock_entry", {
-            _entry_id: entryId as unknown as string,
+    // If editing and admin changed unit breakdown counts, apply a stock adjustment with reason.
+    if (editing) {
+      const newBase = units.reduce((sum, u, i) => {
+        const c = Number(editStockCounts[String(i)] ?? 0) || 0;
+        return sum + c * u.equals_base;
+      }, 0);
+      const delta = newBase - Number(editing.stock);
+      if (delta !== 0) {
+        if (!editStockReason.trim()) {
+          toast.error("Please enter a reason for the stock change");
+          return;
+        }
+        const baseRow = units.find((u) => u.is_base);
+        const baseUnitId = baseRow?.id ?? null;
+        const baseUnitName = baseRow?.name ?? "Unit";
+        const { error: upErr } = await supabase
+          .from("products")
+          .update({ stock: newBase })
+          .eq("id", editing.id);
+        if (upErr) toast.error(upErr.message);
+        else {
+          const { data: ures } = await supabase.auth.getUser();
+          const uid = ures.user?.id ?? null;
+          const uname =
+            (ures.user?.user_metadata?.full_name as string) ?? ures.user?.email ?? "admin";
+          await supabase.from("inventory_movements").insert({
+            product_id: editing.id,
+            unit_id: baseUnitId,
+            unit_name: baseUnitName,
+            qty_in_unit: delta,
+            qty_in_base: delta,
+            kind: "adjustment",
+            user_id: uid,
+            user_name: uname,
+            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta}): ${editStockReason.trim()}`,
           });
-          if (appErr) toast.error(appErr.message);
         }
       }
     }
@@ -425,7 +461,19 @@ function ProductsPage() {
     toast.success(editing ? "Product updated" : "Product added");
     setOpen(false);
     load(page, search, filter);
-  }, [form, units, editing, initialStockQty, initialStockUnitIdx, load, page, search, filter]);
+  }, [
+    form,
+    units,
+    editing,
+    initialStockQty,
+    initialStockUnitIdx,
+    editStockCounts,
+    editStockReason,
+    load,
+    page,
+    search,
+    filter,
+  ]);
 
   const baseUnitForm = units.find((u) => u.is_base);
   const baseName = baseUnitForm?.name?.trim() || "Piece";
@@ -452,8 +500,19 @@ function ProductsPage() {
     [units],
   );
 
-  // Stock we expect after saving: existing stock + add-stock when editing, otherwise the initial-stock entry.
-  const projectedBase = editing ? Number(form.stock) + totalInitialBase : totalInitialBase;
+  // Edit-stock: per-unit counts × conversion = new total base stock.
+  const editedBase = useMemo(() => {
+    if (!editing) return 0;
+    return units.reduce((sum, u, i) => {
+      const c = Number(editStockCounts[String(i)] ?? 0) || 0;
+      return sum + c * u.equals_base;
+    }, 0);
+  }, [editing, units, editStockCounts]);
+  const editDelta = editing ? editedBase - Number(editing.stock) : 0;
+
+  // Stock we expect after saving: edited breakdown when editing, otherwise the initial-stock entry.
+  const projectedBase = editing ? editedBase : totalInitialBase;
+  const stockError = projectedBase < 0;
 
   // Live "if you sell …" preview.
   const previewUnit = units[previewUnitIdx] ?? baseUnitForm;
@@ -779,55 +838,105 @@ function ProductsPage() {
                   </div>
                 ) : (
                   <div className="rounded-xl border p-4 space-y-3">
-                    <div className="font-semibold text-sm flex items-center gap-2">
-                      <Box className="h-4 w-4 text-primary" /> Add Stock
-                      <span className="text-xs text-muted-foreground font-normal">
-                        (current: {Number(form.stock)} {pluralize(baseName, Number(form.stock))})
+                    <div className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                      <Box className="h-4 w-4 text-primary" /> Edit Stock
+                      <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        <ShieldCheck className="h-3 w-3" /> Admin
+                      </span>
+                      <span className="text-xs text-muted-foreground font-normal ml-auto">
+                        current: {Number(editing.stock)} {pluralize(baseName, Number(editing.stock))}
                       </span>
                     </div>
-                    <div className="flex gap-2">
-                      <Select
-                        value={String(initialStockUnitIdx)}
-                        onValueChange={(v) => setInitialStockUnitIdx(Number(v))}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {units.map((u, i) => (
-                            <SelectItem key={i} value={String(i)}>
-                              {u.name || `Unit ${i + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={initialStockQty}
-                        onChange={(e) => setInitialStockQty(e.target.value)}
-                        placeholder="0"
+                    <div className="space-y-2">
+                      {units.map((u, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Label className="w-24 text-xs">{u.name || `Unit ${i + 1}`}</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            className="h-9"
+                            value={editStockCounts[String(i)] ?? "0"}
+                            onChange={(e) =>
+                              setEditStockCounts((s) => ({ ...s, [String(i)]: e.target.value }))
+                            }
+                          />
+                          <span className="text-[11px] text-muted-foreground w-20 text-right">
+                            × {u.equals_base}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">
+                        Reason {editDelta !== 0 && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="e.g. Damaged stock removed, recount adjustment…"
+                        value={editStockReason}
+                        onChange={(e) => setEditStockReason(e.target.value)}
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      {totalInitialBase > 0
-                        ? `Adds +${totalInitialBase} ${pluralize(baseName, totalInitialBase)} on save (auto-approved).`
-                        : "Enter a quantity to add stock when you save."}
-                    </p>
+                    <div
+                      className={`rounded-lg border p-2.5 text-xs ${
+                        editDelta === 0
+                          ? "bg-muted/40 text-muted-foreground"
+                          : editDelta > 0
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300"
+                            : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>New total</span>
+                        <span className="font-bold">
+                          {editedBase} {pluralize(baseName, editedBase)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span>Change</span>
+                        <span className="font-bold">
+                          {editDelta > 0 ? "+" : ""}
+                          {editDelta}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div className="rounded-xl border p-4 space-y-3">
+                <div
+                  className={`rounded-xl border p-4 space-y-3 ${stockError ? "border-destructive bg-destructive/5" : ""}`}
+                >
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> Stock Summary
+                    {stockError ? (
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    )}
+                    Stock Summary
                     <span className="text-xs text-muted-foreground font-normal">
-                      {editing ? "(current)" : "(after saving)"}
+                      {editing ? "(after save)" : "(after saving)"}
                     </span>
                   </div>
-                  <UnitChips base={projectedBase} units={draftUnits} />
+                  {stockError ? (
+                    <div className="space-y-2">
+                      <div className="rounded-md bg-destructive text-destructive-foreground px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5">
+                        <ShieldAlert className="h-3.5 w-3.5" /> STOCK ERROR — Run audit
+                      </div>
+                      <div className="text-sm font-mono text-destructive">
+                        {units
+                          .map(
+                            (u, i) =>
+                              `${Number(editStockCounts[String(i)] ?? 0) || 0} ${u.name || "—"}`,
+                          )
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  ) : (
+                    <UnitChips base={projectedBase} units={draftUnits} />
+                  )}
                   <div className="flex items-center justify-between border-t pt-2.5 text-sm">
                     <span className="text-muted-foreground">Total</span>
-                    <span className="font-bold">
+                    <span className={`font-bold ${stockError ? "text-destructive" : ""}`}>
                       {projectedBase} {pluralize(baseName, projectedBase)}
                     </span>
                   </div>
