@@ -418,25 +418,42 @@ function ProductsPage() {
       }
     }
 
-    // If editing and admin entered an "Add Stock" qty, create + auto-approve the entry.
-    if (editing && Number(initialStockQty) > 0) {
-      const pid = editing.id;
-      const map = await fetchUnitsByProductIds([pid]);
-      const refreshed = map[pid] ?? [];
-      const target = refreshed.sort((a, b) => b.equals_base - a.equals_base)[initialStockUnitIdx];
-      if (target) {
-        const { data: entryId, error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
-          _product_id: pid,
-          _unit_id: target.id,
-          _qty: Number(initialStockQty),
-          _notes: "Admin edit — direct add",
-        });
-        if (stkErr) toast.error(stkErr.message);
-        else if (entryId) {
-          const { error: appErr } = await supabase.rpc("approve_stock_entry", {
-            _entry_id: entryId as unknown as string,
+    // If editing and admin changed unit breakdown counts, apply a stock adjustment with reason.
+    if (editing) {
+      const newBase = units.reduce((sum, u, i) => {
+        const c = Number(editStockCounts[String(i)] ?? 0) || 0;
+        return sum + c * u.equals_base;
+      }, 0);
+      const delta = newBase - Number(editing.stock);
+      if (delta !== 0) {
+        if (!editStockReason.trim()) {
+          toast.error("Please enter a reason for the stock change");
+          return;
+        }
+        const baseRow = units.find((u) => u.is_base);
+        const baseUnitId = baseRow?.id ?? null;
+        const baseUnitName = baseRow?.name ?? "Unit";
+        const { error: upErr } = await supabase
+          .from("products")
+          .update({ stock: newBase })
+          .eq("id", editing.id);
+        if (upErr) toast.error(upErr.message);
+        else {
+          const { data: ures } = await supabase.auth.getUser();
+          const uid = ures.user?.id ?? null;
+          const uname =
+            (ures.user?.user_metadata?.full_name as string) ?? ures.user?.email ?? "admin";
+          await supabase.from("inventory_movements").insert({
+            product_id: editing.id,
+            unit_id: baseUnitId,
+            unit_name: baseUnitName,
+            qty_in_unit: delta,
+            qty_in_base: delta,
+            kind: "adjustment",
+            user_id: uid,
+            user_name: uname,
+            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta}): ${editStockReason.trim()}`,
           });
-          if (appErr) toast.error(appErr.message);
         }
       }
     }
@@ -444,7 +461,19 @@ function ProductsPage() {
     toast.success(editing ? "Product updated" : "Product added");
     setOpen(false);
     load(page, search, filter);
-  }, [form, units, editing, initialStockQty, initialStockUnitIdx, load, page, search, filter]);
+  }, [
+    form,
+    units,
+    editing,
+    initialStockQty,
+    initialStockUnitIdx,
+    editStockCounts,
+    editStockReason,
+    load,
+    page,
+    search,
+    filter,
+  ]);
 
   const baseUnitForm = units.find((u) => u.is_base);
   const baseName = baseUnitForm?.name?.trim() || "Piece";
