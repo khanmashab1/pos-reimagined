@@ -500,8 +500,19 @@ function ProductsPage() {
     [units],
   );
 
-  // Stock we expect after saving: existing stock + add-stock when editing, otherwise the initial-stock entry.
-  const projectedBase = editing ? Number(form.stock) + totalInitialBase : totalInitialBase;
+  // Edit-stock: per-unit counts × conversion = new total base stock.
+  const editedBase = useMemo(() => {
+    if (!editing) return 0;
+    return units.reduce((sum, u, i) => {
+      const c = Number(editStockCounts[String(i)] ?? 0) || 0;
+      return sum + c * u.equals_base;
+    }, 0);
+  }, [editing, units, editStockCounts]);
+  const editDelta = editing ? editedBase - Number(editing.stock) : 0;
+
+  // Stock we expect after saving: edited breakdown when editing, otherwise the initial-stock entry.
+  const projectedBase = editing ? editedBase : totalInitialBase;
+  const stockError = projectedBase < 0;
 
   // Live "if you sell …" preview.
   const previewUnit = units[previewUnitIdx] ?? baseUnitForm;
