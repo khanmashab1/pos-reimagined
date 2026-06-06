@@ -838,55 +838,105 @@ function ProductsPage() {
                   </div>
                 ) : (
                   <div className="rounded-xl border p-4 space-y-3">
-                    <div className="font-semibold text-sm flex items-center gap-2">
-                      <Box className="h-4 w-4 text-primary" /> Add Stock
-                      <span className="text-xs text-muted-foreground font-normal">
-                        (current: {Number(form.stock)} {pluralize(baseName, Number(form.stock))})
+                    <div className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                      <Box className="h-4 w-4 text-primary" /> Edit Stock
+                      <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        <ShieldCheck className="h-3 w-3" /> Admin
+                      </span>
+                      <span className="text-xs text-muted-foreground font-normal ml-auto">
+                        current: {Number(editing.stock)} {pluralize(baseName, Number(editing.stock))}
                       </span>
                     </div>
-                    <div className="flex gap-2">
-                      <Select
-                        value={String(initialStockUnitIdx)}
-                        onValueChange={(v) => setInitialStockUnitIdx(Number(v))}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {units.map((u, i) => (
-                            <SelectItem key={i} value={String(i)}>
-                              {u.name || `Unit ${i + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={initialStockQty}
-                        onChange={(e) => setInitialStockQty(e.target.value)}
-                        placeholder="0"
+                    <div className="space-y-2">
+                      {units.map((u, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Label className="w-24 text-xs">{u.name || `Unit ${i + 1}`}</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            className="h-9"
+                            value={editStockCounts[String(i)] ?? "0"}
+                            onChange={(e) =>
+                              setEditStockCounts((s) => ({ ...s, [String(i)]: e.target.value }))
+                            }
+                          />
+                          <span className="text-[11px] text-muted-foreground w-20 text-right">
+                            × {u.equals_base}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">
+                        Reason {editDelta !== 0 && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="e.g. Damaged stock removed, recount adjustment…"
+                        value={editStockReason}
+                        onChange={(e) => setEditStockReason(e.target.value)}
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      {totalInitialBase > 0
-                        ? `Adds +${totalInitialBase} ${pluralize(baseName, totalInitialBase)} on save (auto-approved).`
-                        : "Enter a quantity to add stock when you save."}
-                    </p>
+                    <div
+                      className={`rounded-lg border p-2.5 text-xs ${
+                        editDelta === 0
+                          ? "bg-muted/40 text-muted-foreground"
+                          : editDelta > 0
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300"
+                            : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>New total</span>
+                        <span className="font-bold">
+                          {editedBase} {pluralize(baseName, editedBase)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span>Change</span>
+                        <span className="font-bold">
+                          {editDelta > 0 ? "+" : ""}
+                          {editDelta}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div className="rounded-xl border p-4 space-y-3">
+                <div
+                  className={`rounded-xl border p-4 space-y-3 ${stockError ? "border-destructive bg-destructive/5" : ""}`}
+                >
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> Stock Summary
+                    {stockError ? (
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    )}
+                    Stock Summary
                     <span className="text-xs text-muted-foreground font-normal">
-                      {editing ? "(current)" : "(after saving)"}
+                      {editing ? "(after save)" : "(after saving)"}
                     </span>
                   </div>
-                  <UnitChips base={projectedBase} units={draftUnits} />
+                  {stockError ? (
+                    <div className="space-y-2">
+                      <div className="rounded-md bg-destructive text-destructive-foreground px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5">
+                        <ShieldAlert className="h-3.5 w-3.5" /> STOCK ERROR — Run audit
+                      </div>
+                      <div className="text-sm font-mono text-destructive">
+                        {units
+                          .map(
+                            (u, i) =>
+                              `${Number(editStockCounts[String(i)] ?? 0) || 0} ${u.name || "—"}`,
+                          )
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  ) : (
+                    <UnitChips base={projectedBase} units={draftUnits} />
+                  )}
                   <div className="flex items-center justify-between border-t pt-2.5 text-sm">
                     <span className="text-muted-foreground">Total</span>
-                    <span className="font-bold">
+                    <span className={`font-bold ${stockError ? "text-destructive" : ""}`}>
                       {projectedBase} {pluralize(baseName, projectedBase)}
                     </span>
                   </div>
