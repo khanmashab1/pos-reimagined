@@ -331,14 +331,15 @@ function ProductsPage() {
       setUnits(sorted);
       const di = sorted.findIndex((u) => u.is_default_sale);
       setPreviewUnitIdx(di >= 0 ? di : 0);
-      // Pre-fill breakdown from current stock (greedy largest→smallest).
-      const breakdown = greedyBreakdown(
-        p.stock,
-        sorted.map((u, i) => ({ id: String(i), name: u.name, equals_base: u.equals_base })),
-      );
+      // Pre-fill breakdown from current stock (signed greedy largest→smallest, preserves negatives).
       const seed: Record<string, string> = {};
-      breakdown.forEach((b) => {
-        seed[b.id] = String(b.count);
+      const sign = p.stock < 0 ? -1 : 1;
+      let rem = Math.abs(Math.floor(p.stock));
+      sorted.forEach((u, i) => {
+        const eb = u.equals_base;
+        const c = eb > 0 ? Math.floor(rem / eb) : 0;
+        rem -= c * eb;
+        seed[String(i)] = String(sign * c);
       });
       setEditStockCounts(seed);
     }
