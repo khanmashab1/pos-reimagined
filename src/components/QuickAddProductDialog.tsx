@@ -10,6 +10,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export interface QuickAddProduct {
@@ -26,6 +29,8 @@ function genBarcode() {
   return "ZIC" + Date.now().toString().slice(-9) + Math.floor(Math.random() * 10);
 }
 
+const NONE = "__none__";
+
 export function QuickAddProductDialog({
   open,
   onClose,
@@ -40,6 +45,9 @@ export function QuickAddProductDialog({
   const [name, setName] = useState("");
   const [barcode, setBarcode] = useState("");
   const [salePrice, setSalePrice] = useState<string>("");
+  const [costPrice, setCostPrice] = useState<string>("");
+  const [categoryId, setCategoryId] = useState<string>(NONE);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [stock, setStock] = useState<string>("1");
   const [saving, setSaving] = useState(false);
 
@@ -48,7 +56,14 @@ export function QuickAddProductDialog({
       setName("");
       setBarcode(initialBarcode?.trim() || genBarcode());
       setSalePrice("");
+      setCostPrice("");
+      setCategoryId(NONE);
       setStock("1");
+      supabase
+        .from("categories")
+        .select("id, name")
+        .order("name")
+        .then(({ data }) => setCategories((data ?? []) as any));
     }
   }, [open, initialBarcode]);
 
@@ -56,6 +71,9 @@ export function QuickAddProductDialog({
     if (!name.trim()) return toast.error("Name is required");
     const price = Number(salePrice);
     if (!price || price <= 0) return toast.error("Sale price must be greater than 0");
+    const cost = Number(costPrice) || 0;
+    if (cost < 0) return toast.error("Cost price cannot be negative");
+    if (cost > price) return toast.error("Cost price cannot exceed sale price");
     if (!barcode.trim()) return toast.error("Barcode is required");
 
     setSaving(true);
@@ -72,6 +90,7 @@ export function QuickAddProductDialog({
       }
 
       const stockNum = Math.max(0, parseInt(stock, 10) || 0);
+      const catId = categoryId === NONE ? null : categoryId;
 
       const { data, error } = await supabase
         .from("products")
@@ -79,10 +98,10 @@ export function QuickAddProductDialog({
           name: name.trim(),
           barcode: barcode.trim(),
           sale_price: price,
-          purchase_price: 0,
+          purchase_price: cost,
           stock: stockNum,
           min_stock_alert: 5,
-          category_id: null,
+          category_id: catId,
           is_active: true,
         })
         .select("*")
@@ -103,7 +122,7 @@ export function QuickAddProductDialog({
           equals_base: 1,
           is_base: true,
           is_default_sale: true,
-          purchase_price: 0,
+          purchase_price: cost,
           sale_price: price,
           sort_order: 0,
         })
@@ -137,16 +156,41 @@ export function QuickAddProductDialog({
               placeholder="e.g. Pepsi 500ml"
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Cost Price</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label>Sale Price</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
           <div>
-            <Label>Sale Price</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={salePrice}
-              onChange={(e) => setSalePrice(e.target.value)}
-              placeholder="0.00"
-            />
+            <Label>Category</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Uncategorized</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Barcode</Label>
@@ -171,7 +215,7 @@ export function QuickAddProductDialog({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Product will be added to the cart automatically. You can edit cost & category later in
+            Product will be added to the cart automatically. You can edit additional units later in
             the catalog.
           </p>
         </div>
