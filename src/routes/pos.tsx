@@ -844,10 +844,14 @@ function BillSummary({
               }}
             />
             {subtotal > 0 && Number(discountInput) > 0 && (
-              <p className="text-xs text-muted-foreground text-right -mt-1">
+              <p className={`text-xs text-right -mt-1 ${Number(discountInput) > maxDiscount ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                 = {((Number(discountInput) / subtotal) * 100).toFixed(1)}% off
+                {Number(discountInput) > maxDiscount && ` · exceeds max ${fmt(maxDiscount)}`}
               </p>
             )}
+            <p className="text-[11px] text-muted-foreground text-right">
+              Max discount: <span className="font-semibold">{fmt(maxDiscount)}</span> (cart cost {fmt(subtotal - maxDiscount)})
+            </p>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1 text-xs sm:text-sm" onClick={applyDiscount}>Apply</Button>
               {discount > 0 && (
