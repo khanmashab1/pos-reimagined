@@ -75,10 +75,13 @@ function DailyExpensesPage() {
   const [search, setSearch] = useState("");
   // Online payments pulled from POS sales for the scope: card+easypaisa -> Junaid, jazzcash -> Usama.
   const [online, setOnline] = useState({ junaid: 0, usama: 0 });
+  // Cash expenses recorded by cashiers through the POS "Add Expense" dialog
+  // (shift_expenses.description holds the recipient name). Bucketed for the same scope.
+  const [shiftExp, setShiftExp] = useState({ junaid: 0, usama: 0, others: 0, total: 0 });
 
   useEffect(() => { load(); }, []);
 
-  // Fetch online payments by method for the selected Year + Month and attribute to people.
+  // Fetch online payments by method + shift expenses by recipient for the selected Year + Month.
   useEffect(() => {
     let active = true;
     const from = `${year}-${month === "all" ? "01" : month}-01`;
@@ -95,6 +98,22 @@ function DailyExpensesPage() {
         usama: num(d.jazzcash),
       });
     });
+    supabase.from("shift_expenses").select("amount, description, created_at")
+      .gte("created_at", fromIso).lte("created_at", toIso)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { setShiftExp({ junaid: 0, usama: 0, others: 0, total: 0 }); return; }
+        const acc = { junaid: 0, usama: 0, others: 0, total: 0 };
+        (data ?? []).forEach((r: any) => {
+          const amt = num(r.amount);
+          const who = String(r.description ?? "").trim().toLowerCase();
+          acc.total += amt;
+          if (who === "junaid") acc.junaid += amt;
+          else if (who === "usama") acc.usama += amt;
+          else acc.others += amt;
+        });
+        setShiftExp(acc);
+      });
     return () => { active = false; };
   }, [year, month]);
 
@@ -294,14 +313,16 @@ function DailyExpensesPage() {
       {/* Summary cards (respect the Year + Month filter) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard label={`Total Sales (${scopeLabel})`} value={fmt(cards.sales)} icon={TrendingUp} color="var(--info)" />
-        <SummaryCard label={`Total Profit (${scopeLabel})`} value={fmt(cards.profit)} icon={Coins} color="var(--success)"
-          accent={cards.profit < 0 ? "text-destructive" : "text-green-600"} />
-        <SummaryCard label={`Total Expenses (${scopeLabel})`} value={fmt(cards.expenses)} icon={Receipt} color="var(--warning)" />
+        <SummaryCard label={`Total Profit (${scopeLabel})`} value={fmt(cards.profit - shiftExp.total)} icon={Coins} color="var(--success)"
+          accent={(cards.profit - shiftExp.total) < 0 ? "text-destructive" : "text-green-600"} />
+        <SummaryCard label={`Total Expenses (${scopeLabel})`} value={fmt(cards.expenses + shiftExp.total)} icon={Receipt} color="var(--warning)"
+          sub={shiftExp.total > 0 ? `Manual ${fmt(cards.expenses)} · POS ${fmt(shiftExp.total)}` : undefined} />
         <SummaryCard label={`Total Cash (${scopeLabel})`} value={fmt(cards.cash)} icon={Wallet} color="var(--accent)" />
       </div>
 
       {/* Per-person totals (respect the Year + Month date filter).
-          Junaid also includes Card + EasyPaisa; Usama also includes JazzCash (from POS sales). */}
+          Junaid also includes Card + EasyPaisa; Usama also includes JazzCash (from POS sales).
+          Cashier-recorded POS expenses (shift_expenses) are also bucketed by recipient. */}
       <div className="space-y-2">
         <div className="text-xs font-semibold uppercase text-muted-foreground">
           By Person · {scopeLabel}
@@ -309,17 +330,22 @@ function DailyExpensesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <SummaryCard
             label="Total Junaid"
-            value={fmt(personTotals.junaid + online.junaid)}
-            sub={`Cash ${fmt(personTotals.junaid)} · Card+EasyPaisa ${fmt(online.junaid)}`}
+            value={fmt(personTotals.junaid + online.junaid + shiftExp.junaid)}
+            sub={`Cash ${fmt(personTotals.junaid)}${shiftExp.junaid ? ` · POS ${fmt(shiftExp.junaid)}` : ""} · Card+EasyPaisa ${fmt(online.junaid)}`}
             icon={User} color="var(--info)"
           />
           <SummaryCard
             label="Total Usama"
-            value={fmt(personTotals.usama + online.usama)}
-            sub={`Cash ${fmt(personTotals.usama)} · JazzCash ${fmt(online.usama)}`}
+            value={fmt(personTotals.usama + online.usama + shiftExp.usama)}
+            sub={`Cash ${fmt(personTotals.usama)}${shiftExp.usama ? ` · POS ${fmt(shiftExp.usama)}` : ""} · JazzCash ${fmt(online.usama)}`}
             icon={User} color="var(--success)"
           />
-          <SummaryCard label="Total others" value={fmt(personTotals.others)} icon={Users} color="var(--warning)" />
+          <SummaryCard
+            label="Total others"
+            value={fmt(personTotals.others + shiftExp.others)}
+            sub={shiftExp.others ? `Manual ${fmt(personTotals.others)} · POS ${fmt(shiftExp.others)}` : undefined}
+            icon={Users} color="var(--warning)"
+          />
         </div>
       </div>
 
