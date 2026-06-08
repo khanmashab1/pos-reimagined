@@ -75,10 +75,13 @@ function DailyExpensesPage() {
   const [search, setSearch] = useState("");
   // Online payments pulled from POS sales for the scope: card+easypaisa -> Junaid, jazzcash -> Usama.
   const [online, setOnline] = useState({ junaid: 0, usama: 0 });
+  // Cash expenses recorded by cashiers through the POS "Add Expense" dialog
+  // (shift_expenses.description holds the recipient name). Bucketed for the same scope.
+  const [shiftExp, setShiftExp] = useState({ junaid: 0, usama: 0, others: 0, total: 0 });
 
   useEffect(() => { load(); }, []);
 
-  // Fetch online payments by method for the selected Year + Month and attribute to people.
+  // Fetch online payments by method + shift expenses by recipient for the selected Year + Month.
   useEffect(() => {
     let active = true;
     const from = `${year}-${month === "all" ? "01" : month}-01`;
@@ -95,6 +98,22 @@ function DailyExpensesPage() {
         usama: num(d.jazzcash),
       });
     });
+    supabase.from("shift_expenses").select("amount, description, created_at")
+      .gte("created_at", fromIso).lte("created_at", toIso)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { setShiftExp({ junaid: 0, usama: 0, others: 0, total: 0 }); return; }
+        const acc = { junaid: 0, usama: 0, others: 0, total: 0 };
+        (data ?? []).forEach((r: any) => {
+          const amt = num(r.amount);
+          const who = String(r.description ?? "").trim().toLowerCase();
+          acc.total += amt;
+          if (who === "junaid") acc.junaid += amt;
+          else if (who === "usama") acc.usama += amt;
+          else acc.others += amt;
+        });
+        setShiftExp(acc);
+      });
     return () => { active = false; };
   }, [year, month]);
 
