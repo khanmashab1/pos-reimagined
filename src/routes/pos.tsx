@@ -688,6 +688,7 @@ function PosPage() {
 interface CartPanelProps {
   cart: CartItem[];
   subtotal: number; discount: number; setDiscount: (n: number) => void;
+  maxDiscount: number;
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
   processing: boolean; processSale: () => unknown | Promise<unknown>;
@@ -698,7 +699,7 @@ interface CartPanelProps {
 }
 
 function BillSummary({
-  cart, subtotal, discount, setDiscount, taxRate, taxAmount, total,
+  cart, subtotal, discount, setDiscount, maxDiscount, taxRate, taxAmount, total,
   cash, setCash, change, processing, processSale,
   paymentMethod, setPaymentMethod,
   discountOpen, setDiscountOpen, discountInput, setDiscountInput,
