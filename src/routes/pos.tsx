@@ -709,7 +709,14 @@ function BillSummary({
   const finalTotal = total + cardSurcharge;
 
   const applyDiscount = () => {
-    setDiscount(Math.max(0, Number(discountInput) || 0));
+    const want = Math.max(0, Number(discountInput) || 0);
+    if (want > maxDiscount) {
+      toast.error(`Discount cannot exceed Rs. ${maxDiscount.toFixed(2)} (cart cost limit)`);
+      setDiscount(maxDiscount);
+      setDiscountInput(String(maxDiscount));
+    } else {
+      setDiscount(want);
+    }
     setDiscountOpen(false);
   };
 
