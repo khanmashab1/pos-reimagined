@@ -539,7 +539,8 @@ function PosPage() {
         {/* ── Right sidebar (desktop) ── */}
         <div className="hidden lg:flex w-80 xl:w-96 2xl:w-[440px] flex-col bg-sidebar border-l shrink-0">
           <BillSummary
-            cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+            cart={cart} subtotal={subtotal} discount={cappedDiscount} setDiscount={setDiscount}
+            maxDiscount={maxDiscount}
             taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
             processing={processing} processSale={processSale}
             paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
