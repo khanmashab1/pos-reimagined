@@ -346,14 +346,19 @@ function PosPage() {
   const filtered = products;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
-  const taxAmount = Math.max(0, (subtotal - discount) * (taxRate / 100));
-  const total = Math.max(0, subtotal - discount + taxAmount);
+  // Discount must never push the bill below total cost — otherwise the sale is a loss.
+  const cartCost = cart.reduce((s, i) => s + i.qty * Number(i.unit_purchase_price || 0), 0);
+  const maxDiscount = Math.max(0, subtotal - cartCost);
+  const cappedDiscount = Math.min(discount, maxDiscount);
+  const taxAmount = Math.max(0, (subtotal - cappedDiscount) * (taxRate / 100));
+  const total = Math.max(0, subtotal - cappedDiscount + taxAmount);
   const cashNum = Number(cash) || 0;
   const change = Math.max(0, cashNum - total);
 
   const processSale = async () => {
     if (!session) { toast.error("Start a shift first"); return; }
     if (cart.length === 0) return toast.error("Cart is empty");
+    if (discount > maxDiscount) return toast.error(`Discount cannot exceed Rs. ${maxDiscount.toFixed(2)} (would sell below cost)`);
     if (paymentMethod === "cash" && cash !== "" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     try {
