@@ -571,7 +571,8 @@ function PosPage() {
             </SheetHeader>
             <div className="flex-1 overflow-hidden min-h-0">
               <BillSummary
-                cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+                cart={cart} subtotal={subtotal} discount={cappedDiscount} setDiscount={setDiscount}
+                maxDiscount={maxDiscount}
                 taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
                 processing={processing}
                 processSale={async () => { await processSale(); setCartOpen(false); }}
