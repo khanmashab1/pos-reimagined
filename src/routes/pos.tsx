@@ -346,14 +346,19 @@ function PosPage() {
   const filtered = products;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const subtotal = cart.reduce((s, i) => s + i.qty * Number(i.unit_sale_price), 0);
-  const taxAmount = Math.max(0, (subtotal - discount) * (taxRate / 100));
-  const total = Math.max(0, subtotal - discount + taxAmount);
+  // Discount must never push the bill below total cost — otherwise the sale is a loss.
+  const cartCost = cart.reduce((s, i) => s + i.qty * Number(i.unit_purchase_price || 0), 0);
+  const maxDiscount = Math.max(0, subtotal - cartCost);
+  const cappedDiscount = Math.min(discount, maxDiscount);
+  const taxAmount = Math.max(0, (subtotal - cappedDiscount) * (taxRate / 100));
+  const total = Math.max(0, subtotal - cappedDiscount + taxAmount);
   const cashNum = Number(cash) || 0;
   const change = Math.max(0, cashNum - total);
 
   const processSale = async () => {
     if (!session) { toast.error("Start a shift first"); return; }
     if (cart.length === 0) return toast.error("Cart is empty");
+    if (discount > maxDiscount) return toast.error(`Discount cannot exceed Rs. ${maxDiscount.toFixed(2)} (would sell below cost)`);
     if (paymentMethod === "cash" && cash !== "" && cashNum < total) return toast.error("Cash received is less than total");
     setProcessing(true);
     try {
@@ -366,7 +371,7 @@ function PosPage() {
           purchase_price: i.unit_purchase_price,
           subtotal: i.qty * i.unit_sale_price,
         })),
-        _subtotal: subtotal, _tax_amount: taxAmount, _discount: discount, _total: total,
+        _subtotal: subtotal, _tax_amount: taxAmount, _discount: cappedDiscount, _total: total,
         _cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         _change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
         _payment_type: paymentMethod,
@@ -378,7 +383,7 @@ function PosPage() {
         bill_no: result.bill_no,
         items: cart.map((i) => ({ name: `${i.name}${i.unit_name && i.available_units.length > 1 ? ` (${i.unit_name})` : ""}`, barcode: i.barcode, qty: i.qty, sale_price: i.unit_sale_price })),
         subtotal, tax_amount: taxAmount,
-        discount, total,
+        discount: cappedDiscount, total,
         cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
         cashier_name: fullName, created_at: new Date().toISOString(),
@@ -534,7 +539,8 @@ function PosPage() {
         {/* ── Right sidebar (desktop) ── */}
         <div className="hidden lg:flex w-80 xl:w-96 2xl:w-[440px] flex-col bg-sidebar border-l shrink-0">
           <BillSummary
-            cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+            cart={cart} subtotal={subtotal} discount={cappedDiscount} setDiscount={setDiscount}
+            maxDiscount={maxDiscount}
             taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
             processing={processing} processSale={processSale}
             paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
@@ -565,7 +571,8 @@ function PosPage() {
             </SheetHeader>
             <div className="flex-1 overflow-hidden min-h-0">
               <BillSummary
-                cart={cart} subtotal={subtotal} discount={discount} setDiscount={setDiscount}
+                cart={cart} subtotal={subtotal} discount={cappedDiscount} setDiscount={setDiscount}
+                maxDiscount={maxDiscount}
                 taxRate={taxRate} taxAmount={taxAmount} total={total} cash={cash} setCash={setCash} change={change}
                 processing={processing}
                 processSale={async () => { await processSale(); setCartOpen(false); }}
@@ -681,6 +688,7 @@ function PosPage() {
 interface CartPanelProps {
   cart: CartItem[];
   subtotal: number; discount: number; setDiscount: (n: number) => void;
+  maxDiscount: number;
   taxRate: number; taxAmount: number; total: number;
   cash: string; setCash: (s: string) => void; change: number;
   processing: boolean; processSale: () => unknown | Promise<unknown>;
@@ -691,7 +699,7 @@ interface CartPanelProps {
 }
 
 function BillSummary({
-  cart, subtotal, discount, setDiscount, taxRate, taxAmount, total,
+  cart, subtotal, discount, setDiscount, maxDiscount, taxRate, taxAmount, total,
   cash, setCash, change, processing, processSale,
   paymentMethod, setPaymentMethod,
   discountOpen, setDiscountOpen, discountInput, setDiscountInput,
@@ -701,7 +709,14 @@ function BillSummary({
   const finalTotal = total + cardSurcharge;
 
   const applyDiscount = () => {
-    setDiscount(Math.max(0, Number(discountInput) || 0));
+    const want = Math.max(0, Number(discountInput) || 0);
+    if (want > maxDiscount) {
+      toast.error(`Discount cannot exceed Rs. ${maxDiscount.toFixed(2)} (cart cost limit)`);
+      setDiscount(maxDiscount);
+      setDiscountInput(String(maxDiscount));
+    } else {
+      setDiscount(want);
+    }
     setDiscountOpen(false);
   };
 
@@ -829,10 +844,14 @@ function BillSummary({
               }}
             />
             {subtotal > 0 && Number(discountInput) > 0 && (
-              <p className="text-xs text-muted-foreground text-right -mt-1">
+              <p className={`text-xs text-right -mt-1 ${Number(discountInput) > maxDiscount ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                 = {((Number(discountInput) / subtotal) * 100).toFixed(1)}% off
+                {Number(discountInput) > maxDiscount && ` · exceeds max ${fmt(maxDiscount)}`}
               </p>
             )}
+            <p className="text-[11px] text-muted-foreground text-right">
+              Max discount: <span className="font-semibold">{fmt(maxDiscount)}</span> (cart cost {fmt(subtotal - maxDiscount)})
+            </p>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1 text-xs sm:text-sm" onClick={applyDiscount}>Apply</Button>
               {discount > 0 && (
