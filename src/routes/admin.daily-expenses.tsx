@@ -12,7 +12,7 @@ import {
 import { fmt, today } from "@/lib/format";
 import {
   BookText, Download, Search, Plus, Pencil, Trash2, Loader2, X,
-  TrendingUp, Wallet, Receipt, Coins, User, Users,
+  TrendingUp, Wallet, Receipt, Coins, User, Users, Building2, HandCoins,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,6 +62,13 @@ const blankForm = {
   today_expenses: "",
 };
 
+const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Miscellaneous"];
+const PAY_METHODS = ["cash", "easypaisa", "jazzcash", "card", "bank"];
+const PERSON_OPTIONS = ["Junaid", "Usama", "Other"];
+
+const blankOp = { expense_date: today(), category: "Rent", description: "", amount: "", paid_to: "", payment_method: "cash" };
+const blankPay = { payment_date: today(), person: "Junaid", customPerson: "", amount: "", payment_method: "cash", notes: "" };
+
 function DailyExpensesPage() {
   const { fullName } = useAuth();
   const [rows, setRows] = useState<Raw[]>([]);
@@ -73,15 +80,21 @@ function DailyExpensesPage() {
   const [year, setYear] = useState(thisYear);
   const [month, setMonth] = useState("all");
   const [search, setSearch] = useState("");
-  // Online payments pulled from POS sales for the scope: card+easypaisa -> Junaid, jazzcash -> Usama.
-  const [online, setOnline] = useState({ junaid: 0, usama: 0 });
-  // Cash expenses recorded by cashiers through the POS "Add Expense" dialog
-  // (shift_expenses.description holds the recipient name). Bucketed for the same scope.
-  const [shiftExp, setShiftExp] = useState({ junaid: 0, usama: 0, others: 0, total: 0 });
+  // POS cashier expenses (shift_expenses) total for the scope — folded into Total Expenses.
+  const [shiftExpTotal, setShiftExpTotal] = useState(0);
+  // Operating expenses (rent, bills, salaries) for the scope, with per-category breakdown.
+  const [opTotals, setOpTotals] = useState<{ total: number; byCat: Record<string, number> }>({ total: 0, byCat: {} });
+  // Person payments (Junaid/Usama/Other) for the scope, grouped by person and method.
+  const [personPay, setPersonPay] = useState<Record<string, { total: number; byMethod: Record<string, number> }>>({});
+  const [opForm, setOpForm] = useState(blankOp);
+  const [payForm, setPayForm] = useState(blankPay);
+  const [savingOp, setSavingOp] = useState(false);
+  const [savingPay, setSavingPay] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => { load(); }, []);
 
-  // Fetch online payments by method + shift expenses by recipient for the selected Year + Month.
+  // Fetch scope-bound data: POS cashier expenses, operating expenses, person payments.
   useEffect(() => {
     let active = true;
     const from = `${year}-${month === "all" ? "01" : month}-01`;
@@ -89,33 +102,49 @@ function DailyExpensesPage() {
     const to = `${year}-${month === "all" ? "12" : month}-${String(month === "all" ? 31 : lastDay).padStart(2, "0")}`;
     const fromIso = new Date(from + "T00:00:00").toISOString();
     const toIso = new Date(to + "T23:59:59.999").toISOString();
-    supabase.rpc("get_online_by_method" as any, { _from: fromIso, _to: toIso }).then(({ data, error }) => {
-      if (!active) return;
-      if (error) { setOnline({ junaid: 0, usama: 0 }); return; } // RPC not deployed yet → 0
-      const d = (data ?? {}) as Record<string, number>;
-      setOnline({
-        junaid: num(d.card) + num(d.easypasa),
-        usama: num(d.jazzcash),
-      });
-    });
-    supabase.from("shift_expenses").select("amount, description, created_at")
+
+    supabase.from("shift_expenses").select("amount, created_at")
       .gte("created_at", fromIso).lte("created_at", toIso)
       .then(({ data, error }) => {
         if (!active) return;
-        if (error) { setShiftExp({ junaid: 0, usama: 0, others: 0, total: 0 }); return; }
-        const acc = { junaid: 0, usama: 0, others: 0, total: 0 };
+        setShiftExpTotal(error ? 0 : (data ?? []).reduce((s: number, r: any) => s + num(r.amount), 0));
+      });
+
+    supabase.from("operating_expenses" as any).select("amount, category")
+      .gte("expense_date", from).lte("expense_date", to)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { setOpTotals({ total: 0, byCat: {} }); return; }
+        const byCat: Record<string, number> = {};
+        let total = 0;
         (data ?? []).forEach((r: any) => {
           const amt = num(r.amount);
-          const who = String(r.description ?? "").trim().toLowerCase();
-          acc.total += amt;
-          if (who === "junaid") acc.junaid += amt;
-          else if (who === "usama") acc.usama += amt;
-          else acc.others += amt;
+          total += amt;
+          const cat = String(r.category || "Miscellaneous");
+          byCat[cat] = (byCat[cat] ?? 0) + amt;
         });
-        setShiftExp(acc);
+        setOpTotals({ total, byCat });
       });
+
+    supabase.from("person_payments" as any).select("amount, person_name, payment_method")
+      .gte("payment_date", from).lte("payment_date", to)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { setPersonPay({}); return; }
+        const acc: Record<string, { total: number; byMethod: Record<string, number> }> = {};
+        (data ?? []).forEach((r: any) => {
+          const name = String(r.person_name || "Other").trim() || "Other";
+          const amt = num(r.amount);
+          const method = String(r.payment_method || "cash");
+          const bucket = (acc[name] ??= { total: 0, byMethod: {} });
+          bucket.total += amt;
+          bucket.byMethod[method] = (bucket.byMethod[method] ?? 0) + amt;
+        });
+        setPersonPay(acc);
+      });
+
     return () => { active = false; };
-  }, [year, month]);
+  }, [year, month, refreshTick]);
 
   async function load() {
     setLoading(true);
@@ -183,19 +212,22 @@ function DailyExpensesPage() {
     [scoped],
   );
 
-  const personTotals = useMemo(
-    () => scoped.reduce(
-      (a, r) => ({
-        junaid: a.junaid + num(r.cash_junaid),
-        usama: a.usama + num(r.cash_usama),
-        others: a.others + num(r.others),
-      }),
-      { junaid: 0, usama: 0, others: 0 },
-    ),
-    [scoped],
-  );
-
   const scopeLabel = month === "all" ? year : `${MONTHS.find((m) => m.v === month)?.label} ${year}`;
+
+  // Person totals come from the person_payments ledger. Junaid/Usama always shown;
+  // everyone else is aggregated into "Others".
+  const personCards = useMemo(() => {
+    const known = new Set(["junaid", "usama"]);
+    const junaid = personPay["Junaid"] ?? { total: 0, byMethod: {} };
+    const usama = personPay["Usama"] ?? { total: 0, byMethod: {} };
+    const others = { total: 0, byMethod: {} as Record<string, number> };
+    for (const [name, v] of Object.entries(personPay)) {
+      if (known.has(name.trim().toLowerCase())) continue;
+      others.total += v.total;
+      for (const [m, amt] of Object.entries(v.byMethod)) others.byMethod[m] = (others.byMethod[m] ?? 0) + amt;
+    }
+    return { junaid, usama, others };
+  }, [personPay]);
 
   const display = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -222,6 +254,45 @@ function DailyExpensesPage() {
     toast.success(form.id ? "Entry updated" : "Entry added");
     setForm({ ...blankForm, entry_date: form.entry_date });
     load();
+  }
+
+  async function saveOp() {
+    if (!opForm.amount || num(opForm.amount) <= 0) return toast.error("Enter an amount");
+    setSavingOp(true);
+    const { error } = await supabase.from("operating_expenses" as any).insert({
+      expense_date: opForm.expense_date,
+      category: opForm.category,
+      description: opForm.description.trim(),
+      amount: num(opForm.amount),
+      paid_to: opForm.paid_to.trim(),
+      payment_method: opForm.payment_method,
+      recorded_by_name: fullName,
+    });
+    setSavingOp(false);
+    if (error) return toast.error(error.message);
+    toast.success("Operating expense added");
+    setOpForm({ ...blankOp, expense_date: opForm.expense_date });
+    setRefreshTick((t) => t + 1);
+  }
+
+  async function savePay() {
+    const person = payForm.person === "Other" ? payForm.customPerson.trim() : payForm.person;
+    if (!person) return toast.error("Enter the person's name");
+    if (!payForm.amount || num(payForm.amount) <= 0) return toast.error("Enter an amount");
+    setSavingPay(true);
+    const { error } = await supabase.from("person_payments" as any).insert({
+      payment_date: payForm.payment_date,
+      person_name: person,
+      amount: num(payForm.amount),
+      payment_method: payForm.payment_method,
+      notes: payForm.notes.trim(),
+      recorded_by_name: fullName,
+    });
+    setSavingPay(false);
+    if (error) return toast.error(error.message);
+    toast.success("Payment recorded");
+    setPayForm({ ...blankPay, payment_date: payForm.payment_date });
+    setRefreshTick((t) => t + 1);
   }
 
   function editRow(r: Computed) {
@@ -311,41 +382,28 @@ function DailyExpensesPage() {
       </Card>
 
       {/* Summary cards (respect the Year + Month filter) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <SummaryCard label={`Total Sales (${scopeLabel})`} value={fmt(cards.sales)} icon={TrendingUp} color="var(--info)" />
-        <SummaryCard label={`Total Profit (${scopeLabel})`} value={fmt(cards.profit - shiftExp.total)} icon={Coins} color="var(--success)"
-          accent={(cards.profit - shiftExp.total) < 0 ? "text-destructive" : "text-green-600"} />
-        <SummaryCard label={`Total Expenses (${scopeLabel})`} value={fmt(cards.expenses + shiftExp.total)} icon={Receipt} color="var(--warning)"
-          sub={shiftExp.total > 0 ? `Manual ${fmt(cards.expenses)} · POS ${fmt(shiftExp.total)}` : undefined} />
+        <SummaryCard label={`Total Profit (${scopeLabel})`} value={fmt(cards.profit - shiftExpTotal - opTotals.total)} icon={Coins} color="var(--success)"
+          accent={(cards.profit - shiftExpTotal - opTotals.total) < 0 ? "text-destructive" : "text-green-600"} />
+        <SummaryCard label={`Total Expenses (${scopeLabel})`} value={fmt(cards.expenses + shiftExpTotal + opTotals.total)} icon={Receipt} color="var(--warning)"
+          sub={(shiftExpTotal > 0 || opTotals.total > 0)
+            ? `Daily ${fmt(cards.expenses)}${shiftExpTotal ? ` · POS ${fmt(shiftExpTotal)}` : ""}${opTotals.total ? ` · Operating ${fmt(opTotals.total)}` : ""}`
+            : undefined} />
+        <SummaryCard label={`Operating Exp. (${scopeLabel})`} value={fmt(opTotals.total)} icon={Building2} color="var(--destructive)"
+          sub={catSub(opTotals.byCat)} />
         <SummaryCard label={`Total Cash (${scopeLabel})`} value={fmt(cards.cash)} icon={Wallet} color="var(--accent)" />
       </div>
 
-      {/* Per-person totals (respect the Year + Month date filter).
-          Junaid also includes Card + EasyPaisa; Usama also includes JazzCash (from POS sales).
-          Cashier-recorded POS expenses (shift_expenses) are also bucketed by recipient. */}
+      {/* Per-person totals from the person_payments ledger (respect the Year + Month filter). */}
       <div className="space-y-2">
         <div className="text-xs font-semibold uppercase text-muted-foreground">
-          By Person · {scopeLabel}
+          By Person · {scopeLabel} <span className="normal-case font-normal text-muted-foreground">· from recorded payments</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard
-            label="Total Junaid"
-            value={fmt(personTotals.junaid + online.junaid + shiftExp.junaid)}
-            sub={`Cash ${fmt(personTotals.junaid)}${shiftExp.junaid ? ` · POS ${fmt(shiftExp.junaid)}` : ""} · Card+EasyPaisa ${fmt(online.junaid)}`}
-            icon={User} color="var(--info)"
-          />
-          <SummaryCard
-            label="Total Usama"
-            value={fmt(personTotals.usama + online.usama + shiftExp.usama)}
-            sub={`Cash ${fmt(personTotals.usama)}${shiftExp.usama ? ` · POS ${fmt(shiftExp.usama)}` : ""} · JazzCash ${fmt(online.usama)}`}
-            icon={User} color="var(--success)"
-          />
-          <SummaryCard
-            label="Total others"
-            value={fmt(personTotals.others + shiftExp.others)}
-            sub={shiftExp.others ? `Manual ${fmt(personTotals.others)} · POS ${fmt(shiftExp.others)}` : undefined}
-            icon={Users} color="var(--warning)"
-          />
+          <SummaryCard label="Total Junaid" value={fmt(personCards.junaid.total)} sub={methodSub(personCards.junaid.byMethod)} icon={User} color="var(--info)" />
+          <SummaryCard label="Total Usama" value={fmt(personCards.usama.total)} sub={methodSub(personCards.usama.byMethod)} icon={User} color="var(--success)" />
+          <SummaryCard label="Total Others" value={fmt(personCards.others.total)} sub={methodSub(personCards.others.byMethod)} icon={Users} color="var(--warning)" />
         </div>
       </div>
 
@@ -366,12 +424,6 @@ function DailyExpensesPage() {
           <Field label="Date">
             <Input type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} />
           </Field>
-          <Field label="Cash Junaid">
-            <Input type="number" step="0.01" value={form.cash_junaid} onChange={(e) => setForm({ ...form, cash_junaid: e.target.value })} placeholder="0" />
-          </Field>
-          <Field label="Cash Usama">
-            <Input type="number" step="0.01" value={form.cash_usama} onChange={(e) => setForm({ ...form, cash_usama: e.target.value })} placeholder="0" />
-          </Field>
           <Field label="others">
             <Input type="number" step="0.01" value={form.others} onChange={(e) => setForm({ ...form, others: e.target.value })} placeholder="0" />
           </Field>
@@ -390,6 +442,79 @@ function DailyExpensesPage() {
           </div>
         </div>
       </Card>
+
+      {/* Two side-by-side ledgers: operating expenses + person payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Add Operating Expense */}
+        <Card className="p-4 sm:p-5">
+          <h2 className="font-semibold flex items-center gap-2 mb-4"><Building2 className="h-4 w-4" /> Add Operating Expense</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date">
+              <Input type="date" value={opForm.expense_date} onChange={(e) => setOpForm({ ...opForm, expense_date: e.target.value })} />
+            </Field>
+            <Field label="Category">
+              <Select value={opForm.category} onValueChange={(v) => setOpForm({ ...opForm, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Amount">
+              <Input type="number" step="0.01" value={opForm.amount} onChange={(e) => setOpForm({ ...opForm, amount: e.target.value })} placeholder="0" />
+            </Field>
+            <Field label="Payment Method">
+              <Select value={opForm.payment_method} onValueChange={(v) => setOpForm({ ...opForm, payment_method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PAY_METHODS.map((m) => <SelectItem key={m} value={m}>{METHOD_LABEL[m] ?? m}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Paid To">
+              <Input value={opForm.paid_to} onChange={(e) => setOpForm({ ...opForm, paid_to: e.target.value })} placeholder="optional" />
+            </Field>
+            <Field label="Description">
+              <Input value={opForm.description} onChange={(e) => setOpForm({ ...opForm, description: e.target.value })} placeholder="optional" />
+            </Field>
+          </div>
+          <Button className="w-full mt-3" onClick={saveOp} disabled={savingOp}>
+            {savingOp ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Add Operating Expense
+          </Button>
+        </Card>
+
+        {/* Add Payment (Junaid / Usama / Other) */}
+        <Card className="p-4 sm:p-5">
+          <h2 className="font-semibold flex items-center gap-2 mb-4"><HandCoins className="h-4 w-4" /> Add Payment</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date">
+              <Input type="date" value={payForm.payment_date} onChange={(e) => setPayForm({ ...payForm, payment_date: e.target.value })} />
+            </Field>
+            <Field label="Person">
+              <Select value={payForm.person} onValueChange={(v) => setPayForm({ ...payForm, person: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PERSON_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            {payForm.person === "Other" && (
+              <Field label="Name">
+                <Input value={payForm.customPerson} onChange={(e) => setPayForm({ ...payForm, customPerson: e.target.value })} placeholder="Mention the name" />
+              </Field>
+            )}
+            <Field label="Amount">
+              <Input type="number" step="0.01" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} placeholder="0" />
+            </Field>
+            <Field label="Payment Method">
+              <Select value={payForm.payment_method} onValueChange={(v) => setPayForm({ ...payForm, payment_method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PAY_METHODS.map((m) => <SelectItem key={m} value={m}>{METHOD_LABEL[m] ?? m}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Notes">
+              <Input value={payForm.notes} onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })} placeholder="optional" />
+            </Field>
+          </div>
+          <Button className="w-full mt-3" onClick={savePay} disabled={savingPay}>
+            {savingPay ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Record Payment
+          </Button>
+        </Card>
+      </div>
 
       {/* Data table */}
       <Card className="overflow-hidden">
@@ -453,6 +578,27 @@ function DailyExpensesPage() {
       </Card>
     </div>
   );
+}
+
+const METHOD_LABEL: Record<string, string> = {
+  cash: "Cash", easypaisa: "EasyPaisa", jazzcash: "JazzCash", card: "Card", bank: "Bank",
+};
+
+/** "Cash 5,000 · EasyPaisa 2,000" from a {method: amount} map, or undefined if empty. */
+function methodSub(byMethod: Record<string, number>): string | undefined {
+  const parts = Object.entries(byMethod)
+    .filter(([, v]) => v > 0)
+    .map(([m, v]) => `${METHOD_LABEL[m] ?? m} ${fmt(v)}`);
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
+/** "Rent 20,000 · Salary 15,000" from a {category: amount} map, or undefined if empty. */
+function catSub(byCat: Record<string, number>): string | undefined {
+  const parts = Object.entries(byCat)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([c, v]) => `${c} ${fmt(v)}`);
+  return parts.length ? parts.join(" · ") : undefined;
 }
 
 function SummaryCard({ label, value, icon: Icon, color, accent, sub }: {
