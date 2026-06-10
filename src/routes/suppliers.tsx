@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, Truck, Wallet, Receipt, Plus, Trash2, Phone, MapPin, Search } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, Wallet, Receipt, Plus, Trash2, Phone, MapPin, Search, FileBarChart } from "lucide-react";
 import { toast } from "sonner";
 import { fmt } from "@/lib/format";
 
@@ -92,9 +92,14 @@ function SuppliersPage() {
               <p className="text-xs text-muted-foreground">{fullName}</p>
             </div>
           </div>
-          <Button onClick={() => setAddOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> New Supplier
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" className="gap-2">
+              <Link to="/suppliers/report"><FileBarChart className="h-4 w-4" /> View Report</Link>
+            </Button>
+            <Button onClick={() => setAddOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> New Supplier
+            </Button>
+          </div>
         </div>
       </header>
 

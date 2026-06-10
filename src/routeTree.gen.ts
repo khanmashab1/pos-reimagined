@@ -16,6 +16,7 @@ import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SuppliersReportRouteImport } from './routes/suppliers.report'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as AdminStockSummaryRouteImport } from './routes/admin.stock-summary'
@@ -66,6 +67,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SuppliersReportRoute = SuppliersReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => SuppliersRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
@@ -150,7 +156,7 @@ export interface FileRoutesByFullPath {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
-  '/suppliers': typeof SuppliersRoute
+  '/suppliers': typeof SuppliersRouteWithChildren
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
+  '/suppliers/report': typeof SuppliersReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,7 +181,7 @@ export interface FileRoutesByTo {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
-  '/suppliers': typeof SuppliersRoute
+  '/suppliers': typeof SuppliersRouteWithChildren
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
+  '/suppliers/report': typeof SuppliersReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -199,7 +207,7 @@ export interface FileRoutesById {
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
-  '/suppliers': typeof SuppliersRoute
+  '/suppliers': typeof SuppliersRouteWithChildren
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
+  '/suppliers/report': typeof SuppliersReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
+    | '/suppliers/report'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
+    | '/suppliers/report'
   id:
     | '__root__'
     | '/'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
+    | '/suppliers/report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,7 +310,7 @@ export interface RootRouteChildren {
   PosRoute: typeof PosRoute
   ReturnsRoute: typeof ReturnsRoute
   StockEntryRoute: typeof StockEntryRoute
-  SuppliersRoute: typeof SuppliersRoute
+  SuppliersRoute: typeof SuppliersRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -351,6 +363,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/suppliers/report': {
+      id: '/suppliers/report'
+      path: '/report'
+      fullPath: '/suppliers/report'
+      preLoaderRoute: typeof SuppliersReportRouteImport
+      parentRoute: typeof SuppliersRoute
     }
     '/admin/users': {
       id: '/admin/users'
@@ -498,6 +517,18 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface SuppliersRouteChildren {
+  SuppliersReportRoute: typeof SuppliersReportRoute
+}
+
+const SuppliersRouteChildren: SuppliersRouteChildren = {
+  SuppliersReportRoute: SuppliersReportRoute,
+}
+
+const SuppliersRouteWithChildren = SuppliersRoute._addFileChildren(
+  SuppliersRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
@@ -505,7 +536,7 @@ const rootRouteChildren: RootRouteChildren = {
   PosRoute: PosRoute,
   ReturnsRoute: ReturnsRoute,
   StockEntryRoute: StockEntryRoute,
-  SuppliersRoute: SuppliersRoute,
+  SuppliersRoute: SuppliersRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
