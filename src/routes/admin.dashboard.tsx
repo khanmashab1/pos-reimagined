@@ -21,6 +21,8 @@ export const Route = createFileRoute("/admin/dashboard")({
 
 const PIE_COLORS = ["hsl(142 71% 45%)", "hsl(210 90% 56%)", "hsl(38 92% 50%)", "hsl(0 84% 60%)"];
 const PAY_COLORS = ["hsl(142 71% 45%)", "hsl(210 90% 56%)"]; // cash = green, online = blue
+const METHOD_LABEL: Record<string, string> = { cash: "Cash", easypaisa: "EasyPaisa", jazzcash: "JazzCash", card: "Card", bank: "Bank" };
+const methodLabel = (m: string) => METHOD_LABEL[(m || "").toLowerCase()] ?? m;
 
 const PERIODS = [
   { key: "today", label: "Today", days: 1 },
@@ -136,6 +138,8 @@ function Dashboard() {
   const [margin, setMargin] = useState<{ name: string; value: number }[]>([]);
   const [topCashiers, setTopCashiers] = useState<{ name: string; sales: number; bills: number }[]>([]);
   const [hourly, setHourly] = useState<{ hour: number; sales: number }[]>([]);
+  const [byPerson, setByPerson] = useState<Record<string, { total: number; byMethod: Record<string, number> }>>({});
+  const [extras, setExtras] = useState({ discounts: 0, stockPurchased: 0, operatingExpenses: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -146,16 +150,22 @@ function Dashboard() {
         const startIso = startOfPeriod(period).toISOString();
         const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
 
+        const startDate = startOfPeriod(period).toISOString().slice(0, 10);
         const [
           { data: summary },
           { data: inventory },
           { data: recentSales },
+          { data: personPay },
+          { data: extrasRaw },
         ] = await Promise.all([
           supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
           supabase.rpc("get_admin_inventory_summary" as any),
           supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
             .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
-        ]);
+          supabase.from("person_payments" as any).select("person_name,amount,payment_method")
+            .gte("payment_date", startDate),
+          supabase.rpc("get_period_extras" as any, { _from: startIso }),
+        ]) as any;
 
         if (!active) return;
 
@@ -186,6 +196,22 @@ function Dashboard() {
         setMargin((s.margin ?? []) as any[]);
         setTopCashiers((s.topCashiers ?? []) as any[]);
         setHourly((s.hourly ?? []) as any[]);
+        const bp: Record<string, { total: number; byMethod: Record<string, number> }> = {};
+        for (const p of (personPay ?? []) as any[]) {
+          const name = String(p.person_name || "Other").trim() || "Other";
+          const amt = Number(p.amount) || 0;
+          const method = String(p.payment_method || "cash");
+          const b = (bp[name] ??= { total: 0, byMethod: {} });
+          b.total += amt;
+          b.byMethod[method] = (b.byMethod[method] ?? 0) + amt;
+        }
+        setByPerson(bp);
+        const ex = (extrasRaw as any) ?? {};
+        setExtras({
+          discounts: Number(ex.discounts ?? 0),
+          stockPurchased: Number(ex.stockPurchased ?? 0),
+          operatingExpenses: Number(ex.operatingExpenses ?? 0),
+        });
       } finally {
         if (active) setLoading(false);
       }
@@ -234,6 +260,15 @@ function Dashboard() {
         <StatCard label="Return Rate" value={kpis.rate.toFixed(2) + "%"} icon={Percent} color="var(--destructive)" loading={loading} />
         <StatCard label="Total Products" value={stats.products} icon={Package} color="var(--info)" loading={loading} />
         <StatCard label="Low Stock" value={stats.lowStock} icon={AlertTriangle} color="var(--warning)" loading={loading} />
+      </div>
+
+      {/* Profit, expenses & investment (supplier payments are investment, not profit) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Net Profit" icon={Wallet} color="var(--success)" loading={loading}
+          value={<span className={(kpis.grossProfit - extras.operatingExpenses) < 0 ? "text-destructive" : "text-green-600"}>{fmt(kpis.grossProfit - extras.operatingExpenses)}</span>} />
+        <StatCard label="Operating Expenses" value={fmt(extras.operatingExpenses)} icon={Percent} color="var(--destructive)" loading={loading} />
+        <StatCard label="Stock Purchased" value={fmt(extras.stockPurchased)} icon={Package} color="var(--info)" loading={loading} />
+        <StatCard label="Total Discounts Given" value={fmt(extras.discounts)} icon={ShoppingCart} color="var(--warning)" loading={loading} />
       </div>
 
       {/* Cash vs Online + Sales vs Refunds */}
@@ -347,6 +382,24 @@ function Dashboard() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* By Person — from person_payments, grouped by person + method */}
+      {Object.keys(byPerson).length > 0 && (
+        <Card className="p-4 sm:p-5">
+          <h3 className="font-semibold flex items-center gap-2 mb-4"><Users className="h-4 w-4 text-muted-foreground" /> By Person</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(byPerson).sort((a, b) => b[1].total - a[1].total).map(([name, v]) => (
+              <div key={name} className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">{name}</div>
+                <div className="text-xl font-bold mt-1">{fmt(v.total)}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5 break-words">
+                  {Object.entries(v.byMethod).filter(([, a]) => a > 0).map(([m, a]) => `${methodLabel(m)} ${fmt(a)}`).join(" · ") || "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Recent sales + Low stock */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

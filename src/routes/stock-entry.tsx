@@ -119,8 +119,16 @@ function StockEntryPage() {
             .eq("barcode", code)
             .eq("is_active", true)
             .maybeSingle();
-          if (data) selectProduct(data as Product);
-          else toast.error(`Barcode not found: ${code}`);
+          if (data) { selectProduct(data as Product); return; }
+          // Also match a per-unit barcode (Box / Half Box / …) and pre-select that unit.
+          const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
+          if (unitRow) {
+            const { data: prod } = await supabase
+              .from("products").select("id,barcode,name,stock")
+              .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
+            if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
+          }
+          toast.error(`Barcode not found: ${code}`);
         })();
         return;
       }
@@ -140,7 +148,7 @@ function StockEntryPage() {
   // `products` already holds the server-side search results, so just cap the dropdown length.
   const filtered = search.trim() && !selectedProduct ? products.slice(0, 10) : [];
 
-  const selectProduct = async (p: Product) => {
+  const selectProduct = async (p: Product, preselectUnitId?: string) => {
     setSelectedProduct(p);
     setSearch(p.name);
     setShowDrop(false);
@@ -149,7 +157,7 @@ function StockEntryPage() {
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
-    const def = pickDefaultUnit(units);
+    const def = (preselectUnitId ? units.find((u) => u.id === preselectUnitId) : undefined) ?? pickDefaultUnit(units);
     setSelectedUnitId(def?.id ?? null);
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
@@ -161,6 +169,7 @@ function StockEntryPage() {
     const unit = selectedUnits.find((u) => u.id === selectedUnitId);
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
+    const pieces = qtyNum * unitEquals;
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -171,7 +180,7 @@ function StockEntryPage() {
           i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e,
         ),
       );
-      toast.success(`Updated: ${selectedProduct.name}`);
+      toast.success(`Updated ${selectedProduct.name}: +${qtyNum} ${unitName} (${pieces} pieces)`);
     } else {
       setEntries((prev) => [
         ...prev,
@@ -187,7 +196,7 @@ function StockEntryPage() {
           unit_equals_base: unitEquals,
         },
       ]);
-      toast.success(`Added: ${selectedProduct.name}`);
+      toast.success(`Adding ${qtyNum} ${unitName} = ${pieces} pieces to ${selectedProduct.name}`);
     }
     setSelectedProduct(null);
     setSelectedUnits([]);

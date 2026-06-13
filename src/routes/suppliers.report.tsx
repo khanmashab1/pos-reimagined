@@ -34,9 +34,29 @@ interface Purchase { id: string; supplier_id: string; bill_no: string; amount: n
 interface Payment { id: string; supplier_id: string; amount: number; method: string; notes: string; payment_date: string; created_by_name: string; }
 interface Row { id: string; name: string; phone: string; bills: number; paid: number; outstanding: number; }
 type SortKey = "bills" | "outstanding" | null;
+type TabKey = "today" | "week" | "month" | "all" | "custom";
+
+const DATE_TABS: { key: TabKey; label: string }[] = [
+  { key: "today", label: "Today" }, { key: "week", label: "This Week" },
+  { key: "month", label: "This Month" }, { key: "all", label: "All Time" },
+];
+const MONTHS_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtDMY = (d: string) => {
+  const [y, m, day] = d.split("-");
+  return `${day}-${MONTHS_ABBR[Number(m) - 1] ?? m}-${y}`;
+};
+function rangeFor(tab: TabKey): { from: string; to: string } {
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const t = today();
+  if (tab === "week") { const d = new Date(); d.setDate(d.getDate() - 6); return { from: ymd(d), to: t }; }
+  if (tab === "month") return { from: monthStart(), to: t };
+  if (tab === "all") return { from: "2000-01-01", to: t };
+  return { from: t, to: t };
+}
 
 function SupplierReportPage() {
-  const [from, setFrom] = useState(monthStart());
+  const [tab, setTab] = useState<TabKey>("today");
+  const [from, setFrom] = useState(today());
   const [to, setTo] = useState(today());
   const [supplierId, setSupplierId] = useState("all");
 
@@ -44,20 +64,20 @@ function SupplierReportPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>("outstanding");
+  const [sortKey, setSortKey] = useState<SortKey>("bills");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [drawer, setDrawer] = useState<Row | null>(null);
 
-  async function load() {
+  async function load(f = from, t = to) {
     setLoading(true);
     const [{ data: sup }, { data: pur }, { data: pay }] = await Promise.all([
       supabase.from("suppliers" as any).select("id,name,phone").order("name"),
       supabase.from("supplier_purchases" as any)
         .select("id,supplier_id,bill_no,amount,description,purchase_date")
-        .gte("purchase_date", from).lte("purchase_date", to),
+        .gte("purchase_date", f).lte("purchase_date", t),
       supabase.from("supplier_payments" as any)
         .select("id,supplier_id,amount,method,notes,payment_date,created_by_name")
-        .gte("payment_date", from).lte("payment_date", to),
+        .gte("payment_date", f).lte("payment_date", t),
     ]);
     setSuppliers(((sup as any) ?? []) as Supplier[]);
     setPurchases(((pur as any) ?? []) as Purchase[]);
@@ -65,7 +85,13 @@ function SupplierReportPage() {
     setLoading(false);
   }
 
-  // initial load only; further loads happen on "Apply Filter"
+  function pickTab(t: TabKey) {
+    const r = rangeFor(t);
+    setTab(t); setFrom(r.from); setTo(r.to);
+    load(r.from, r.to);
+  }
+
+  // initial load (defaults to Today)
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const rows = useMemo<Row[]>(() => {
@@ -73,11 +99,13 @@ function SupplierReportPage() {
     const payBy: Record<string, number> = {};
     for (const p of purchases) purBy[p.supplier_id] = (purBy[p.supplier_id] ?? 0) + num(p.amount);
     for (const p of payments) payBy[p.supplier_id] = (payBy[p.supplier_id] ?? 0) + num(p.amount);
-    let list = suppliers.map((s) => ({
-      id: s.id, name: s.name, phone: s.phone,
-      bills: purBy[s.id] ?? 0, paid: payBy[s.id] ?? 0,
-      outstanding: (purBy[s.id] ?? 0) - (payBy[s.id] ?? 0),
-    }));
+    let list = suppliers
+      .map((s) => ({
+        id: s.id, name: s.name, phone: s.phone,
+        bills: purBy[s.id] ?? 0, paid: payBy[s.id] ?? 0,
+        outstanding: (purBy[s.id] ?? 0) - (payBy[s.id] ?? 0),
+      }))
+      .filter((r) => r.bills > 0 || r.paid > 0); // only suppliers with activity in the period
     if (supplierId !== "all") list = list.filter((r) => r.id === supplierId);
     if (sortKey) {
       list = [...list].sort((a, b) => {
@@ -87,6 +115,18 @@ function SupplierReportPage() {
     }
     return list;
   }, [suppliers, purchases, payments, supplierId, sortKey, sortDir]);
+
+  const supName = (id: string) => suppliers.find((s) => s.id === id)?.name ?? "—";
+
+  // Latest payment date per supplier (within range), for the "Last paid" line.
+  const lastPaid = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of payments) if (!m[p.supplier_id] || p.payment_date > m[p.supplier_id]) m[p.supplier_id] = p.payment_date;
+    return m;
+  }, [payments]);
+
+  // Today's payments (for the Today banner).
+  const todaysPayments = useMemo(() => payments.filter((p) => p.payment_date === today()), [payments]);
 
   const totals = useMemo(
     () => rows.reduce(
@@ -175,11 +215,20 @@ function SupplierReportPage() {
       </header>
 
       <div className="flex-1 overflow-auto p-4 md:p-6 max-w-6xl mx-auto w-full space-y-5">
+        {/* Quick date tabs */}
+        <div className="flex flex-wrap gap-2">
+          {DATE_TABS.map((t) => (
+            <Button key={t.key} size="sm" variant={tab === t.key ? "default" : "outline"} onClick={() => pickTab(t.key)}>
+              {t.label}
+            </Button>
+          ))}
+        </div>
+
         {/* Filters */}
         <Card className="p-4 bg-white shadow-sm">
           <div className="grid grid-cols-2 md:grid-cols-[1fr_1fr_1.5fr_auto] gap-3 items-end">
-            <div><Label className="text-xs">From Date</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-            <div><Label className="text-xs">To Date</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+            <div><Label className="text-xs">From Date</Label><Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTab("custom"); }} /></div>
+            <div><Label className="text-xs">To Date</Label><Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTab("custom"); }} /></div>
             <div>
               <Label className="text-xs">Supplier</Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
@@ -190,7 +239,7 @@ function SupplierReportPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={load} disabled={loading} className="gap-2">
+            <Button onClick={() => load()} disabled={loading} className="gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Apply Filter
             </Button>
           </div>
@@ -212,6 +261,25 @@ function SupplierReportPage() {
           </Card>
         </div>
 
+        {/* Today's activity banner */}
+        {tab === "today" && (
+          <Card className="p-4 bg-green-50 border-green-200 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-green-800 mb-2">Today's Payments</p>
+            {todaysPayments.length === 0 ? (
+              <p className="text-sm text-green-900/70">No payments recorded today.</p>
+            ) : (
+              <div className="space-y-1 text-sm">
+                {todaysPayments.map((p) => (
+                  <div key={p.id} className="text-green-900">
+                    <span className="font-medium">{supName(p.supplier_id)}</span> — {fmt(p.amount)} · {methodLabel(p.method)}
+                    {p.created_by_name ? ` · by ${p.created_by_name}` : ""}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Main table */}
         <Card className="bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -230,10 +298,13 @@ function SupplierReportPage() {
                 {loading ? (
                   <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No suppliers.</td></tr>
+                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No supplier activity in this period.</td></tr>
                 ) : rows.map((r) => (
                   <tr key={r.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-semibold">{r.name}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      {r.name}
+                      {lastPaid[r.id] && <div className="text-[11px] font-normal text-muted-foreground">Last paid: {fmtDMY(lastPaid[r.id])}</div>}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{r.phone || "—"}</td>
                     <td className="px-4 py-3 text-right font-medium">{fmt(r.bills)}</td>
                     <td className="px-4 py-3 text-right font-medium text-green-600">{fmt(r.paid)}</td>
