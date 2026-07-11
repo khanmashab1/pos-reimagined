@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminSidebar } from "@/components/AdminSidebar";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,8 +92,7 @@ function PriceRequestsPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
+    <>
       <main className="flex-1 p-6 md:p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -262,6 +261,6 @@ function PriceRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
