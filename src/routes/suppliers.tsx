@@ -44,9 +44,13 @@ function SuppliersPage() {
 
   const load = async () => {
     setBusy(true);
-    const { data, error } = await supabase.rpc("get_suppliers_summary" as any);
+    const [{ data, error }, { data: bd }] = await Promise.all([
+      supabase.rpc("get_suppliers_summary" as any),
+      supabase.from("supplier_purchases" as any).select("*").order("purchase_date", { ascending: false }).limit(200),
+    ]);
     if (error) toast.error(error.message);
     setSuppliers(((data as any) ?? []) as Supplier[]);
+    setBills(((bd as any) ?? []) as BillRow[]);
     setBusy(false);
   };
   useEffect(() => { load(); }, []);
