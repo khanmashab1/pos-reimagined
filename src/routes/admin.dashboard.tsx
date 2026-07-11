@@ -252,12 +252,27 @@ function Dashboard() {
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground text-sm">Welcome back to ZIC Mart POS</p>
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {PERIODS.map(p => (
-            <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
-              onClick={() => setPeriod(p.key)}>{p.label}</Button>
-          ))}
+        <div className="flex flex-col gap-2 md:items-end">
+          <div className="flex gap-1 flex-wrap">
+            {PERIODS.map(p => (
+              <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
+                onClick={() => setPeriod(p.key)}>{p.label}</Button>
+            ))}
+            <Button variant={period === "custom" ? "default" : "outline"} size="sm"
+              onClick={() => setPeriod("custom")}>Custom</Button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Label className="text-xs text-muted-foreground">From</Label>
+            <Input type="date" value={customFrom} max={customTo}
+              onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }}
+              className="h-8 w-[150px]" />
+            <Label className="text-xs text-muted-foreground">To</Label>
+            <Input type="date" value={customTo} min={customFrom} max={new Date().toISOString().slice(0, 10)}
+              onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }}
+              className="h-8 w-[150px]" />
+          </div>
         </div>
+
       </div>
 
       {/* Hero band */}
