@@ -509,37 +509,41 @@ function StockEntryPage() {
               )}
             </div>
 
-            {/* Cost Price */}
-            <div>
-              <Label>Cost Price</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
-                disabled={!selectedProduct}
-                className="mt-1"
-              />
+            {/* Prices (read-only, request change from admin) */}
+            <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Prices
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!selectedProduct}
+                  onClick={openPriceRequest}
+                >
+                  <Tag className="h-3.5 w-3.5 mr-1.5" /> Request Price Change
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-xs text-muted-foreground">Cost Price</div>
+                  <div className="font-semibold">
+                    {selectedProduct ? Number(selectedProduct.purchase_price ?? 0).toFixed(2) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Sale Price</div>
+                  <div className="font-semibold">
+                    {selectedProduct ? Number(selectedProduct.sale_price ?? 0).toFixed(2) : "—"}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Price changes require admin approval.
+              </p>
             </div>
 
-            {/* Sale Price */}
-            <div>
-              <Label>Sale Price</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
-                disabled={!selectedProduct}
-                className="mt-1"
-              />
-            </div>
 
             {/* Notes */}
             <div className="col-span-2">
