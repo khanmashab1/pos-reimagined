@@ -375,9 +375,15 @@ function StockEntryPage() {
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.barcode}</td>
                       <td className="px-4 py-3 text-right font-bold text-green-600">+{e.qty} {e.unit_name}</td>
                       <td className="px-4 py-3">
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
-                          Pending
-                        </span>
+                        {summary.status === "approved" ? (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
+                            Approved
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                            Pending
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{e.notes || "—"}</td>
                     </tr>
