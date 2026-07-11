@@ -14,6 +14,7 @@ import { Route as StockEntryRouteImport } from './routes/stock-entry'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuppliersReportRouteImport } from './routes/suppliers.report'
@@ -28,6 +29,7 @@ import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminPriceRequestsRouteImport } from './routes/admin.price-requests'
 import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
+import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-expenses'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
@@ -57,6 +59,11 @@ const PosRoute = PosRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -129,6 +136,11 @@ const AdminLowStockRoute = AdminLowStockRouteImport.update({
   path: '/low-stock',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -158,6 +170,7 @@ const AdminBackupRoute = AdminBackupRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
@@ -168,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
@@ -184,6 +198,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
@@ -194,6 +209,7 @@ export interface FileRoutesByTo {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
@@ -211,6 +227,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/returns': typeof ReturnsRoute
@@ -221,6 +238,7 @@ export interface FileRoutesById {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/low-stock': typeof AdminLowStockRoute
   '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
@@ -239,6 +257,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/feedback'
     | '/login'
     | '/pos'
     | '/returns'
@@ -249,6 +268,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/daily-expenses'
     | '/admin/dashboard'
+    | '/admin/feedback'
     | '/admin/low-stock'
     | '/admin/price-requests'
     | '/admin/products'
@@ -265,6 +285,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/feedback'
     | '/login'
     | '/pos'
     | '/returns'
@@ -275,6 +296,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/daily-expenses'
     | '/admin/dashboard'
+    | '/admin/feedback'
     | '/admin/low-stock'
     | '/admin/price-requests'
     | '/admin/products'
@@ -291,6 +313,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/feedback'
     | '/login'
     | '/pos'
     | '/returns'
@@ -301,6 +324,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/daily-expenses'
     | '/admin/dashboard'
+    | '/admin/feedback'
     | '/admin/low-stock'
     | '/admin/price-requests'
     | '/admin/products'
@@ -318,6 +342,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  FeedbackRoute: typeof FeedbackRoute
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
   ReturnsRoute: typeof ReturnsRoute
@@ -360,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -460,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLowStockRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/feedback': {
+      id: '/admin/feedback'
+      path: '/feedback'
+      fullPath: '/admin/feedback'
+      preLoaderRoute: typeof AdminFeedbackRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/dashboard'
@@ -504,6 +543,7 @@ interface AdminRouteChildren {
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminDailyExpensesRoute: typeof AdminDailyExpensesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminLowStockRoute: typeof AdminLowStockRoute
   AdminPriceRequestsRoute: typeof AdminPriceRequestsRoute
   AdminProductsRoute: typeof AdminProductsRoute
@@ -523,6 +563,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminDailyExpensesRoute: AdminDailyExpensesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminFeedbackRoute: AdminFeedbackRoute,
   AdminLowStockRoute: AdminLowStockRoute,
   AdminPriceRequestsRoute: AdminPriceRequestsRoute,
   AdminProductsRoute: AdminProductsRoute,
@@ -553,6 +594,7 @@ const SuppliersRouteWithChildren = SuppliersRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  FeedbackRoute: FeedbackRoute,
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
   ReturnsRoute: ReturnsRoute,
