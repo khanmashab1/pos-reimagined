@@ -21,8 +21,9 @@ interface Supplier {
   id: string; name: string; phone: string; address: string; notes: string;
   total_purchases: number; total_paid: number; balance: number;
 }
-interface Purchase { id: string; amount: number; bill_no: string; description: string; purchase_date: string; }
+interface Purchase { id: string; amount: number; bill_no: string; description: string; purchase_date: string; supplier_id?: string; }
 interface Payment  { id: string; amount: number; method: string; notes: string; payment_date: string; }
+interface BillRow  { id: string; amount: number; bill_no: string; description: string; purchase_date: string; supplier_id: string; supplier_name?: string; }
 
 function SuppliersPage() {
   const { loading, user, fullName } = useAuth();
@@ -34,6 +35,7 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [bills, setBills] = useState<BillRow[]>([]);
 
   useEffect(() => {
     if (loading) return;
@@ -42,9 +44,13 @@ function SuppliersPage() {
 
   const load = async () => {
     setBusy(true);
-    const { data, error } = await supabase.rpc("get_suppliers_summary" as any);
+    const [{ data, error }, { data: bd }] = await Promise.all([
+      supabase.rpc("get_suppliers_summary" as any),
+      supabase.from("supplier_purchases" as any).select("*").order("purchase_date", { ascending: false }).limit(200),
+    ]);
     if (error) toast.error(error.message);
     setSuppliers(((data as any) ?? []) as Supplier[]);
+    setBills(((bd as any) ?? []) as BillRow[]);
     setBusy(false);
   };
   useEffect(() => { load(); }, []);
@@ -126,11 +132,64 @@ function SuppliersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-9 bg-white shadow-sm"
-            placeholder="Search suppliers by name or phone..."
+            placeholder="Search suppliers or bills by name, phone or bill #..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Bills */}
+        {(() => {
+          const nameById = new Map(suppliers.map(s => [s.id, s.name]));
+          const q = search.trim().toLowerCase();
+          const filteredBills = q
+            ? bills.filter(b =>
+                (b.bill_no || "").toLowerCase().includes(q) ||
+                (b.description || "").toLowerCase().includes(q) ||
+                (nameById.get(b.supplier_id) || "").toLowerCase().includes(q))
+            : bills;
+          const shown = filteredBills.slice(0, 50);
+          return (
+            <Card className="bg-white shadow-sm rounded-2xl border-gray-100 overflow-hidden p-0">
+              <div className="px-6 py-3 bg-gray-50/60 border-b border-gray-100 flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-primary" /> Bills
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {shown.length} of {filteredBills.length}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-white border-b border-gray-100">
+                      <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bill #</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supplier</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</th>
+                      <th className="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {busy ? (
+                      <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Loading...</td></tr>
+                    ) : shown.length === 0 ? (
+                      <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">No bills.</td></tr>
+                    ) : shown.map(b => (
+                      <tr key={b.id} className="hover:bg-gray-50/50">
+                        <td className="px-6 py-3 text-gray-600 whitespace-nowrap">{b.purchase_date}</td>
+                        <td className="px-6 py-3 font-medium text-gray-900">{b.bill_no || "—"}</td>
+                        <td className="px-6 py-3 text-gray-700">{nameById.get(b.supplier_id) || "—"}</td>
+                        <td className="px-6 py-3 text-gray-500 max-w-xs truncate">{b.description || "—"}</td>
+                        <td className="px-6 py-3 text-right font-semibold text-gray-900">{fmt(b.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* Suppliers Table */}
         <Card className="bg-white shadow-sm rounded-2xl border-gray-100 overflow-hidden p-0">
