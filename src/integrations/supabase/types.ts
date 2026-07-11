@@ -203,6 +203,81 @@ export type Database = {
           },
         ]
       }
+      operating_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          paid_to: string
+          payment_method: string
+          recorded_by: string | null
+          recorded_by_name: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          expense_date: string
+          id?: string
+          paid_to?: string
+          payment_method?: string
+          recorded_by?: string | null
+          recorded_by_name?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          paid_to?: string
+          payment_method?: string
+          recorded_by?: string | null
+          recorded_by_name?: string
+        }
+        Relationships: []
+      }
+      person_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string
+          payment_date: string
+          payment_method: string
+          person_name: string
+          recorded_by: string | null
+          recorded_by_name: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string
+          payment_date: string
+          payment_method?: string
+          person_name?: string
+          recorded_by?: string | null
+          recorded_by_name?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string
+          payment_date?: string
+          payment_method?: string
+          person_name?: string
+          recorded_by?: string | null
+          recorded_by_name?: string
+        }
+        Relationships: []
+      }
       product_units: {
         Row: {
           barcode: string | null
@@ -975,6 +1050,7 @@ export type Database = {
         Returns: Json
       }
       get_open_session: { Args: never; Returns: Json }
+      get_period_extras: { Args: { _from: string }; Returns: Json }
       get_profit_report: { Args: { _from: string; _to: string }; Returns: Json }
       get_suppliers_summary: { Args: never; Returns: Json }
       get_unit_breakdown: { Args: { _product_id: string }; Returns: Json }
