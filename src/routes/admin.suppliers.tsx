@@ -129,6 +129,29 @@ function SuppliersPage() {
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Supplier</Button>
       </div>
 
+      {/* Date range */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-1 flex-wrap">
+          {PERIODS.map(p => (
+            <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
+              onClick={() => setPeriod(p.key)}>{p.label}</Button>
+          ))}
+          <Button variant={period === "custom" ? "default" : "outline"} size="sm"
+            onClick={() => setPeriod("custom")}>Custom</Button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Label className="text-xs text-muted-foreground">From</Label>
+          <Input type="date" value={customFrom} max={customTo}
+            onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }}
+            className="h-8 w-[150px]" />
+          <Label className="text-xs text-muted-foreground">To</Label>
+          <Input type="date" value={customTo} min={customFrom} max={new Date().toISOString().slice(0, 10)}
+            onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }}
+            className="h-8 w-[150px]" />
+        </div>
+      </div>
+
+
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-3"><div className="text-[11px] uppercase text-muted-foreground">Total Purchases</div><div className="text-lg font-bold">{fmt(totals.purchases)}</div></Card>
         <Card className="p-3"><div className="text-[11px] uppercase text-muted-foreground">Total Paid</div><div className="text-lg font-bold text-success">{fmt(totals.paid)}</div></Card>
