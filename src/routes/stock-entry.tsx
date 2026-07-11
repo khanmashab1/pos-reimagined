@@ -197,14 +197,25 @@ function StockEntryPage() {
     }
     setSubmittingReq(true);
     try {
-      const { error } = await supabase.rpc("request_price_change", {
+      const { data: reqId, error } = await supabase.rpc("request_price_change", {
         _product_id: selectedProduct.id,
         _requested_purchase: cost,
         _requested_sale: sale,
         _reason: reqReason || undefined,
       });
       if (error) return toast.error(error.message);
-      toast.success("Price change request sent to admin");
+      // Admins auto-approve their own price changes — no approval workflow.
+      if (role === "admin" && reqId) {
+        const { error: apErr } = await supabase.rpc("approve_price_change", {
+          _request_id: reqId as string,
+          _notes: undefined,
+        });
+        if (apErr) return toast.error(apErr.message);
+        toast.success("Prices updated");
+        setSelectedProduct({ ...selectedProduct, purchase_price: cost, sale_price: sale });
+      } else {
+        toast.success("Price change request sent to admin");
+      }
       setPriceDialogOpen(false);
     } finally {
       setSubmittingReq(false);
@@ -273,14 +284,28 @@ function StockEntryPage() {
       );
       const errors = results.filter((r) => r.error);
       if (errors.length > 0) return toast.error(errors[0]!.error!.message);
+
+      // Admins bypass the approval workflow — auto-approve immediately.
+      const isAdmin = role === "admin";
+      if (isAdmin) {
+        const ids = results.map((r) => r.data as string).filter(Boolean);
+        const approveResults = await Promise.all(
+          ids.map((id) => supabase.rpc("approve_stock_entry", { _entry_id: id })),
+        );
+        const apErrs = approveResults.filter((r) => r.error);
+        if (apErrs.length > 0) return toast.error(apErrs[0]!.error!.message);
+      }
+
       toast.success(
-        `${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted for admin approval`,
+        isAdmin
+          ? `${entries.length} entr${entries.length === 1 ? "y" : "ies"} added to stock`
+          : `${entries.length} entr${entries.length === 1 ? "y" : "ies"} submitted for admin approval`,
       );
       setSummary({
         entries: [...entries],
         submittedAt: new Date().toISOString(),
         submittedBy: fullName ?? "",
-        status: "pending",
+        status: isAdmin ? "approved" : "pending",
       });
       setEntries([]);
     } catch (err) {
