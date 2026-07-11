@@ -20,20 +20,32 @@ interface Supplier {
   id: string; name: string; phone: string; address: string; notes: string;
   total_purchases: number; total_paid: number; balance: number;
 }
+interface BillRow {
+  id: string; amount: number; bill_no: string; description: string;
+  purchase_date: string; supplier_id: string; created_at?: string;
+  created_by_name?: string;
+}
 
 function SuppliersPage() {
   const [items, setItems] = useState<Supplier[]>([]);
+  const [bills, setBills] = useState<BillRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [detail, setDetail] = useState<Supplier | null>(null);
+  const [billSearch, setBillSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc("get_suppliers_summary" as any);
+    const [{ data, error }, { data: bd }] = await Promise.all([
+      supabase.rpc("get_suppliers_summary" as any),
+      supabase.from("supplier_purchases" as any).select("*")
+        .order("created_at", { ascending: false }).limit(300),
+    ]);
     if (error) toast.error(error.message);
     setItems(((data as any) ?? []) as Supplier[]);
+    setBills(((bd as any) ?? []) as BillRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
