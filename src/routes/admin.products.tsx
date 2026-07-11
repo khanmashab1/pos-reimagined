@@ -306,7 +306,7 @@ function ProductsPage() {
           is_base: true,
           is_default_sale: true,
           sku: "",
-          barcode: "",
+          barcode: p.barcode ?? "",
           purchase_price: p.purchase_price,
           sale_price: p.sale_price,
           sort_order: 0,
@@ -328,7 +328,11 @@ function ProductsPage() {
           sale_price: Number(u.sale_price),
           sort_order: u.sort_order,
         }));
-      setUnits(sorted);
+      // Fallback: if the base unit has no barcode saved, use the product-level barcode.
+      const withBaseBarcode = sorted.map((u) =>
+        u.is_base && !u.barcode.trim() ? { ...u, barcode: p.barcode ?? "" } : u,
+      );
+      setUnits(withBaseBarcode);
       const di = sorted.findIndex((u) => u.is_default_sale);
       setPreviewUnitIdx(di >= 0 ? di : 0);
       // Pre-fill breakdown from current stock (signed greedy largest→smallest, preserves negatives).
