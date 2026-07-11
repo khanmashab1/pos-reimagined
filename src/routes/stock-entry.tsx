@@ -473,7 +473,7 @@ function StockEntryPage() {
                 placeholder="0"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEntry()}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
                 className="mt-1"
               />
               {selectedUnit && Number(qty) > 0 && selectedUnit.equals_base > 1 && (
