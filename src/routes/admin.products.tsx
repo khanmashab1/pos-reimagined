@@ -867,17 +867,6 @@ function ProductsPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">
-                        Reason {editDelta !== 0 && <span className="text-destructive">*</span>}
-                      </Label>
-                      <Textarea
-                        rows={2}
-                        placeholder="e.g. Damaged stock removed, recount adjustment…"
-                        value={editStockReason}
-                        onChange={(e) => setEditStockReason(e.target.value)}
-                      />
-                    </div>
                     <div
                       className={`rounded-lg border p-2.5 text-xs ${
                         editDelta === 0
