@@ -427,10 +427,6 @@ function ProductsPage() {
       }, 0);
       const delta = newBase - Number(editing.stock);
       if (delta !== 0) {
-        if (!editStockReason.trim()) {
-          toast.error("Please enter a reason for the stock change");
-          return;
-        }
         const baseRow = units.find((u) => u.is_base);
         const baseUnitId = baseRow?.id ?? null;
         const baseUnitName = baseRow?.name ?? "Unit";
@@ -453,7 +449,7 @@ function ProductsPage() {
             kind: "adjustment",
             user_id: uid,
             user_name: uname,
-            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta}): ${editStockReason.trim()}`,
+            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta})`,
           });
         }
       }
@@ -866,17 +862,6 @@ function ProductsPage() {
                           </span>
                         </div>
                       ))}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">
-                        Reason {editDelta !== 0 && <span className="text-destructive">*</span>}
-                      </Label>
-                      <Textarea
-                        rows={2}
-                        placeholder="e.g. Damaged stock removed, recount adjustment…"
-                        value={editStockReason}
-                        onChange={(e) => setEditStockReason(e.target.value)}
-                      />
                     </div>
                     <div
                       className={`rounded-lg border p-2.5 text-xs ${
