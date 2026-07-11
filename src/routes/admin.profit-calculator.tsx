@@ -831,7 +831,15 @@ function ProfitCalculator() {
 
       {/* Detailed Product Table */}
       <Card className="p-6">
-        <h2 className="font-semibold mb-4">Product Profit Breakdown</h2>
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <h2 className="font-semibold">Product Profit Breakdown</h2>
+          {/* Item 6: quickly narrow the table to products whose profit is
+              inflated by a missing purchase price. */}
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <Switch checked={showFlaggedOnly} onCheckedChange={setShowFlaggedOnly} />
+            Show only flagged lines (zero cost)
+          </label>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -845,34 +853,58 @@ function ProfitCalculator() {
               </tr>
             </thead>
             <tbody>
-              {profitByProduct.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No sales data for selected period
-                  </td>
-                </tr>
-              ) : (
-                profitByProduct.map((p, i) => (
-                  <tr key={i} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-2 font-medium">{p.name}</td>
-                    <td className="text-right px-4 py-2">{p.qty}</td>
-                    <td className="text-right px-4 py-2">{fmt(p.revenue)}</td>
-                    <td className="text-right px-4 py-2">{fmt(p.revenue - p.profit)}</td>
-                    <td className="text-right px-4 py-2 font-semibold text-green-600">
-                      {fmt(p.profit)}
-                    </td>
-                    <td className="text-right px-4 py-2">
-                      <span
-                        className={`font-semibold ${p.margin >= 30 ? "text-green-600" : p.margin >= 15 ? "text-yellow-600" : "text-red-600"}`}
-                      >
-                        {p.margin.toFixed(2)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
+              {(() => {
+                const rows = showFlaggedOnly
+                  ? profitByProduct.filter((p) => p.zero_cost)
+                  : profitByProduct;
+                if (rows.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                        {showFlaggedOnly
+                          ? "No flagged (zero-cost) products in this period"
+                          : "No sales data for selected period"}
+                      </td>
+                    </tr>
+                  );
+                }
+                return rows.map((p, i) => {
+                  const marginClass =
+                    p.margin == null
+                      ? "text-muted-foreground"
+                      : p.margin >= 30
+                        ? "text-green-600"
+                        : p.margin >= 15
+                          ? "text-yellow-600"
+                          : "text-red-600";
+                  return (
+                    <tr key={i} className="border-b hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-2 font-medium">
+                        {p.name}
+                        {p.zero_cost && (
+                          <Badge variant="outline" className="ml-2 border-yellow-500 text-yellow-700">
+                            zero cost
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="text-right px-4 py-2">{p.qty}</td>
+                      <td className="text-right px-4 py-2">{fmt(p.revenue)}</td>
+                      <td className="text-right px-4 py-2">{fmt(p.revenue - p.profit)}</td>
+                      <td className="text-right px-4 py-2 font-semibold text-green-600">
+                        {fmt(p.profit)}
+                      </td>
+                      <td className="text-right px-4 py-2">
+                        <span className={`font-semibold ${marginClass}`}>
+                          {p.margin == null ? "N/A" : `${p.margin.toFixed(2)}%`}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
+
         </div>
       </Card>
 
