@@ -30,6 +30,20 @@ function CashierReturnsPage() {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
+  const [mySales, setMySales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  async function loadMySales(uid: string) {
+    setLoadingSales(true);
+    const { data } = await supabase
+      .from("sales")
+      .select("id,bill_no,created_at,cashier_name,payment_type,items_count,discount,total")
+      .eq("cashier_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setMySales(data ?? []);
+    setLoadingSales(false);
+  }
 
   useEffect(() => {
     if (loading) return;
