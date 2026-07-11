@@ -126,7 +126,9 @@ function ChartCard({ title, icon: Icon, empty, loading, children }: {
 
 function Dashboard() {
   const isMobile = useIsMobile();
-  const [period, setPeriod] = useState<PeriodKey>("7d");
+  const [period, setPeriod] = useState<PeriodKey | "custom">("7d");
+  const [customFrom, setCustomFrom] = useState<string>(() => new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [stats, setStats] = useState({ products: 0, lowStock: 0 });
   const [kpis, setKpis] = useState({
     grossSales: 0, bills: 0, refunds: 0, net: 0, rate: 0, returnsCount: 0,
