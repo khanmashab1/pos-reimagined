@@ -357,23 +357,30 @@ function ProductsPage() {
   );
 
   const save = useCallback(async () => {
-    if (!form.name.trim() || !form.barcode.trim())
-      return toast.error("Name and barcode are required");
+    if (!form.name.trim()) return toast.error("Product name is required");
     const err = validateUnits(units);
     if (err) return toast.error(err);
 
-    // Mirror base unit prices onto the product row for backward compat
+    // Base unit is the single source of truth for barcode + default prices.
     const baseUnit = units.find((u) => u.is_base)!;
+    const baseBarcode = (baseUnit.barcode || "").trim() || genBarcode();
+    // Reflect any auto-generated barcode back onto the base unit row
+    if (!baseUnit.barcode || !baseUnit.barcode.trim()) {
+      setUnits((prev) =>
+        prev.map((u) => (u.is_base ? { ...u, barcode: baseBarcode } : u)),
+      );
+    }
     const productPayload = {
       id: editing?.id,
       name: form.name.trim(),
-      barcode: form.barcode.trim(),
+      barcode: baseBarcode,
       category_id: form.category_id,
       purchase_price: Number(baseUnit.purchase_price),
       sale_price: Number(baseUnit.sale_price),
       min_stock_alert: Number(form.min_stock_alert),
       is_active: form.is_active,
     };
+
 
     const unitsPayload = units.map((u, idx) => ({
       id: u.id,
