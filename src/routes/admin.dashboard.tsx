@@ -236,7 +236,7 @@ function Dashboard() {
       }
     })();
     return () => { active = false; };
-  }, [period]);
+  }, [period, customFrom, customTo]);
 
   const avgBill = kpis.bills > 0 ? kpis.grossSales / kpis.bills : 0;
   const payMix = [
