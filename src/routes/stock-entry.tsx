@@ -483,8 +483,40 @@ function StockEntryPage() {
               )}
             </div>
 
-            {/* Notes */}
+            {/* Cost Price */}
             <div>
+              <Label>Cost Price</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
+                disabled={!selectedProduct}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Sale Price */}
+            <div>
+              <Label>Sale Price</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
+                disabled={!selectedProduct}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="col-span-2">
               <Label>
                 Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span>
               </Label>
@@ -492,17 +524,18 @@ function StockEntryPage() {
                 placeholder="e.g. New batch, Supplier..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEntry()}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
                 className="mt-1"
               />
             </div>
 
             {/* Add button — full width */}
             <div className="col-span-2">
-              <Button onClick={addEntry} className="w-full">
+              <Button onClick={() => void addEntry()} className="w-full">
                 <Plus className="h-4 w-4 mr-2" /> Add to List
               </Button>
             </div>
+
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             💡 Physical barcode scanner works anywhere on this page
