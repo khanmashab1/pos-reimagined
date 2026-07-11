@@ -449,7 +449,7 @@ function ProductsPage() {
             kind: "adjustment",
             user_id: uid,
             user_name: uname,
-            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta}): ${editStockReason.trim()}`,
+            notes: `Admin edit (${delta > 0 ? "+" : ""}${delta})`,
           });
         }
       }
