@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Printer, X } from "lucide-react";
 import { fmt } from "@/lib/format";
 
+interface ReturnReceiptItem {
+  product_name: string;
+  qty: number;
+  unit_price: number;
+  subtotal: number;
+  original_unit_price?: number;
+}
+
 interface ReturnReceiptData {
   return_no: string;
   original_bill_no: string;
   reason: string;
-  items: { product_name: string; qty: number; unit_price: number; subtotal: number }[];
+  items: ReturnReceiptItem[];
   refund_amount: number;
   cashier_name: string;
   created_at: string;
@@ -19,6 +27,9 @@ interface ReturnReceiptData {
   voided_at?: string | null;
   approved_by_name?: string | null;
   approved_at?: string | null;
+  sale_subtotal?: number;
+  sale_discount?: number;
+  discount_ratio?: number;
 }
 
 export function ReturnReceipt({ ret, onClose }: { ret: ReturnReceiptData; onClose: () => void }) {
