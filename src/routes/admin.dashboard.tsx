@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { fmt } from "@/lib/format";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -124,7 +126,9 @@ function ChartCard({ title, icon: Icon, empty, loading, children }: {
 
 function Dashboard() {
   const isMobile = useIsMobile();
-  const [period, setPeriod] = useState<PeriodKey>("7d");
+  const [period, setPeriod] = useState<PeriodKey | "custom">("7d");
+  const [customFrom, setCustomFrom] = useState<string>(() => new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [stats, setStats] = useState({ products: 0, lowStock: 0 });
   const [kpis, setKpis] = useState({
     grossSales: 0, bills: 0, refunds: 0, net: 0, rate: 0, returnsCount: 0,
@@ -147,10 +151,25 @@ function Dashboard() {
     (async () => {
       try {
         setLoading(true);
-        const startIso = startOfPeriod(period).toISOString();
-        const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
-
-        const startDate = startOfPeriod(period).toISOString().slice(0, 10);
+        let startAt: Date;
+        let endAt: Date;
+        let days: number;
+        if (period === "custom") {
+          startAt = new Date(customFrom + "T00:00:00");
+          endAt = new Date(customTo + "T23:59:59.999");
+          if (isNaN(startAt.getTime()) || isNaN(endAt.getTime()) || endAt < startAt) {
+            setLoading(false); return;
+          }
+          days = Math.max(1, Math.round((endAt.getTime() - startAt.getTime()) / 86400000) + 1);
+        } else {
+          startAt = startOfPeriod(period);
+          endAt = new Date();
+          days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
+        }
+        const startIso = startAt.toISOString();
+        const endIso = endAt.toISOString();
+        const startDate = startAt.toISOString().slice(0, 10);
+        const endDate = endAt.toISOString().slice(0, 10);
         const [
           { data: summary },
           { data: inventory },
@@ -158,13 +177,13 @@ function Dashboard() {
           { data: personPay },
           { data: extrasRaw },
         ] = await Promise.all([
-          supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
+          supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days, _end_at: endIso }),
           supabase.rpc("get_admin_inventory_summary" as any),
           supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
-            .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
+            .gte("created_at", startIso).lte("created_at", endIso).order("created_at", { ascending: false }).limit(6),
           supabase.from("person_payments" as any).select("person_name,amount,payment_method")
-            .gte("payment_date", startDate),
-          supabase.rpc("get_period_extras" as any, { _from: startIso }),
+            .gte("payment_date", startDate).lte("payment_date", endDate),
+          supabase.rpc("get_period_extras" as any, { _from: startIso, _to: endIso }),
         ]) as any;
 
         if (!active) return;
@@ -217,7 +236,7 @@ function Dashboard() {
       }
     })();
     return () => { active = false; };
-  }, [period]);
+  }, [period, customFrom, customTo]);
 
   const avgBill = kpis.bills > 0 ? kpis.grossSales / kpis.bills : 0;
   const payMix = [
@@ -233,12 +252,27 @@ function Dashboard() {
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground text-sm">Welcome back to ZIC Mart POS</p>
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {PERIODS.map(p => (
-            <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
-              onClick={() => setPeriod(p.key)}>{p.label}</Button>
-          ))}
+        <div className="flex flex-col gap-2 md:items-end">
+          <div className="flex gap-1 flex-wrap">
+            {PERIODS.map(p => (
+              <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
+                onClick={() => setPeriod(p.key)}>{p.label}</Button>
+            ))}
+            <Button variant={period === "custom" ? "default" : "outline"} size="sm"
+              onClick={() => setPeriod("custom")}>Custom</Button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Label className="text-xs text-muted-foreground">From</Label>
+            <Input type="date" value={customFrom} max={customTo}
+              onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }}
+              className="h-8 w-[150px]" />
+            <Label className="text-xs text-muted-foreground">To</Label>
+            <Input type="date" value={customTo} min={customFrom} max={new Date().toISOString().slice(0, 10)}
+              onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }}
+              className="h-8 w-[150px]" />
+          </div>
         </div>
+
       </div>
 
       {/* Hero band */}

@@ -1040,17 +1040,21 @@ export type Database = {
       approve_return: { Args: { _return_id: string }; Returns: Json }
       approve_stock_entry: { Args: { _entry_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
-      get_admin_dashboard_summary: {
-        Args: { _days: number; _start_at: string }
-        Returns: Json
-      }
+      get_admin_dashboard_summary:
+        | { Args: { _days: number; _start_at: string }; Returns: Json }
+        | {
+            Args: { _days: number; _end_at?: string; _start_at: string }
+            Returns: Json
+          }
       get_admin_inventory_summary: { Args: never; Returns: Json }
       get_online_by_method: {
         Args: { _from: string; _to: string }
         Returns: Json
       }
       get_open_session: { Args: never; Returns: Json }
-      get_period_extras: { Args: { _from: string }; Returns: Json }
+      get_period_extras:
+        | { Args: { _from: string }; Returns: Json }
+        | { Args: { _from: string; _to?: string }; Returns: Json }
       get_profit_report: { Args: { _from: string; _to: string }; Returns: Json }
       get_suppliers_summary: { Args: never; Returns: Json }
       get_unit_breakdown: { Args: { _product_id: string }; Returns: Json }
