@@ -71,6 +71,8 @@ function StockEntryPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
+  const [costPrice, setCostPrice] = useState("");
+  const [salePrice, setSalePrice] = useState("");
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [processing, setProcessing] = useState(false);
   const [summary, setSummary] = useState<SubmitSummary | null>(null);
