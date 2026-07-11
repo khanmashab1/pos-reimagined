@@ -21,8 +21,9 @@ interface Supplier {
   id: string; name: string; phone: string; address: string; notes: string;
   total_purchases: number; total_paid: number; balance: number;
 }
-interface Purchase { id: string; amount: number; bill_no: string; description: string; purchase_date: string; }
+interface Purchase { id: string; amount: number; bill_no: string; description: string; purchase_date: string; supplier_id?: string; }
 interface Payment  { id: string; amount: number; method: string; notes: string; payment_date: string; }
+interface BillRow  { id: string; amount: number; bill_no: string; description: string; purchase_date: string; supplier_id: string; supplier_name?: string; }
 
 function SuppliersPage() {
   const { loading, user, fullName } = useAuth();
