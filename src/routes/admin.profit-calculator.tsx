@@ -610,32 +610,88 @@ function ProfitCalculator() {
     setZeroCostLoading(true);
     setZeroCostOpen(true);
     try {
-      const { data } = await supabase
-        .from("products")
-        .select("id,name,barcode,purchase_price,sale_price")
-        .eq("purchase_price", 0)
-        .eq("is_active", true)
-        .order("name");
-      setZeroCostProducts((data ?? []) as any[]);
+      // Fetch all zero-cost sale line items so we can fix legacy rows too
+      // (including items whose product no longer exists in the catalog)
+      const pageSize = 1000;
+      let page = 0;
+      const rows: Array<{ product_id: string | null; product_name: string; barcode: string | null; qty: number; unit_price: number }> = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("sale_items")
+          .select("product_id,product_name,barcode,qty,unit_price,purchase_price")
+          .or("purchase_price.is.null,purchase_price.eq.0")
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        rows.push(...(data as any));
+        if (data.length < pageSize) break;
+        page++;
+      }
+
+      // Group by product_name
+      const grouped = new Map<
+        string,
+        { key: string; name: string; product_id: string | null; barcode: string; sale_price: number; qty: number; revenue: number; lines: number }
+      >();
+      for (const r of rows) {
+        const name = r.product_name || "Unknown";
+        const key = name;
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            key,
+            name,
+            product_id: r.product_id,
+            barcode: r.barcode || "",
+            sale_price: Number(r.unit_price) || 0,
+            qty: 0,
+            revenue: 0,
+            lines: 0,
+          });
+        }
+        const g = grouped.get(key)!;
+        g.qty += Number(r.qty) || 0;
+        g.revenue += (Number(r.qty) || 0) * (Number(r.unit_price) || 0);
+        g.lines += 1;
+        if (r.product_id && !g.product_id) g.product_id = r.product_id;
+      }
+
+      setZeroCostProducts(Array.from(grouped.values()).sort((a, b) => b.revenue - a.revenue));
     } catch (err) {
-      console.error("Error loading zero-cost products:", err);
+      console.error("Error loading zero-cost items:", err);
     } finally {
       setZeroCostLoading(false);
     }
   }
 
-  async function updatePurchasePrice(id: string, price: number) {
-    setSavingId(id);
+  async function updatePurchasePrice(key: string, price: number) {
+    setSavingId(key);
     try {
-      const { error } = await supabase
-        .from("products")
+      const row = zeroCostProducts.find((p) => p.key === key);
+      if (!row) return;
+
+      // Update all zero-cost sale_items with this product_name so historical profit is corrected
+      const { error: siErr } = await supabase
+        .from("sale_items")
         .update({ purchase_price: price })
-        .eq("id", id);
-      if (error) {
-        console.error("Update error:", error);
+        .eq("product_name", row.name)
+        .or("purchase_price.is.null,purchase_price.eq.0");
+      if (siErr) {
+        console.error("Sale items update error:", siErr);
         return;
       }
-      setZeroCostProducts((prev) => prev.filter((p) => p.id !== id));
+
+      // If a matching product exists, also update its catalog purchase price
+      if (row.product_id) {
+        const { error: pErr } = await supabase
+          .from("products")
+          .update({ purchase_price: price })
+          .eq("id", row.product_id);
+        if (pErr) console.error("Product update error:", pErr);
+      }
+
+      setZeroCostProducts((prev) => prev.filter((p) => p.key !== key));
+      // Refresh the profit numbers
+      load(from, to);
     } catch (err) {
       console.error("Update error:", err);
     } finally {
