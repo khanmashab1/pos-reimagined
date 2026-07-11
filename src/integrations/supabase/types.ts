@@ -101,6 +101,42 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_feedback: {
+        Row: {
+          admin_notes: string | null
+          category: string
+          contact: string | null
+          created_at: string
+          id: string
+          message: string
+          name: string | null
+          rating: number | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          category?: string
+          contact?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          name?: string | null
+          rating?: number | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          category?: string
+          contact?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          name?: string | null
+          rating?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       daily_expenses: {
         Row: {
           cash_junaid: number
