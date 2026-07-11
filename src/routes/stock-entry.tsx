@@ -96,7 +96,7 @@ function StockEntryPage() {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from("products")
-        .select("id,barcode,name,stock")
+        .select("id,barcode,name,stock,purchase_price,sale_price")
         .eq("is_active", true)
         .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
         .order("name")
@@ -119,7 +119,7 @@ function StockEntryPage() {
         void (async () => {
           const { data } = await supabase
             .from("products")
-            .select("id,barcode,name,stock")
+            .select("id,barcode,name,stock,purchase_price,sale_price")
             .eq("barcode", code)
             .eq("is_active", true)
             .maybeSingle();
@@ -128,7 +128,7 @@ function StockEntryPage() {
           const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
           if (unitRow) {
             const { data: prod } = await supabase
-              .from("products").select("id,barcode,name,stock")
+              .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
               .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
             if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
           }
