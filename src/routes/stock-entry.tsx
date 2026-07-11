@@ -170,8 +170,6 @@ function StockEntryPage() {
     setShowDrop(false);
     setQty("");
     setNotes("");
-    setCostPrice(p.purchase_price != null ? String(p.purchase_price) : "");
-    setSalePrice(p.sale_price != null ? String(p.sale_price) : "");
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
@@ -180,29 +178,47 @@ function StockEntryPage() {
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
-  const addEntry = async () => {
+  const openPriceRequest = () => {
+    if (!selectedProduct) return toast.error("Select a product first");
+    setReqPurchase(String(selectedProduct.purchase_price ?? 0));
+    setReqSale(String(selectedProduct.sale_price ?? 0));
+    setReqReason("");
+    setPriceDialogOpen(true);
+  };
+
+  const submitPriceRequest = async () => {
+    if (!selectedProduct) return;
+    const cost = Number(reqPurchase);
+    const sale = Number(reqSale);
+    if (reqPurchase === "" || Number.isNaN(cost) || cost < 0) return toast.error("Enter a valid cost price");
+    if (reqSale === "" || Number.isNaN(sale) || sale < 0) return toast.error("Enter a valid sale price");
+    if (cost === Number(selectedProduct.purchase_price) && sale === Number(selectedProduct.sale_price)) {
+      return toast.error("New prices are the same as current");
+    }
+    setSubmittingReq(true);
+    try {
+      const { error } = await supabase.rpc("request_price_change", {
+        _product_id: selectedProduct.id,
+        _requested_purchase: cost,
+        _requested_sale: sale,
+        _reason: reqReason || undefined,
+      });
+      if (error) return toast.error(error.message);
+      toast.success("Price change request sent to admin");
+      setPriceDialogOpen(false);
+    } finally {
+      setSubmittingReq(false);
+    }
+  };
+
+  const addEntry = () => {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
-    const cost = Number(costPrice);
-    const sale = Number(salePrice);
-    if (costPrice === "" || Number.isNaN(cost) || cost < 0) return toast.error("Enter a valid cost price");
-    if (salePrice === "" || Number.isNaN(sale) || sale < 0) return toast.error("Enter a valid sale price");
     const unit = selectedUnits.find((u) => u.id === selectedUnitId);
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
     const pieces = qtyNum * unitEquals;
-
-    // Persist any price change immediately so the new stock is valued correctly.
-    if (cost !== selectedProduct.purchase_price || sale !== selectedProduct.sale_price) {
-      const { error } = await supabase.rpc("update_product_prices", {
-        _product_id: selectedProduct.id,
-        _purchase_price: cost,
-        _sale_price: sale,
-      });
-      if (error) return toast.error(error.message);
-      toast.success("Prices updated");
-    }
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -237,8 +253,6 @@ function StockEntryPage() {
     setSearch("");
     setQty("");
     setNotes("");
-    setCostPrice("");
-    setSalePrice("");
   };
 
   const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
