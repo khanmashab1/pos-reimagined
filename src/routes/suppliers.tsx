@@ -156,21 +156,6 @@ function SuppliersPage() {
           />
         </div>
 
-        {/* Suppliers Table */}
-        <Card className="bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground border-b">
-                  <th className="text-left px-5 py-3">Supplier</th>
-                  <th className="text-left px-5 py-3">Contact</th>
-                  <th className="text-right px-5 py-3">Bills</th>
-                  <th className="text-right px-5 py-3">Paid</th>
-                  <th className="text-right px-5 py-3">Outstanding</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
         {/* Suppliers List (collapsible) */}
         <Card className="bg-white shadow-sm overflow-hidden divide-y">
           {busy ? (
