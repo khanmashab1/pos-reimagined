@@ -34,11 +34,30 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [shiftPaid, setShiftPaid] = useState<Record<string, number>>({});
+  const [shiftOpen, setShiftOpen] = useState(false);
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
+
+  const loadShiftPayments = async () => {
+    const { data } = await supabase.rpc("get_open_session" as any);
+    const session: any = data;
+    if (!session?.id) { setShiftOpen(false); setShiftPaid({}); return; }
+    setShiftOpen(true);
+    const { data: rows } = await supabase
+      .from("supplier_payments" as any)
+      .select("supplier_id,amount")
+      .eq("session_id", session.id);
+    const map: Record<string, number> = {};
+    ((rows as any[]) ?? []).forEach(r => {
+      map[r.supplier_id] = (map[r.supplier_id] ?? 0) + Number(r.amount);
+    });
+    setShiftPaid(map);
+  };
 
   const load = async () => {
     setBusy(true);
@@ -46,8 +65,13 @@ function SuppliersPage() {
     if (error) toast.error(error.message);
     setSuppliers(((data as any) ?? []) as Supplier[]);
     setBusy(false);
+    loadShiftPayments();
   };
   useEffect(() => { load(); }, []);
+
+  const toggle = (id: string) => setExpanded(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   const saveSupplier = async () => {
     if (!form.name.trim()) return toast.error("Name is required");
