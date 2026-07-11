@@ -35,6 +35,7 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [bills, setBills] = useState<BillRow[]>([]);
 
   useEffect(() => {
     if (loading) return;
