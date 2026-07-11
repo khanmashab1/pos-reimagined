@@ -644,7 +644,7 @@ function ProfitCalculator() {
         p.revenue,
         p.revenue - p.profit,
         p.profit,
-        p.margin.toFixed(2),
+        p.margin == null ? "N/A" : p.margin.toFixed(2),
       ]),
     ];
     const csv = rows
