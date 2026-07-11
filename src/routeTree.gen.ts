@@ -26,6 +26,7 @@ import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit-calculator'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminPriceRequestsRouteImport } from './routes/admin.price-requests'
 import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-expenses'
@@ -118,6 +119,11 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPriceRequestsRoute = AdminPriceRequestsRouteImport.update({
+  id: '/price-requests',
+  path: '/price-requests',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLowStockRoute = AdminLowStockRouteImport.update({
   id: '/low-stock',
   path: '/low-stock',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
+  '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
+  '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/admin/daily-expenses': typeof AdminDailyExpensesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/low-stock': typeof AdminLowStockRoute
+  '/admin/price-requests': typeof AdminPriceRequestsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/profit-calculator': typeof AdminProfitCalculatorRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
+    | '/admin/price-requests'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
+    | '/admin/price-requests'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/admin/daily-expenses'
     | '/admin/dashboard'
     | '/admin/low-stock'
+    | '/admin/price-requests'
     | '/admin/products'
     | '/admin/profit-calculator'
     | '/admin/reports'
@@ -434,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/price-requests': {
+      id: '/admin/price-requests'
+      path: '/price-requests'
+      fullPath: '/admin/price-requests'
+      preLoaderRoute: typeof AdminPriceRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/low-stock': {
       id: '/admin/low-stock'
       path: '/low-stock'
@@ -486,6 +505,7 @@ interface AdminRouteChildren {
   AdminDailyExpensesRoute: typeof AdminDailyExpensesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminLowStockRoute: typeof AdminLowStockRoute
+  AdminPriceRequestsRoute: typeof AdminPriceRequestsRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminProfitCalculatorRoute: typeof AdminProfitCalculatorRoute
   AdminReportsRoute: typeof AdminReportsRoute
@@ -504,6 +524,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDailyExpensesRoute: AdminDailyExpensesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminLowStockRoute: AdminLowStockRoute,
+  AdminPriceRequestsRoute: AdminPriceRequestsRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminProfitCalculatorRoute: AdminProfitCalculatorRoute,
   AdminReportsRoute: AdminReportsRoute,

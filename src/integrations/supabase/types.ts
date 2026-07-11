@@ -278,6 +278,74 @@ export type Database = {
         }
         Relationships: []
       }
+      price_change_requests: {
+        Row: {
+          created_at: string
+          current_purchase_price: number
+          current_sale_price: number
+          id: string
+          product_id: string
+          product_name: string
+          reason: string
+          requested_by: string | null
+          requested_by_name: string
+          requested_purchase_price: number
+          requested_sale_price: number
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_purchase_price?: number
+          current_sale_price?: number
+          id?: string
+          product_id: string
+          product_name?: string
+          reason?: string
+          requested_by?: string | null
+          requested_by_name?: string
+          requested_purchase_price: number
+          requested_sale_price: number
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_purchase_price?: number
+          current_sale_price?: number
+          id?: string
+          product_id?: string
+          product_name?: string
+          reason?: string
+          requested_by?: string | null
+          requested_by_name?: string
+          requested_purchase_price?: number
+          requested_sale_price?: number
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_change_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_units: {
         Row: {
           barcode: string | null
@@ -1037,6 +1105,10 @@ export type Database = {
             }
             Returns: Json
           }
+      approve_price_change: {
+        Args: { _notes?: string; _request_id: string }
+        Returns: undefined
+      }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       approve_stock_entry: { Args: { _entry_id: string }; Returns: Json }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
@@ -1115,9 +1187,22 @@ export type Database = {
         }
         Returns: Json
       }
+      reject_price_change: {
+        Args: { _notes?: string; _request_id: string }
+        Returns: undefined
+      }
       reject_stock_entry: {
         Args: { _entry_id: string; _reason: string }
         Returns: Json
+      }
+      request_price_change: {
+        Args: {
+          _product_id: string
+          _reason?: string
+          _requested_purchase: number
+          _requested_sale: number
+        }
+        Returns: string
       }
       save_product_with_units: {
         Args: { _initial_stock?: Json; _product: Json; _units: Json }

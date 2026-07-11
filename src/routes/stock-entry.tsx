@@ -16,6 +16,7 @@ import {
   Package,
   Trash2,
   Clock,
+  Tag,
 } from "lucide-react";
 import {
   Select,
@@ -24,6 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
 
@@ -71,8 +80,11 @@ function StockEntryPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
-  const [costPrice, setCostPrice] = useState("");
-  const [salePrice, setSalePrice] = useState("");
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [reqPurchase, setReqPurchase] = useState("");
+  const [reqSale, setReqSale] = useState("");
+  const [reqReason, setReqReason] = useState("");
+  const [submittingReq, setSubmittingReq] = useState(false);
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [processing, setProcessing] = useState(false);
   const [summary, setSummary] = useState<SubmitSummary | null>(null);
@@ -158,8 +170,6 @@ function StockEntryPage() {
     setShowDrop(false);
     setQty("");
     setNotes("");
-    setCostPrice(p.purchase_price != null ? String(p.purchase_price) : "");
-    setSalePrice(p.sale_price != null ? String(p.sale_price) : "");
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
@@ -168,29 +178,47 @@ function StockEntryPage() {
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
-  const addEntry = async () => {
+  const openPriceRequest = () => {
+    if (!selectedProduct) return toast.error("Select a product first");
+    setReqPurchase(String(selectedProduct.purchase_price ?? 0));
+    setReqSale(String(selectedProduct.sale_price ?? 0));
+    setReqReason("");
+    setPriceDialogOpen(true);
+  };
+
+  const submitPriceRequest = async () => {
+    if (!selectedProduct) return;
+    const cost = Number(reqPurchase);
+    const sale = Number(reqSale);
+    if (reqPurchase === "" || Number.isNaN(cost) || cost < 0) return toast.error("Enter a valid cost price");
+    if (reqSale === "" || Number.isNaN(sale) || sale < 0) return toast.error("Enter a valid sale price");
+    if (cost === Number(selectedProduct.purchase_price) && sale === Number(selectedProduct.sale_price)) {
+      return toast.error("New prices are the same as current");
+    }
+    setSubmittingReq(true);
+    try {
+      const { error } = await supabase.rpc("request_price_change", {
+        _product_id: selectedProduct.id,
+        _requested_purchase: cost,
+        _requested_sale: sale,
+        _reason: reqReason || undefined,
+      });
+      if (error) return toast.error(error.message);
+      toast.success("Price change request sent to admin");
+      setPriceDialogOpen(false);
+    } finally {
+      setSubmittingReq(false);
+    }
+  };
+
+  const addEntry = () => {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
-    const cost = Number(costPrice);
-    const sale = Number(salePrice);
-    if (costPrice === "" || Number.isNaN(cost) || cost < 0) return toast.error("Enter a valid cost price");
-    if (salePrice === "" || Number.isNaN(sale) || sale < 0) return toast.error("Enter a valid sale price");
     const unit = selectedUnits.find((u) => u.id === selectedUnitId);
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
     const pieces = qtyNum * unitEquals;
-
-    // Persist any price change immediately so the new stock is valued correctly.
-    if (cost !== selectedProduct.purchase_price || sale !== selectedProduct.sale_price) {
-      const { error } = await supabase.rpc("update_product_prices", {
-        _product_id: selectedProduct.id,
-        _purchase_price: cost,
-        _sale_price: sale,
-      });
-      if (error) return toast.error(error.message);
-      toast.success("Prices updated");
-    }
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -225,8 +253,6 @@ function StockEntryPage() {
     setSearch("");
     setQty("");
     setNotes("");
-    setCostPrice("");
-    setSalePrice("");
   };
 
   const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
@@ -483,37 +509,41 @@ function StockEntryPage() {
               )}
             </div>
 
-            {/* Cost Price */}
-            <div>
-              <Label>Cost Price</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
-                disabled={!selectedProduct}
-                className="mt-1"
-              />
+            {/* Prices (read-only, request change from admin) */}
+            <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Prices
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!selectedProduct}
+                  onClick={openPriceRequest}
+                >
+                  <Tag className="h-3.5 w-3.5 mr-1.5" /> Request Price Change
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-xs text-muted-foreground">Cost Price</div>
+                  <div className="font-semibold">
+                    {selectedProduct ? Number(selectedProduct.purchase_price ?? 0).toFixed(2) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Sale Price</div>
+                  <div className="font-semibold">
+                    {selectedProduct ? Number(selectedProduct.sale_price ?? 0).toFixed(2) : "—"}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Price changes require admin approval.
+              </p>
             </div>
 
-            {/* Sale Price */}
-            <div>
-              <Label>Sale Price</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
-                disabled={!selectedProduct}
-                className="mt-1"
-              />
-            </div>
 
             {/* Notes */}
             <div className="col-span-2">
@@ -619,6 +649,75 @@ function StockEntryPage() {
           </Button>
         )}
       </div>
+
+      <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Price Change</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <div className="font-medium">{selectedProduct.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  Current: Cost {Number(selectedProduct.purchase_price ?? 0).toFixed(2)} · Sale{" "}
+                  {Number(selectedProduct.sale_price ?? 0).toFixed(2)}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>New Cost Price</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={reqPurchase}
+                    onChange={(e) => setReqPurchase(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>New Sale Price</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={reqSale}
+                    onChange={(e) => setReqSale(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>
+                  Reason <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                </Label>
+                <Textarea
+                  placeholder="Why this change?"
+                  value={reqReason}
+                  onChange={(e) => setReqReason(e.target.value)}
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceDialogOpen(false)} disabled={submittingReq}>
+              Cancel
+            </Button>
+            <Button onClick={submitPriceRequest} disabled={submittingReq}>
+              {submittingReq ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...
+                </>
+              ) : (
+                "Send Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
