@@ -159,7 +159,16 @@ function ProfitCalculator() {
   // Zero-cost products dialog
   const [zeroCostOpen, setZeroCostOpen] = useState(false);
   const [zeroCostProducts, setZeroCostProducts] = useState<
-    Array<{ id: string; name: string; barcode: string; purchase_price: number; sale_price: number }>
+    Array<{
+      key: string;
+      name: string;
+      product_id: string | null;
+      barcode: string;
+      sale_price: number;
+      qty: number;
+      revenue: number;
+      lines: number;
+    }>
   >([]);
   const [zeroCostLoading, setZeroCostLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -601,32 +610,88 @@ function ProfitCalculator() {
     setZeroCostLoading(true);
     setZeroCostOpen(true);
     try {
-      const { data } = await supabase
-        .from("products")
-        .select("id,name,barcode,purchase_price,sale_price")
-        .eq("purchase_price", 0)
-        .eq("is_active", true)
-        .order("name");
-      setZeroCostProducts((data ?? []) as any[]);
+      // Fetch all zero-cost sale line items so we can fix legacy rows too
+      // (including items whose product no longer exists in the catalog)
+      const pageSize = 1000;
+      let page = 0;
+      const rows: Array<{ product_id: string | null; product_name: string; barcode: string | null; qty: number; unit_price: number }> = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("sale_items")
+          .select("product_id,product_name,barcode,qty,unit_price,purchase_price")
+          .or("purchase_price.is.null,purchase_price.eq.0")
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        rows.push(...(data as any));
+        if (data.length < pageSize) break;
+        page++;
+      }
+
+      // Group by product_name
+      const grouped = new Map<
+        string,
+        { key: string; name: string; product_id: string | null; barcode: string; sale_price: number; qty: number; revenue: number; lines: number }
+      >();
+      for (const r of rows) {
+        const name = r.product_name || "Unknown";
+        const key = name;
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            key,
+            name,
+            product_id: r.product_id,
+            barcode: r.barcode || "",
+            sale_price: Number(r.unit_price) || 0,
+            qty: 0,
+            revenue: 0,
+            lines: 0,
+          });
+        }
+        const g = grouped.get(key)!;
+        g.qty += Number(r.qty) || 0;
+        g.revenue += (Number(r.qty) || 0) * (Number(r.unit_price) || 0);
+        g.lines += 1;
+        if (r.product_id && !g.product_id) g.product_id = r.product_id;
+      }
+
+      setZeroCostProducts(Array.from(grouped.values()).sort((a, b) => b.revenue - a.revenue));
     } catch (err) {
-      console.error("Error loading zero-cost products:", err);
+      console.error("Error loading zero-cost items:", err);
     } finally {
       setZeroCostLoading(false);
     }
   }
 
-  async function updatePurchasePrice(id: string, price: number) {
-    setSavingId(id);
+  async function updatePurchasePrice(key: string, price: number) {
+    setSavingId(key);
     try {
-      const { error } = await supabase
-        .from("products")
+      const row = zeroCostProducts.find((p) => p.key === key);
+      if (!row) return;
+
+      // Update all zero-cost sale_items with this product_name so historical profit is corrected
+      const { error: siErr } = await supabase
+        .from("sale_items")
         .update({ purchase_price: price })
-        .eq("id", id);
-      if (error) {
-        console.error("Update error:", error);
+        .eq("product_name", row.name)
+        .or("purchase_price.is.null,purchase_price.eq.0");
+      if (siErr) {
+        console.error("Sale items update error:", siErr);
         return;
       }
-      setZeroCostProducts((prev) => prev.filter((p) => p.id !== id));
+
+      // If a matching product exists, also update its catalog purchase price
+      if (row.product_id) {
+        const { error: pErr } = await supabase
+          .from("products")
+          .update({ purchase_price: price })
+          .eq("id", row.product_id);
+        if (pErr) console.error("Product update error:", pErr);
+      }
+
+      setZeroCostProducts((prev) => prev.filter((p) => p.key !== key));
+      // Refresh the profit numbers
+      load(from, to);
     } catch (err) {
       console.error("Update error:", err);
     } finally {
@@ -930,27 +995,30 @@ function ProfitCalculator() {
             <div className="space-y-2 max-h-[60vh] overflow-auto">
               {zeroCostProducts.map((p) => (
                 <div
-                  key={p.id}
-                  data-product-id={p.id}
+                  key={p.key}
+                  data-product-key={p.key}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.barcode}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.lines} line(s) • Qty {p.qty} • Revenue {fmt(p.revenue)}
+                      {!p.product_id && <span className="ml-1 text-orange-600">(no product link)</span>}
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground shrink-0">
-                    Sale: <span className="font-semibold text-foreground">{fmt(p.sale_price)}</span>
+                    Avg sale: <span className="font-semibold text-foreground">{fmt(p.sale_price)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="Cost"
                       className="w-24 h-8 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           const val = parseFloat((e.target as HTMLInputElement).value);
-                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.key, val);
                         }
                       }}
                     />
@@ -958,18 +1026,18 @@ function ProfitCalculator() {
                       size="sm"
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      disabled={savingId === p.id}
+                      disabled={savingId === p.key}
                       onClick={(e) => {
                         const input = e.currentTarget
-                          .closest("[data-product-id]")
+                          .closest("[data-product-key]")
                           ?.querySelector("input") as HTMLInputElement | null;
                         if (input) {
                           const val = parseFloat(input.value);
-                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.key, val);
                         }
                       }}
                     >
-                      {savingId === p.id ? (
+                      {savingId === p.key ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Save className="h-3.5 w-3.5" />
