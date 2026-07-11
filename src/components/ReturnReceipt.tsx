@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Printer, X } from "lucide-react";
 import { fmt } from "@/lib/format";
 
+interface ReturnReceiptItem {
+  product_name: string;
+  qty: number;
+  unit_price: number;
+  subtotal: number;
+  original_unit_price?: number;
+}
+
 interface ReturnReceiptData {
   return_no: string;
   original_bill_no: string;
   reason: string;
-  items: { product_name: string; qty: number; unit_price: number; subtotal: number }[];
+  items: ReturnReceiptItem[];
   refund_amount: number;
   cashier_name: string;
   created_at: string;
@@ -19,6 +27,9 @@ interface ReturnReceiptData {
   voided_at?: string | null;
   approved_by_name?: string | null;
   approved_at?: string | null;
+  sale_subtotal?: number;
+  sale_discount?: number;
+  discount_ratio?: number;
 }
 
 export function ReturnReceipt({ ret, onClose }: { ret: ReturnReceiptData; onClose: () => void }) {
@@ -78,22 +89,41 @@ export function ReturnReceipt({ ret, onClose }: { ret: ReturnReceiptData; onClos
       <div className="border-t border-dashed border-black my-2" />
 
       <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 font-bold">
-        <span>Item</span><span className="text-right">Qty</span><span className="text-right">Price</span><span className="text-right">Refund</span>
+        <span>Item</span><span className="text-right">Qty</span><span className="text-right">Paid</span><span className="text-right">Refund</span>
       </div>
       <div className="border-t border-dashed border-black my-1" />
-      {ret.items.map((i, idx) => (
-        <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2">
-          <span className="truncate">{i.product_name}</span>
-          <span className="text-right">{i.qty}</span>
-          <span className="text-right">{Number(i.unit_price).toFixed(0)}</span>
-          <span className="text-right">{Number(i.subtotal).toFixed(0)}</span>
-        </div>
-      ))}
+      {ret.items.map((i, idx) => {
+        const orig = Number(i.original_unit_price ?? i.unit_price);
+        const paid = Number(i.unit_price);
+        const disc = orig - paid;
+        return (
+          <div key={idx} className="mb-1">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2">
+              <span className="truncate">{i.product_name}</span>
+              <span className="text-right">{i.qty}</span>
+              <span className="text-right">{paid.toFixed(0)}</span>
+              <span className="text-right">{Number(i.subtotal).toFixed(0)}</span>
+            </div>
+            {disc > 0.001 && (
+              <div className="pl-2 text-[10px] opacity-80">
+                Orig {fmt(orig)} − Disc {fmt(disc)} = Paid {fmt(paid)}
+              </div>
+            )}
+          </div>
+        );
+      })}
       <div className="border-t border-double border-black my-2" />
+      {ret.sale_subtotal !== undefined && ret.sale_discount !== undefined && ret.sale_discount > 0 && (
+        <div className="text-[10px] mb-1">
+          <div className="flex justify-between"><span>Bill subtotal</span><span>{fmt(ret.sale_subtotal)}</span></div>
+          <div className="flex justify-between"><span>Bill discount</span><span>− {fmt(ret.sale_discount)}</span></div>
+        </div>
+      )}
       <div className="flex justify-between font-bold text-sm">
         <span>TOTAL REFUND</span><span>{fmt(ret.refund_amount)}</span>
       </div>
       <div className="border-t border-dashed border-black my-2" />
+
       <div className="text-center mt-2">{store.footer_message}</div>
       <div className="text-center text-[9px] mt-1 opacity-70">Powered by ZIC Mart POS</div>
     </div>
