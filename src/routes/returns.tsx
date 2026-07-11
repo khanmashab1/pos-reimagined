@@ -50,11 +50,18 @@ function CashierReturnsPage() {
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
-  async function lookup() {
-    if (!billNo.trim()) return;
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { navigate({ to: "/login" }); return; }
+    loadMySales(user.id);
+  }, [loading, user, navigate]);
+
+  async function lookup(bn?: string) {
+    const q = (bn ?? billNo).trim();
+    if (!q) return;
     setSale(null); setItems([]); setReturnQty({});
     const { data: s } = await supabase.from("sales")
-      .select("*").eq("bill_no", billNo.trim()).maybeSingle();
+      .select("*").eq("bill_no", q).maybeSingle();
     if (!s) { toast.error("Bill not found"); return; }
     const { data: it } = await supabase.from("sale_items").select("*").eq("sale_id", s.id);
     setSale(s);
