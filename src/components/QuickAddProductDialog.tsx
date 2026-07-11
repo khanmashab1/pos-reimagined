@@ -226,18 +226,7 @@ export function QuickAddProductDialog({
             </div>
           </div>
 
-          <ProductUnitsEditor
-            units={units}
-            onChange={(next) => {
-              // Cashier rule: the "Piece" row (index 0) is ALWAYS the base + default sale unit.
-              const locked = next.map((u, i) =>
-                i === 0
-                  ? { ...u, name: "Piece", equals_base: 1, is_base: true, is_default_sale: true }
-                  : { ...u, is_base: false, is_default_sale: false },
-              );
-              setUnits(locked);
-            }}
-          />
+          <ProductUnitsEditor units={units} onChange={setUnits} />
 
           <div className="rounded-xl border bg-card p-4">
             <div className="font-semibold mb-3">Initial Stock (optional)</div>
