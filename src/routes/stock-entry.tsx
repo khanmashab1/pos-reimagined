@@ -36,6 +36,8 @@ interface Product {
   barcode: string;
   name: string;
   stock: number;
+  purchase_price: number;
+  sale_price: number;
 }
 
 interface EntryRow {
