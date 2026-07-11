@@ -26,6 +26,23 @@ interface BillRow {
   created_by_name?: string;
 }
 
+const PERIODS = [
+  { key: "today", label: "Today", days: 1 },
+  { key: "7d", label: "Last 7 days", days: 7 },
+  { key: "30d", label: "Last 30 days", days: 30 },
+  { key: "90d", label: "Last 90 days", days: 90 },
+] as const;
+type PeriodKey = typeof PERIODS[number]["key"];
+
+function periodStart(p: PeriodKey) {
+  const d = new Date();
+  if (p === "today") { d.setHours(0, 0, 0, 0); return d; }
+  const days = PERIODS.find(x => x.key === p)!.days;
+  d.setDate(d.getDate() - (days - 1));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 function SuppliersPage() {
   const [items, setItems] = useState<Supplier[]>([]);
   const [bills, setBills] = useState<BillRow[]>([]);
@@ -35,20 +52,40 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [detail, setDetail] = useState<Supplier | null>(null);
   const [billSearch, setBillSearch] = useState("");
+  const [period, setPeriod] = useState<PeriodKey | "custom">("7d");
+  const [customFrom, setCustomFrom] = useState<string>(() => new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const range = (() => {
+    let from: Date, to: Date;
+    if (period === "custom") {
+      from = new Date(customFrom + "T00:00:00");
+      to = new Date(customTo + "T23:59:59.999");
+      if (isNaN(from.getTime()) || isNaN(to.getTime()) || to < from) {
+        from = periodStart("7d"); to = new Date();
+      }
+    } else {
+      from = periodStart(period); to = new Date();
+    }
+    return { from, to };
+  })();
 
   const load = async () => {
     setLoading(true);
+    const { from, to } = range;
     const [{ data, error }, { data: bd }] = await Promise.all([
       supabase.rpc("get_suppliers_summary" as any),
       supabase.from("supplier_purchases" as any).select("*")
-        .order("created_at", { ascending: false }).limit(300),
+        .gte("created_at", from.toISOString())
+        .lte("created_at", to.toISOString())
+        .order("created_at", { ascending: false }).limit(500),
     ]);
     if (error) toast.error(error.message);
     setItems(((data as any) ?? []) as Supplier[]);
     setBills(((bd as any) ?? []) as BillRow[]);
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [period, customFrom, customTo]);
 
   const openNew = () => { setEditing(null); setForm({ name: "", phone: "", address: "", notes: "" }); setOpen(true); };
   const openEdit = (s: Supplier) => {
@@ -91,6 +128,29 @@ function SuppliersPage() {
         </div>
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Supplier</Button>
       </div>
+
+      {/* Date range */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-1 flex-wrap">
+          {PERIODS.map(p => (
+            <Button key={p.key} variant={period === p.key ? "default" : "outline"} size="sm"
+              onClick={() => setPeriod(p.key)}>{p.label}</Button>
+          ))}
+          <Button variant={period === "custom" ? "default" : "outline"} size="sm"
+            onClick={() => setPeriod("custom")}>Custom</Button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Label className="text-xs text-muted-foreground">From</Label>
+          <Input type="date" value={customFrom} max={customTo}
+            onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }}
+            className="h-8 w-[150px]" />
+          <Label className="text-xs text-muted-foreground">To</Label>
+          <Input type="date" value={customTo} min={customFrom} max={new Date().toISOString().slice(0, 10)}
+            onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }}
+            className="h-8 w-[150px]" />
+        </div>
+      </div>
+
 
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-3"><div className="text-[11px] uppercase text-muted-foreground">Total Purchases</div><div className="text-lg font-bold">{fmt(totals.purchases)}</div></Card>
