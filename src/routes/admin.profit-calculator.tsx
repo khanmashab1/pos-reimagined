@@ -995,27 +995,30 @@ function ProfitCalculator() {
             <div className="space-y-2 max-h-[60vh] overflow-auto">
               {zeroCostProducts.map((p) => (
                 <div
-                  key={p.id}
-                  data-product-id={p.id}
+                  key={p.key}
+                  data-product-key={p.key}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.barcode}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.lines} line(s) • Qty {p.qty} • Revenue {fmt(p.revenue)}
+                      {!p.product_id && <span className="ml-1 text-orange-600">(no product link)</span>}
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground shrink-0">
-                    Sale: <span className="font-semibold text-foreground">{fmt(p.sale_price)}</span>
+                    Avg sale: <span className="font-semibold text-foreground">{fmt(p.sale_price)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="Cost"
                       className="w-24 h-8 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           const val = parseFloat((e.target as HTMLInputElement).value);
-                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.key, val);
                         }
                       }}
                     />
@@ -1023,18 +1026,18 @@ function ProfitCalculator() {
                       size="sm"
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      disabled={savingId === p.id}
+                      disabled={savingId === p.key}
                       onClick={(e) => {
                         const input = e.currentTarget
-                          .closest("[data-product-id]")
+                          .closest("[data-product-key]")
                           ?.querySelector("input") as HTMLInputElement | null;
                         if (input) {
                           const val = parseFloat(input.value);
-                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.id, val);
+                          if (!isNaN(val) && val >= 0) updatePurchasePrice(p.key, val);
                         }
                       }}
                     >
-                      {savingId === p.id ? (
+                      {savingId === p.key ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Save className="h-3.5 w-3.5" />
