@@ -332,7 +332,11 @@ function StockEntryPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" /> Pending Approval
+              {summary.status === "approved" ? (
+                <><CheckCircle2 className="h-5 w-5 text-green-500" /> Stock Added</>
+              ) : (
+                <><Clock className="h-5 w-5 text-amber-500" /> Pending Approval</>
+              )}
             </h1>
             <p className="text-xs text-muted-foreground">
               {summary.submittedBy} · {new Date(summary.submittedAt).toLocaleString()}
