@@ -14,6 +14,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ProductUnitsEditor, makeBlankUnit, validateUnits } from "@/components/ProductUnitsEditor";
+import type { UnitDraft } from "@/lib/units";
+import { fetchUnitsByProductIds } from "@/lib/units";
 
 export interface QuickAddProduct {
   id: string;
@@ -31,6 +34,19 @@ function genBarcode() {
 
 const NONE = "__none__";
 
+function defaultUnits(): UnitDraft[] {
+  return [
+    {
+      ...makeBlankUnit(),
+      name: "Piece",
+      equals_base: 1,
+      is_base: true,
+      is_default_sale: true,
+      sort_order: 0,
+    },
+  ];
+}
+
 export function QuickAddProductDialog({
   open,
   onClose,
@@ -44,21 +60,23 @@ export function QuickAddProductDialog({
 }) {
   const [name, setName] = useState("");
   const [barcode, setBarcode] = useState("");
-  const [salePrice, setSalePrice] = useState<string>("");
-  const [costPrice, setCostPrice] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>(NONE);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [stock, setStock] = useState<string>("1");
+  const [minStock, setMinStock] = useState<string>("5");
+  const [units, setUnits] = useState<UnitDraft[]>(defaultUnits());
+  const [initialStockQty, setInitialStockQty] = useState<string>("1");
+  const [initialStockUnitIdx, setInitialStockUnitIdx] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setName("");
       setBarcode(initialBarcode?.trim() || genBarcode());
-      setSalePrice("");
-      setCostPrice("");
       setCategoryId(NONE);
-      setStock("1");
+      setMinStock("5");
+      setUnits(defaultUnits());
+      setInitialStockQty("1");
+      setInitialStockUnitIdx(0);
       supabase
         .from("categories")
         .select("id, name")
@@ -69,71 +87,85 @@ export function QuickAddProductDialog({
 
   const save = async () => {
     if (!name.trim()) return toast.error("Name is required");
-    const price = Number(salePrice);
-    if (!price || price <= 0) return toast.error("Sale price must be greater than 0");
-    const cost = Number(costPrice) || 0;
-    if (cost < 0) return toast.error("Cost price cannot be negative");
-    if (cost > price) return toast.error("Cost price cannot exceed sale price");
     if (!barcode.trim()) return toast.error("Barcode is required");
+    const err = validateUnits(units);
+    if (err) return toast.error(err);
 
     setSaving(true);
     try {
       const { data: existing } = await supabase
         .from("products")
-        .select("*")
+        .select("id,name")
         .eq("barcode", barcode.trim())
         .maybeSingle();
-
       if (existing) {
         toast.error(`Barcode already used by "${(existing as any).name}"`);
         return;
       }
 
-      const stockNum = Math.max(0, parseInt(stock, 10) || 0);
-      const catId = categoryId === NONE ? null : categoryId;
+      const baseUnit = units.find((u) => u.is_base)!;
+      const productPayload = {
+        name: name.trim(),
+        barcode: barcode.trim(),
+        category_id: categoryId === NONE ? null : categoryId,
+        purchase_price: Number(baseUnit.purchase_price),
+        sale_price: Number(baseUnit.sale_price),
+        min_stock_alert: Math.max(0, parseInt(minStock, 10) || 0),
+        is_active: true,
+      };
+      const unitsPayload = units.map((u, idx) => ({
+        name: u.name.trim(),
+        equals_base: u.equals_base,
+        is_base: u.is_base,
+        is_default_sale: u.is_default_sale,
+        sku: u.sku || null,
+        barcode: u.barcode || null,
+        purchase_price: u.purchase_price,
+        sale_price: u.sale_price,
+        sort_order: idx,
+      }));
 
-      const { data, error } = await supabase
-        .from("products")
-        .insert({
-          name: name.trim(),
-          barcode: barcode.trim(),
-          sale_price: price,
-          purchase_price: cost,
-          stock: stockNum,
-          min_stock_alert: 5,
-          category_id: catId,
-          is_active: true,
-        })
-        .select("*")
-        .single();
-
+      const { data: pid, error } = await supabase.rpc("save_product_with_units", {
+        _product: productPayload,
+        _units: unitsPayload,
+        _initial_stock: null,
+      });
       if (error) {
         toast.error(error.message);
         return;
       }
 
-      // Create matching base unit so multi-unit features (POS unit selector, breakdown) work.
-      const created = data as QuickAddProduct;
-      const { data: unitRow } = await supabase
-        .from("product_units")
-        .insert({
-          product_id: created.id,
-          name: "Piece",
-          equals_base: 1,
-          is_base: true,
-          is_default_sale: true,
-          purchase_price: cost,
-          sale_price: price,
-          sort_order: 0,
-        })
-        .select("id")
-        .single();
-      if (unitRow?.id) {
-        await supabase.from("products").update({ base_unit_id: unitRow.id }).eq("id", created.id);
+      const productId = pid as unknown as string;
+
+      // Apply initial stock (if any) against the selected unit now that IDs exist
+      const qty = Math.max(0, parseInt(initialStockQty, 10) || 0);
+      if (qty > 0) {
+        const map = await fetchUnitsByProductIds([productId]);
+        const created = map[productId] ?? [];
+        // Match by unit name to the editor row index (units are sorted by equals_base desc from RPC)
+        const targetName = units[initialStockUnitIdx]?.name.trim().toLowerCase();
+        const target =
+          created.find((u) => u.name.trim().toLowerCase() === targetName) ??
+          created.find((u) => u.is_base);
+        if (target) {
+          const { error: stkErr } = await supabase.rpc("add_stock_entry_v2", {
+            _product_id: productId,
+            _unit_id: target.id,
+            _qty: qty,
+            _notes: "Initial stock (Quick Add)",
+          });
+          if (stkErr) toast.error(stkErr.message);
+        }
       }
 
+      const { data: fresh } = await supabase
+        .from("products")
+        .select("id, barcode, name, sale_price, purchase_price, stock, category_id")
+        .eq("id", productId)
+        .single();
+
       toast.success("Product added");
-      onCreated(created);
+      onCreated(fresh as QuickAddProduct);
       onClose();
     } finally {
       setSaving(false);
@@ -142,83 +174,101 @@ export function QuickAddProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Quick Add Product</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Product Name</Label>
-            <Input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Pepsi 500ml"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Cost Price</Label>
+              <Label>Product Name</Label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                placeholder="0.00"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Pepsi 500ml"
               />
             </div>
             <div>
-              <Label>Sale Price</Label>
+              <Label>Category</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Uncategorized</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Barcode</Label>
+              <div className="flex gap-2">
+                <Input
+                  className="flex-1 font-mono"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                />
+                <Button type="button" variant="outline" onClick={() => setBarcode(genBarcode())}>
+                  Gen
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label>Low-stock Alert</Label>
               <Input
                 type="number"
-                step="0.01"
                 min="0"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                placeholder="0.00"
+                value={minStock}
+                onChange={(e) => setMinStock(e.target.value)}
               />
             </div>
           </div>
-          <div>
-            <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Uncategorized</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Barcode</Label>
-            <div className="flex gap-2">
-              <Input
-                className="flex-1 font-mono"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-              />
-              <Button type="button" variant="outline" onClick={() => setBarcode(genBarcode())}>
-                Gen
-              </Button>
+
+          <ProductUnitsEditor units={units} onChange={setUnits} />
+
+          <div className="rounded-xl border bg-card p-4">
+            <div className="font-semibold mb-3">Initial Stock (optional)</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={initialStockQty}
+                  onChange={(e) => setInitialStockQty(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>In Unit</Label>
+                <Select
+                  value={String(initialStockUnitIdx)}
+                  onValueChange={(v) => setInitialStockUnitIdx(parseInt(v, 10))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {units.map((u, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {u.name || `Unit ${i + 1}`}
+                        {u.is_base ? " (Base)" : ` (× ${u.equals_base})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Stock is stored in the base unit. If you enter initial stock in another unit it will
+              be converted automatically.
+            </p>
           </div>
-          <div>
-            <Label>Initial Stock</Label>
-            <Input
-              type="number"
-              min="0"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-            />
-          </div>
+
           <p className="text-xs text-muted-foreground">
-            Product will be added to the cart automatically. You can edit additional units later in
-            the catalog.
+            The base unit will be added to the cart automatically after saving.
           </p>
         </div>
+
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             Cancel
