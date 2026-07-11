@@ -26,7 +26,7 @@ interface Payment  { id: string; amount: number; method: string; notes: string; 
 interface BillRow  { id: string; amount: number; bill_no: string; description: string; purchase_date: string; supplier_id: string; supplier_name?: string; }
 
 function SuppliersPage() {
-  const { loading, user, fullName } = useAuth();
+  const { loading, user, fullName, role } = useAuth();
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [busy, setBusy] = useState(true);
@@ -36,6 +36,7 @@ function SuppliersPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [bills, setBills] = useState<BillRow[]>([]);
+  const isAdmin = role === "admin";
 
   useEffect(() => {
     if (loading) return;
@@ -44,16 +45,32 @@ function SuppliersPage() {
 
   const load = async () => {
     setBusy(true);
+    // For cashiers, restrict bills to the currently open shift window (open -> now).
+    let shiftOpenedAt: string | null = null;
+    if (!isAdmin) {
+      const { data: sess } = await supabase.rpc("get_open_session" as any);
+      shiftOpenedAt = (sess as any)?.opened_at ?? null;
+    }
+    let billsQuery = supabase.from("supplier_purchases" as any).select("*")
+      .order("created_at", { ascending: false }).limit(200);
+    if (!isAdmin) {
+      if (!shiftOpenedAt) {
+        // No open shift → no bills visible to the cashier.
+        billsQuery = billsQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+      } else {
+        billsQuery = billsQuery.gte("created_at", shiftOpenedAt);
+      }
+    }
     const [{ data, error }, { data: bd }] = await Promise.all([
       supabase.rpc("get_suppliers_summary" as any),
-      supabase.from("supplier_purchases" as any).select("*").order("purchase_date", { ascending: false }).limit(200),
+      billsQuery,
     ]);
     if (error) toast.error(error.message);
     setSuppliers(((data as any) ?? []) as Supplier[]);
     setBills(((bd as any) ?? []) as BillRow[]);
     setBusy(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (!loading && user) load(); }, [loading, user, isAdmin]);
 
   const saveSupplier = async () => {
     if (!form.name.trim()) return toast.error("Name is required");
