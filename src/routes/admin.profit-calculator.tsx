@@ -59,6 +59,15 @@ interface SaleWithItems {
   }>;
 }
 
+interface ProductRow {
+  name: string;
+  profit: number;
+  qty: number;
+  margin: number | null; // null => N/A (net revenue = 0)
+  revenue: number;
+  zero_cost: boolean;
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -101,6 +110,32 @@ const COLORS = [
   "hsl(280 85% 65%)",
 ];
 
+/**
+ * Largest-remainder allocation: split `total` (Rs, 2 dp) across `weights`
+ * (line subtotals) so each share is rounded to 2 dp AND the sum equals `total`
+ * exactly. Returns an array of Rs values, one per weight.
+ */
+function allocateWithLargestRemainder(total: number, weights: number[]): number[] {
+  const n = weights.length;
+  if (n === 0) return [];
+  const sumW = weights.reduce((a, b) => a + b, 0);
+  if (sumW <= 0 || total === 0) return weights.map(() => 0);
+  // Exact shares scaled to paisa (integer arithmetic) for the fix-up.
+  const totalPaisa = Math.round(total * 100);
+  const exact = weights.map((w) => (w / sumW) * totalPaisa);
+  const floors = exact.map((x) => Math.floor(x));
+  let remainder = totalPaisa - floors.reduce((a, b) => a + b, 0);
+  // Distribute leftover paisa to the lines with the largest fractional part.
+  const order = exact
+    .map((x, i) => ({ i, frac: x - Math.floor(x) }))
+    .sort((a, b) => b.frac - a.frac);
+  const result = floors.slice();
+  for (let k = 0; k < order.length && remainder > 0; k++, remainder--) {
+    result[order[k].i] += 1;
+  }
+  return result.map((p) => p / 100);
+}
+
 function ProfitCalculator() {
   const [from, setFrom] = useState("2000-01-01");
   const [to, setTo] = useState(todayStr());
@@ -112,15 +147,14 @@ function ProfitCalculator() {
   // Calculated metrics
   const [zeroPurchasePriceCount, setZeroPurchasePriceCount] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
-  const [profitMargin, setProfitMargin] = useState(0);
+  const [profitMargin, setProfitMargin] = useState<number | null>(0);
   const [totalSales, setTotalSales] = useState(0);
-  const [profitByProduct, setProfitByProduct] = useState<
-    Array<{ name: string; profit: number; qty: number; margin: number; revenue: number }>
-  >([]);
+  const [profitByProduct, setProfitByProduct] = useState<ProductRow[]>([]);
   const [dailyProfit, setDailyProfit] = useState<
     Array<{ date: string; profit: number; sales: number }>
   >([]);
   const [topProducts, setTopProducts] = useState<Array<{ name: string; profit: number }>>([]);
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   // Zero-cost products dialog
   const [zeroCostOpen, setZeroCostOpen] = useState(false);
@@ -138,8 +172,10 @@ function ProfitCalculator() {
 
   async function load(fromDate = from, toDate = to) {
     setLoading(true);
-    const fromIso = new Date(fromDate + "T00:00:00").toISOString();
-    const toIso = new Date(toDate + "T23:59:59.999").toISOString();
+    // Item 3: interpret from/to as UTC in both paths (matches RPC's
+    // `created_at AT TIME ZONE 'UTC'` grouping and its raw timestamptz filter).
+    const fromIso = `${fromDate}T00:00:00.000Z`;
+    const toIso = `${toDate}T23:59:59.999Z`;
     try {
       // Fast path: aggregate server-side and fetch a tiny summary payload.
       const { data, error: rpcError } = await supabase.rpc("get_profit_report", {
@@ -149,8 +185,13 @@ function ProfitCalculator() {
       if (rpcError) throw rpcError;
       applyReport(data as any);
       setError(null);
+
+      // Item 8: dev-only consistency check — re-run the client aggregation and
+      // warn if totals diverge beyond Rs. 1. Never runs in production builds.
+      if (import.meta.env.DEV) {
+        void devConsistencyCheck(fromIso, toIso, data as any);
+      }
     } catch (rpcErr: any) {
-      // Fallback: the get_profit_report function isn't deployed yet — aggregate client-side.
       console.warn("get_profit_report unavailable, using client aggregation:", rpcErr?.message);
       await legacyLoad(fromIso, toIso);
     } finally {
@@ -160,12 +201,14 @@ function ProfitCalculator() {
 
   /** Map the pre-aggregated server payload into the chart/table state. */
   function applyReport(r: any) {
-    const products = ((r?.by_product ?? []) as any[]).map((p) => ({
+    const products: ProductRow[] = ((r?.by_product ?? []) as any[]).map((p) => ({
       name: p.name,
       profit: Number(p.profit) || 0,
       qty: Number(p.qty) || 0,
       revenue: Number(p.revenue) || 0,
-      margin: Number(p.margin) || 0,
+      // Item 7: server returns null when net revenue = 0 → render as N/A.
+      margin: p.margin == null ? null : Number(p.margin) || 0,
+      zero_cost: Boolean(p.zero_cost),
     }));
     const daily = ((r?.daily ?? []) as any[]).map((d) => ({
       date: d.date,
@@ -174,11 +217,11 @@ function ProfitCalculator() {
     }));
     const revenue = Number(r?.total_revenue) || 0;
     const profit = Number(r?.total_profit) || 0;
-    setSales([]); // raw rows aren't needed when the DB does the aggregation
+    setSales([]);
     setZeroPurchasePriceCount(Number(r?.zero_count) || 0);
     setTotalSales(revenue);
     setTotalProfit(profit);
-    setProfitMargin(revenue > 0 ? (profit / revenue) * 100 : 0);
+    setProfitMargin(revenue > 0 ? (profit / revenue) * 100 : null);
     setProfitByProduct(products);
     setTopProducts(products.slice(0, 5));
     setDailyProfit(daily);
@@ -186,7 +229,6 @@ function ProfitCalculator() {
 
   async function legacyLoad(fromIso: string, toIso: string) {
     try {
-      // Paginate through all sales (Supabase default cap is 1000 rows)
       const SALES_PAGE = 1000;
       let salesData: any[] = [];
       let salesPage = 0;
@@ -212,15 +254,12 @@ function ProfitCalculator() {
 
       if (salesData.length === 0) {
         setSales([]);
-        calculateMetrics([]);
+        await calculateMetrics([], fromIso, toIso);
         setError(null);
         return;
       }
 
-      // Fetch all sale items for the period at once
       const saleIds = (salesData as any[]).map((s) => s.id);
-
-      // Batch fetch sale_items in chunks of 200 to avoid Supabase .in() URL length limits
       const CHUNK = 200;
       let allItems: any[] = [];
       for (let i = 0; i < saleIds.length; i += CHUNK) {
@@ -238,21 +277,19 @@ function ProfitCalculator() {
         allItems = allItems.concat(chunkItems ?? []);
       }
 
-      // Group items by sale_id
       const itemsBySale: Record<string, any[]> = {};
       (allItems ?? []).forEach((item: any) => {
         if (!itemsBySale[item.sale_id]) itemsBySale[item.sale_id] = [];
         itemsBySale[item.sale_id].push(item);
       });
 
-      // Combine sales with their items
       const salesWithItems = (salesData as any[]).map((s) => ({
         ...s,
         sale_items: itemsBySale[s.id] ?? [],
       }));
 
       setSales(salesWithItems);
-      calculateMetrics(salesWithItems);
+      await calculateMetrics(salesWithItems, fromIso, toIso);
       setError(null);
     } catch (err) {
       console.error("Load error:", err);
@@ -261,88 +298,175 @@ function ProfitCalculator() {
     }
   }
 
-  function calculateMetrics(salesData: SaleWithItems[]) {
-    if (salesData.length === 0) {
+  /**
+   * Client aggregation. Applies:
+   *  - Item 4: proportional discount allocation per line with largest-remainder fix-up.
+   *  - Item 1: subtracts approved returns (revenue + matched cost from original sale_items).
+   *  - Item 5: uses stored sale_items.purchase_price (never re-joins products).
+   *  - Item 7: null margin when net revenue = 0.
+   */
+  async function calculateMetrics(salesData: SaleWithItems[], fromIso: string, toIso: string) {
+    // --- Fetch approved returns in period, matched to original sale_items for cost ---
+    type ReturnLine = { name: string; date: string; qty: number; revenue: number; cost: number };
+    const returnLines: ReturnLine[] = [];
+    try {
+      const { data: approvedReturns } = await supabase
+        .from("returns")
+        .select("id,original_sale_id,created_at,approved_at,status")
+        .eq("status", "approved")
+        .gte("approved_at", fromIso)
+        .lte("approved_at", toIso);
+
+      const rIds = (approvedReturns ?? []).map((r: any) => r.id);
+      if (rIds.length > 0) {
+        // return_items in chunks
+        const CHUNK = 200;
+        let rItems: any[] = [];
+        for (let i = 0; i < rIds.length; i += CHUNK) {
+          const { data: batch } = await supabase
+            .from("return_items")
+            .select("return_id,product_id,product_name,qty,unit_price,subtotal")
+            .in("return_id", rIds.slice(i, i + CHUNK))
+            .range(0, 9999);
+          rItems = rItems.concat(batch ?? []);
+        }
+        // Cost lookup: original sale_items (sale_id + product_id) → purchase_price
+        const origSaleIds = Array.from(
+          new Set((approvedReturns ?? []).map((r: any) => r.original_sale_id).filter(Boolean)),
+        );
+        const costByKey = new Map<string, number>();
+        for (let i = 0; i < origSaleIds.length; i += CHUNK) {
+          const { data: origItems } = await supabase
+            .from("sale_items")
+            .select("sale_id,product_id,purchase_price")
+            .in("sale_id", origSaleIds.slice(i, i + CHUNK))
+            .range(0, 9999);
+          (origItems ?? []).forEach((it: any) => {
+            if (it.product_id) {
+              costByKey.set(`${it.sale_id}:${it.product_id}`, Number(it.purchase_price) || 0);
+            }
+          });
+        }
+        const retById = new Map<string, any>();
+        (approvedReturns ?? []).forEach((r: any) => retById.set(r.id, r));
+        for (const it of rItems) {
+          const r = retById.get(it.return_id);
+          if (!r) continue;
+          const cost = costByKey.get(`${r.original_sale_id}:${it.product_id}`) ?? 0;
+          const qty = Number(it.qty) || 0;
+          returnLines.push({
+            name: it.product_name || "Unknown",
+            date: new Date(r.approved_at || r.created_at).toISOString().slice(0, 10),
+            qty,
+            revenue: qty * (Number(it.unit_price) || 0),
+            cost: qty * cost,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Returns fetch failed (skipping return offsets):", e);
+    }
+
+    if (salesData.length === 0 && returnLines.length === 0) {
       setTotalProfit(0);
-      setProfitMargin(0);
+      setProfitMargin(null);
       setTotalSales(0);
       setProfitByProduct([]);
       setDailyProfit([]);
       setTopProducts([]);
+      setZeroPurchasePriceCount(0);
       return;
     }
 
     let totalRevenue = 0;
     let totalCost = 0;
     let zeroCount = 0;
-    const profitMap: Record<string, { profit: number; qty: number; revenue: number }> = {};
+    const profitMap: Record<
+      string,
+      { profit: number; qty: number; revenue: number; zero_cost: boolean }
+    > = {};
     const dailyMap: Record<string, { profit: number; sales: number }> = {};
 
     for (const sale of salesData) {
-      const saleDate = new Date(sale.created_at).toISOString().slice(0, 10);
-      let saleCost = 0;
-      let saleRevenue = 0;
+      const saleDate = new Date(sale.created_at).toISOString().slice(0, 10); // UTC
+      const items = sale.sale_items ?? [];
+      const grossLine = items.map((it) => (Number(it.qty) || 0) * (Number(it.unit_price) || 0));
+      const saleDiscount = Number(sale.discount) || 0;
+      // Item 4: allocate discount with largest-remainder correction so shares
+      // sum EXACTLY to sale.discount when rounded to 2 dp.
+      const discountShare = saleDiscount > 0
+        ? allocateWithLargestRemainder(saleDiscount, grossLine)
+        : grossLine.map(() => 0);
 
-      for (const item of sale.sale_items) {
+      let saleRevenue = 0;
+      let saleCost = 0;
+      items.forEach((item, idx) => {
         const qty = Number(item.qty) || 0;
         const unitPrice = Number(item.unit_price) || 0;
+        // Item 5: purchase_price is the stored snapshot from sale_items.
         const purchasePrice = Number(item.purchase_price) || 0;
-
-        const itemRevenue = qty * unitPrice;
-        // If purchase_price was 0 at time of sale, fall back to current product price from DB
-        // (handles old sales recorded before purchase prices were set)
         if (purchasePrice === 0) zeroCount++;
-        const effectivePurchasePrice = purchasePrice > 0 ? purchasePrice : 0;
-        const itemCost = qty * effectivePurchasePrice;
+
+        const gross = qty * unitPrice;
+        const itemRevenue = gross - (discountShare[idx] ?? 0);
+        const itemCost = qty * purchasePrice;
         const itemProfit = itemRevenue - itemCost;
 
         saleRevenue += itemRevenue;
         saleCost += itemCost;
 
-        // Track by product
-        const productKey = item.product_name || "Unknown";
-        if (!profitMap[productKey]) {
-          profitMap[productKey] = { profit: 0, qty: 0, revenue: 0 };
-        }
-        profitMap[productKey].profit += itemProfit;
-        profitMap[productKey].qty += qty;
-        profitMap[productKey].revenue += itemRevenue;
-      }
+        const key = item.product_name || "Unknown";
+        if (!profitMap[key]) profitMap[key] = { profit: 0, qty: 0, revenue: 0, zero_cost: false };
+        profitMap[key].profit += itemProfit;
+        profitMap[key].qty += qty;
+        profitMap[key].revenue += itemRevenue;
+        if (purchasePrice === 0) profitMap[key].zero_cost = true;
+      });
 
       totalRevenue += saleRevenue;
       totalCost += saleCost;
-
-      // Track daily
-      if (!dailyMap[saleDate]) {
-        dailyMap[saleDate] = { profit: 0, sales: 0 };
-      }
+      if (!dailyMap[saleDate]) dailyMap[saleDate] = { profit: 0, sales: 0 };
       dailyMap[saleDate].profit += saleRevenue - saleCost;
       dailyMap[saleDate].sales += saleRevenue;
     }
 
+    // Item 1: subtract approved returns from revenue, cost, and profit.
+    for (const rl of returnLines) {
+      totalRevenue -= rl.revenue;
+      totalCost -= rl.cost;
+      const key = rl.name;
+      if (!profitMap[key]) profitMap[key] = { profit: 0, qty: 0, revenue: 0, zero_cost: false };
+      profitMap[key].profit -= rl.revenue - rl.cost;
+      profitMap[key].qty -= rl.qty;
+      profitMap[key].revenue -= rl.revenue;
+      if (!dailyMap[rl.date]) dailyMap[rl.date] = { profit: 0, sales: 0 };
+      dailyMap[rl.date].profit -= rl.revenue - rl.cost;
+      dailyMap[rl.date].sales -= rl.revenue;
+    }
+
     const profit = totalRevenue - totalCost;
-    const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+    // Item 7: null margin when net revenue = 0 → UI shows "N/A".
+    const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : null;
 
     setZeroPurchasePriceCount(zeroCount);
     setTotalProfit(profit);
     setTotalSales(totalRevenue);
     setProfitMargin(margin);
 
-    // Product breakdown
-    const products = Object.entries(profitMap)
+    const products: ProductRow[] = Object.entries(profitMap)
       .map(([name, data]) => ({
         name,
         profit: data.profit,
         qty: data.qty,
         revenue: data.revenue,
-        margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0,
+        margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : null,
+        zero_cost: data.zero_cost,
       }))
       .sort((a, b) => b.profit - a.profit);
 
     setProfitByProduct(products);
     setTopProducts(products.slice(0, 5));
 
-    // Daily trends
     const daily = Object.entries(dailyMap)
       .map(([date, data]) => ({
         date,
@@ -352,6 +476,117 @@ function ProfitCalculator() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     setDailyProfit(daily);
+  }
+
+  /**
+   * Item 8: dev-only cross-check. Compares the RPC totals with a re-run of the
+   * client aggregation. Emits a console.warn if any total drifts by more than
+   * Rs. 1. Never runs in production because it's gated on `import.meta.env.DEV`.
+   */
+  async function devConsistencyCheck(fromIso: string, toIso: string, rpcData: any) {
+    try {
+      // Fetch a stripped-down sales+items snapshot, same shape legacyLoad uses.
+      const { data: salesRows } = await supabase
+        .from("sales")
+        .select("id,bill_no,cashier_name,subtotal,tax_amount,discount,total,created_at")
+        .gte("created_at", fromIso)
+        .lte("created_at", toIso)
+        .order("created_at", { ascending: true })
+        .range(0, 9999);
+      const rows = (salesRows ?? []) as any[];
+      const ids = rows.map((r) => r.id);
+      let items: any[] = [];
+      const CHUNK = 200;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { data: batch } = await supabase
+          .from("sale_items")
+          .select("sale_id,product_id,product_name,barcode,qty,unit_price,purchase_price,subtotal")
+          .in("sale_id", ids.slice(i, i + CHUNK))
+          .range(0, 9999);
+        items = items.concat(batch ?? []);
+      }
+      const bySale: Record<string, any[]> = {};
+      items.forEach((it) => {
+        (bySale[it.sale_id] ||= []).push(it);
+      });
+      const merged = rows.map((s) => ({ ...s, sale_items: bySale[s.id] ?? [] }));
+
+      // Recompute locally without mutating component state.
+      let cRev = 0;
+      let cCost = 0;
+      for (const s of merged) {
+        const gross = (s.sale_items as any[]).map(
+          (it) => (Number(it.qty) || 0) * (Number(it.unit_price) || 0),
+        );
+        const disc = Number(s.discount) || 0;
+        const shares = disc > 0 ? allocateWithLargestRemainder(disc, gross) : gross.map(() => 0);
+        (s.sale_items as any[]).forEach((it, i) => {
+          const q = Number(it.qty) || 0;
+          cRev += q * (Number(it.unit_price) || 0) - (shares[i] ?? 0);
+          cCost += q * (Number(it.purchase_price) || 0);
+        });
+      }
+      // Approved returns
+      const { data: rets } = await supabase
+        .from("returns")
+        .select("id,original_sale_id,approved_at")
+        .eq("status", "approved")
+        .gte("approved_at", fromIso)
+        .lte("approved_at", toIso);
+      const rIds = (rets ?? []).map((r: any) => r.id);
+      if (rIds.length > 0) {
+        let rItems: any[] = [];
+        for (let i = 0; i < rIds.length; i += CHUNK) {
+          const { data: b } = await supabase
+            .from("return_items")
+            .select("return_id,product_id,qty,unit_price")
+            .in("return_id", rIds.slice(i, i + CHUNK))
+            .range(0, 9999);
+          rItems = rItems.concat(b ?? []);
+        }
+        const origIds = Array.from(new Set((rets ?? []).map((r: any) => r.original_sale_id).filter(Boolean)));
+        const costByKey = new Map<string, number>();
+        for (let i = 0; i < origIds.length; i += CHUNK) {
+          const { data: oi } = await supabase
+            .from("sale_items")
+            .select("sale_id,product_id,purchase_price")
+            .in("sale_id", origIds.slice(i, i + CHUNK))
+            .range(0, 9999);
+          (oi ?? []).forEach((it: any) => {
+            if (it.product_id)
+              costByKey.set(`${it.sale_id}:${it.product_id}`, Number(it.purchase_price) || 0);
+          });
+        }
+        const retById = new Map<string, any>();
+        (rets ?? []).forEach((r: any) => retById.set(r.id, r));
+        for (const it of rItems) {
+          const r = retById.get(it.return_id);
+          if (!r) continue;
+          const q = Number(it.qty) || 0;
+          cRev -= q * (Number(it.unit_price) || 0);
+          cCost -= q * (costByKey.get(`${r.original_sale_id}:${it.product_id}`) ?? 0);
+        }
+      }
+
+      const cProfit = cRev - cCost;
+      const rRev = Number(rpcData?.total_revenue) || 0;
+      const rCost = Number(rpcData?.total_cost) || 0;
+      const rProfit = Number(rpcData?.total_profit) || 0;
+      const TOL = 1; // Rs. 1
+      const diffs = {
+        revenue: Math.abs(cRev - rRev),
+        cost: Math.abs(cCost - rCost),
+        profit: Math.abs(cProfit - rProfit),
+      };
+      if (diffs.revenue > TOL || diffs.cost > TOL || diffs.profit > TOL) {
+        console.warn(
+          "[profit-calculator][dev] RPC vs client aggregation divergence > Rs. 1",
+          { rpc: { revenue: rRev, cost: rCost, profit: rProfit }, client: { revenue: cRev, cost: cCost, profit: cProfit }, diffs },
+        );
+      }
+    } catch (e) {
+      console.warn("[profit-calculator][dev] consistency check failed:", e);
+    }
   }
 
   useEffect(() => {
@@ -398,6 +633,7 @@ function ProfitCalculator() {
       setSavingId(null);
     }
   }
+
 
   function exportCSV() {
     const rows = [
