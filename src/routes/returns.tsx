@@ -47,11 +47,6 @@ function CashierReturnsPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) navigate({ to: "/login" });
-  }, [loading, user, navigate]);
-
-  useEffect(() => {
-    if (loading) return;
     if (!user) { navigate({ to: "/login" }); return; }
     loadMySales(user.id);
   }, [loading, user, navigate]);
@@ -59,6 +54,7 @@ function CashierReturnsPage() {
   async function lookup(bn?: string) {
     const q = (bn ?? billNo).trim();
     if (!q) return;
+    setBillNo(q);
     setSale(null); setItems([]); setReturnQty({});
     const { data: s } = await supabase.from("sales")
       .select("*").eq("bill_no", q).maybeSingle();
@@ -66,9 +62,9 @@ function CashierReturnsPage() {
     const { data: it } = await supabase.from("sale_items").select("*").eq("sale_id", s.id);
     setSale(s);
     setItems((it ?? []) as SaleItemRow[]);
-    const q: Record<string, number> = {};
-    (it ?? []).forEach((r: any) => q[r.id] = 0);
-    setReturnQty(q);
+    const qmap: Record<string, number> = {};
+    (it ?? []).forEach((r: any) => qmap[r.id] = 0);
+    setReturnQty(qmap);
   }
 
   function setQty(id: string, max: number, v: string) {
