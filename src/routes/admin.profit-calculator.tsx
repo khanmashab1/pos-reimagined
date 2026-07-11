@@ -159,7 +159,16 @@ function ProfitCalculator() {
   // Zero-cost products dialog
   const [zeroCostOpen, setZeroCostOpen] = useState(false);
   const [zeroCostProducts, setZeroCostProducts] = useState<
-    Array<{ id: string; name: string; barcode: string; purchase_price: number; sale_price: number }>
+    Array<{
+      key: string;
+      name: string;
+      product_id: string | null;
+      barcode: string;
+      sale_price: number;
+      qty: number;
+      revenue: number;
+      lines: number;
+    }>
   >([]);
   const [zeroCostLoading, setZeroCostLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
