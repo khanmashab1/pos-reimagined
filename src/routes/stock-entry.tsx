@@ -36,6 +36,8 @@ interface Product {
   barcode: string;
   name: string;
   stock: number;
+  purchase_price: number;
+  sale_price: number;
 }
 
 interface EntryRow {
@@ -69,6 +71,8 @@ function StockEntryPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
+  const [costPrice, setCostPrice] = useState("");
+  const [salePrice, setSalePrice] = useState("");
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [processing, setProcessing] = useState(false);
   const [summary, setSummary] = useState<SubmitSummary | null>(null);
@@ -92,7 +96,7 @@ function StockEntryPage() {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from("products")
-        .select("id,barcode,name,stock")
+        .select("id,barcode,name,stock,purchase_price,sale_price")
         .eq("is_active", true)
         .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
         .order("name")
@@ -115,7 +119,7 @@ function StockEntryPage() {
         void (async () => {
           const { data } = await supabase
             .from("products")
-            .select("id,barcode,name,stock")
+            .select("id,barcode,name,stock,purchase_price,sale_price")
             .eq("barcode", code)
             .eq("is_active", true)
             .maybeSingle();
@@ -124,7 +128,7 @@ function StockEntryPage() {
           const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
           if (unitRow) {
             const { data: prod } = await supabase
-              .from("products").select("id,barcode,name,stock")
+              .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
               .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
             if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
           }
@@ -154,6 +158,8 @@ function StockEntryPage() {
     setShowDrop(false);
     setQty("");
     setNotes("");
+    setCostPrice(p.purchase_price != null ? String(p.purchase_price) : "");
+    setSalePrice(p.sale_price != null ? String(p.sale_price) : "");
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
@@ -162,14 +168,29 @@ function StockEntryPage() {
     setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
-  const addEntry = () => {
+  const addEntry = async () => {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
+    const cost = Number(costPrice);
+    const sale = Number(salePrice);
+    if (costPrice === "" || Number.isNaN(cost) || cost < 0) return toast.error("Enter a valid cost price");
+    if (salePrice === "" || Number.isNaN(sale) || sale < 0) return toast.error("Enter a valid sale price");
     const unit = selectedUnits.find((u) => u.id === selectedUnitId);
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
     const pieces = qtyNum * unitEquals;
+
+    // Persist any price change immediately so the new stock is valued correctly.
+    if (cost !== selectedProduct.purchase_price || sale !== selectedProduct.sale_price) {
+      const { error } = await supabase.rpc("update_product_prices", {
+        _product_id: selectedProduct.id,
+        _purchase_price: cost,
+        _sale_price: sale,
+      });
+      if (error) return toast.error(error.message);
+      toast.success("Prices updated");
+    }
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -204,6 +225,8 @@ function StockEntryPage() {
     setSearch("");
     setQty("");
     setNotes("");
+    setCostPrice("");
+    setSalePrice("");
   };
 
   const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
@@ -450,7 +473,7 @@ function StockEntryPage() {
                 placeholder="0"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEntry()}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
                 className="mt-1"
               />
               {selectedUnit && Number(qty) > 0 && selectedUnit.equals_base > 1 && (
@@ -460,8 +483,40 @@ function StockEntryPage() {
               )}
             </div>
 
-            {/* Notes */}
+            {/* Cost Price */}
             <div>
+              <Label>Cost Price</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
+                disabled={!selectedProduct}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Sale Price */}
+            <div>
+              <Label>Sale Price</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
+                disabled={!selectedProduct}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="col-span-2">
               <Label>
                 Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span>
               </Label>
@@ -469,17 +524,18 @@ function StockEntryPage() {
                 placeholder="e.g. New batch, Supplier..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEntry()}
+                onKeyDown={(e) => e.key === "Enter" && void addEntry()}
                 className="mt-1"
               />
             </div>
 
             {/* Add button — full width */}
             <div className="col-span-2">
-              <Button onClick={addEntry} className="w-full">
+              <Button onClick={() => void addEntry()} className="w-full">
                 <Plus className="h-4 w-4 mr-2" /> Add to List
               </Button>
             </div>
+
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             💡 Physical barcode scanner works anywhere on this page
