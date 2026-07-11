@@ -30,24 +30,41 @@ function CashierReturnsPage() {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
+  const [mySales, setMySales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  async function loadMySales(uid: string) {
+    setLoadingSales(true);
+    const { data } = await supabase
+      .from("sales")
+      .select("id,bill_no,created_at,cashier_name,payment_type,items_count,discount,total")
+      .eq("cashier_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setMySales(data ?? []);
+    setLoadingSales(false);
+  }
 
   useEffect(() => {
     if (loading) return;
-    if (!user) navigate({ to: "/login" });
+    if (!user) { navigate({ to: "/login" }); return; }
+    loadMySales(user.id);
   }, [loading, user, navigate]);
 
-  async function lookup() {
-    if (!billNo.trim()) return;
+  async function lookup(bn?: string) {
+    const q = (bn ?? billNo).trim();
+    if (!q) return;
+    setBillNo(q);
     setSale(null); setItems([]); setReturnQty({});
     const { data: s } = await supabase.from("sales")
-      .select("*").eq("bill_no", billNo.trim()).maybeSingle();
+      .select("*").eq("bill_no", q).maybeSingle();
     if (!s) { toast.error("Bill not found"); return; }
     const { data: it } = await supabase.from("sale_items").select("*").eq("sale_id", s.id);
     setSale(s);
     setItems((it ?? []) as SaleItemRow[]);
-    const q: Record<string, number> = {};
-    (it ?? []).forEach((r: any) => q[r.id] = 0);
-    setReturnQty(q);
+    const qmap: Record<string, number> = {};
+    (it ?? []).forEach((r: any) => qmap[r.id] = 0);
+    setReturnQty(qmap);
   }
 
   function setQty(id: string, max: number, v: string) {
@@ -121,8 +138,56 @@ function CashierReturnsPage() {
               className="font-mono h-11"
               autoFocus
             />
-            <Button onClick={lookup} className="h-11"><Search className="h-4 w-4 mr-1" /> Lookup</Button>
+            <Button onClick={() => lookup()} className="h-11"><Search className="h-4 w-4 mr-1" /> Lookup</Button>
           </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold">My Recent Sales</div>
+            {loadingSales && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+          {mySales.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No sales yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-xs uppercase">
+                  <tr>
+                    <th className="text-left p-2">Bill #</th>
+                    <th className="text-left p-2">Date</th>
+                    <th className="text-left p-2">Cashier</th>
+                    <th className="text-left p-2">Payment</th>
+                    <th className="text-right p-2">Items</th>
+                    <th className="text-right p-2">Discount</th>
+                    <th className="text-right p-2">Cash</th>
+                    <th className="text-right p-2">Online</th>
+                    <th className="p-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mySales.map((s) => {
+                    const isCash = String(s.payment_type ?? "cash").toLowerCase() === "cash";
+                    return (
+                      <tr key={s.id} className="border-t hover:bg-muted/40">
+                        <td className="p-2 font-mono">{s.bill_no}</td>
+                        <td className="p-2 whitespace-nowrap">{new Date(s.created_at).toLocaleString()}</td>
+                        <td className="p-2">{s.cashier_name}</td>
+                        <td className="p-2 capitalize">{s.payment_type ?? "cash"}</td>
+                        <td className="p-2 text-right">{s.items_count}</td>
+                        <td className="p-2 text-right">{fmt(s.discount)}</td>
+                        <td className="p-2 text-right text-green-700">{isCash ? fmt(s.total) : "-"}</td>
+                        <td className="p-2 text-right text-blue-700">{!isCash ? fmt(s.total) : "-"}</td>
+                        <td className="p-2 text-right">
+                          <Button size="sm" variant="outline" onClick={() => lookup(s.bill_no)}>Select</Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
 
         {sale && (
