@@ -427,10 +427,6 @@ function ProductsPage() {
       }, 0);
       const delta = newBase - Number(editing.stock);
       if (delta !== 0) {
-        if (!editStockReason.trim()) {
-          toast.error("Please enter a reason for the stock change");
-          return;
-        }
         const baseRow = units.find((u) => u.is_base);
         const baseUnitId = baseRow?.id ?? null;
         const baseUnitName = baseRow?.name ?? "Unit";
