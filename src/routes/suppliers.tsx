@@ -191,6 +191,9 @@ function SuppliersPage() {
           );
         })()}
 
+        {/* Suppliers Table */}
+        <Card className="bg-white shadow-sm rounded-2xl border-gray-100 overflow-hidden p-0">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50/60 border-b border-gray-100">
