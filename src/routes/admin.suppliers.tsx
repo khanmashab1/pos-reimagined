@@ -98,6 +98,70 @@ function SuppliersPage() {
         <Card className="p-3"><div className="text-[11px] uppercase text-muted-foreground">Outstanding</div><div className="text-lg font-bold text-destructive">{fmt(totals.balance)}</div></Card>
       </div>
 
+      {/* All Bills (admin sees every supplier bill) */}
+      {(() => {
+        const nameById = new Map(items.map(s => [s.id, s.name]));
+        const q = billSearch.trim().toLowerCase();
+        const filtered = q
+          ? bills.filter(b =>
+              (b.bill_no || "").toLowerCase().includes(q) ||
+              (b.description || "").toLowerCase().includes(q) ||
+              (nameById.get(b.supplier_id) || "").toLowerCase().includes(q) ||
+              (b.created_by_name || "").toLowerCase().includes(q))
+          : bills;
+        const shown = filtered.slice(0, 100);
+        return (
+          <Card className="p-0 overflow-hidden">
+            <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <Receipt className="h-4 w-4" /> All Bills
+              </div>
+              <Input
+                className="h-8 max-w-xs"
+                placeholder="Search bill, supplier, cashier..."
+                value={billSearch}
+                onChange={e => setBillSearch(e.target.value)}
+              />
+              <div className="text-xs text-muted-foreground">
+                {shown.length} of {filtered.length}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Date</th>
+                    <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Bill #</th>
+                    <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Supplier</th>
+                    <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Cashier</th>
+                    <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Description</th>
+                    <th className="text-right px-3 py-2 text-[11px] uppercase text-muted-foreground">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</td></tr>
+                  ) : shown.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">No bills.</td></tr>
+                  ) : shown.map(b => (
+                    <tr key={b.id} className="border-t hover:bg-muted/30">
+                      <td className="px-3 py-2 whitespace-nowrap">{b.purchase_date}</td>
+                      <td className="px-3 py-2 font-medium">{b.bill_no || "—"}</td>
+                      <td className="px-3 py-2">{nameById.get(b.supplier_id) || "—"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{b.created_by_name || "—"}</td>
+                      <td className="px-3 py-2 text-muted-foreground max-w-xs truncate">{b.description || "—"}</td>
+                      <td className="px-3 py-2 text-right font-semibold">{fmt(b.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        );
+      })()}
+
+
+
       {loading ? (
         <p className="text-muted-foreground text-sm text-center py-12">Loading…</p>
       ) : items.length === 0 ? (
