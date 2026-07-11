@@ -131,10 +131,6 @@ function SuppliersPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
             className="pl-9 bg-white shadow-sm"
             placeholder="Search suppliers or bills by name, phone or bill #..."
             value={search}
