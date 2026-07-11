@@ -133,20 +133,20 @@ function SuppliersPage() {
         </div>
 
         {/* Suppliers Table */}
-        <Card className="bg-white shadow-sm overflow-hidden">
+        <Card className="bg-white shadow-sm rounded-2xl border-gray-100 overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground border-b">
-                  <th className="text-left px-5 py-3">Supplier</th>
-                  <th className="text-left px-5 py-3">Contact</th>
-                  <th className="text-right px-5 py-3">Bills</th>
-                  <th className="text-right px-5 py-3">Paid</th>
-                  <th className="text-right px-5 py-3">Outstanding</th>
-                  <th className="px-5 py-3"></th>
+                <tr className="bg-gray-50/60 border-b border-gray-100">
+                  <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supplier</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bills</th>
+                  <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Paid</th>
+                  <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outstanding</th>
+                  <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Manage</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-50">
                 {busy ? (
                   <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                 ) : filtered.length === 0 ? (
@@ -155,39 +155,56 @@ function SuppliersPage() {
                     {search ? "No suppliers match your search." : "No suppliers yet. Add one to get started."}
                   </td></tr>
                 ) : filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-foreground">{s.name}</div>
-                      {s.address && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin className="h-3 w-3" />{s.address}
-                        </div>
-                      )}
+                  <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-900">{s.name}</span>
+                        {s.address && (
+                          <span className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />{s.address}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-5">
                       {s.phone ? (
-                        <div className="flex items-center gap-1 text-muted-foreground">
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
                           <Phone className="h-3 w-3" />{s.phone}
                         </div>
-                      ) : <span className="text-muted-foreground">—</span>}
+                      ) : <span className="text-gray-400">—</span>}
                     </td>
-                    <td className="px-5 py-4 text-right font-medium">{fmt(s.total_purchases)}</td>
-                    <td className="px-5 py-4 text-right font-medium text-green-600">{fmt(s.total_paid)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <span className={`font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-green-600"}`}>
+                    <td className="px-6 py-5">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {fmt(s.total_purchases)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-right text-sm font-medium text-green-600">{fmt(s.total_paid)}</td>
+                    <td className="px-6 py-5 text-right">
+                      <span className={`text-sm font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-gray-400"}`}>
                         {fmt(s.balance)}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right">
-                      <Button size="sm" variant="outline" onClick={() => setDetail(s)}>Manage</Button>
+                    <td className="px-6 py-5 text-center">
+                      <button
+                        onClick={() => setDetail(s)}
+                        className="text-primary hover:text-primary/80 p-2 rounded-lg hover:bg-primary/10 transition-colors text-sm font-semibold"
+                      >
+                        Manage
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {!busy && filtered.length > 0 && (
+            <div className="px-6 py-3 bg-gray-50/60 border-t border-gray-100 text-xs text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{filtered.length}</span> of <span className="font-semibold text-foreground">{suppliers.length}</span> suppliers
+            </div>
+          )}
         </Card>
       </div>
+
 
       {/* Add Supplier Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
