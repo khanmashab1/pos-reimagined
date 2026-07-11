@@ -1123,6 +1123,14 @@ export type Database = {
         Args: { _initial_stock?: Json; _product: Json; _units: Json }
         Returns: string
       }
+      update_product_prices: {
+        Args: {
+          _product_id: string
+          _purchase_price: number
+          _sale_price: number
+        }
+        Returns: undefined
+      }
       void_return: {
         Args: { _reason: string; _return_id: string }
         Returns: Json
