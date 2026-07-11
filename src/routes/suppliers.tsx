@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, Truck, Wallet, Receipt, Plus, Trash2, Phone, MapPin, Search, FileBarChart, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, Wallet, Receipt, Plus, Trash2, Phone, MapPin, Search, FileBarChart } from "lucide-react";
 import { toast } from "sonner";
 import { fmt } from "@/lib/format";
 
@@ -34,30 +34,11 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [shiftPaid, setShiftPaid] = useState<Record<string, number>>({});
-  const [shiftOpen, setShiftOpen] = useState(false);
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
-
-  const loadShiftPayments = async () => {
-    const { data } = await supabase.rpc("get_open_session" as any);
-    const session: any = data;
-    if (!session?.id) { setShiftOpen(false); setShiftPaid({}); return; }
-    setShiftOpen(true);
-    const { data: rows } = await supabase
-      .from("supplier_payments" as any)
-      .select("supplier_id,amount")
-      .eq("session_id", session.id);
-    const map: Record<string, number> = {};
-    ((rows as any[]) ?? []).forEach(r => {
-      map[r.supplier_id] = (map[r.supplier_id] ?? 0) + Number(r.amount);
-    });
-    setShiftPaid(map);
-  };
 
   const load = async () => {
     setBusy(true);
@@ -65,13 +46,8 @@ function SuppliersPage() {
     if (error) toast.error(error.message);
     setSuppliers(((data as any) ?? []) as Supplier[]);
     setBusy(false);
-    loadShiftPayments();
   };
   useEffect(() => { load(); }, []);
-
-  const toggle = (id: string) => setExpanded(prev => {
-    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-  });
 
   const saveSupplier = async () => {
     if (!form.name.trim()) return toast.error("Name is required");
@@ -156,82 +132,60 @@ function SuppliersPage() {
           />
         </div>
 
-        {/* Suppliers List (collapsible) */}
-        <Card className="bg-white shadow-sm overflow-hidden divide-y">
-          {busy ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Truck className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              {search ? "No suppliers match your search." : "No suppliers yet. Add one to get started."}
-            </div>
-          ) : filtered.map(s => {
-            const isOpen = expanded.has(s.id);
-            const paidThisShift = shiftPaid[s.id] ?? 0;
-            return (
-              <div key={s.id}>
-                <button
-                  onClick={() => toggle(s.id)}
-                  className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-foreground truncate">{s.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {Number(s.balance) > 0 ? (
-                        <span className="text-red-600 font-medium">Outstanding {fmt(s.balance)}</span>
-                      ) : (
-                        <span className="text-green-600 font-medium">Settled</span>
+        {/* Suppliers Table */}
+        <Card className="bg-white shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground border-b">
+                  <th className="text-left px-5 py-3">Supplier</th>
+                  <th className="text-left px-5 py-3">Contact</th>
+                  <th className="text-right px-5 py-3">Bills</th>
+                  <th className="text-right px-5 py-3">Paid</th>
+                  <th className="text-right px-5 py-3">Outstanding</th>
+                  <th className="px-5 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {busy ? (
+                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    {search ? "No suppliers match your search." : "No suppliers yet. Add one to get started."}
+                  </td></tr>
+                ) : filtered.map(s => (
+                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="font-semibold text-foreground">{s.name}</div>
+                      {s.address && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin className="h-3 w-3" />{s.address}
+                        </div>
                       )}
-                      {shiftOpen && paidThisShift > 0 && (
-                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium">
-                          Paid this shift: {fmt(paidThisShift)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                </button>
-                {isOpen && (
-                  <div className="px-5 pb-4 pt-1 bg-muted/20 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Contact</div>
-                        {s.phone ? (
-                          <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{s.phone}</div>
-                        ) : <div className="text-muted-foreground">—</div>}
-                        {s.address && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <MapPin className="h-3 w-3" />{s.address}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Bills</div>
-                        <div className="font-medium">{fmt(s.total_purchases)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Paid</div>
-                        <div className="font-medium text-green-600">{fmt(s.total_paid)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Outstanding</div>
-                        <div className={`font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-green-600"}`}>{fmt(s.balance)}</div>
-                      </div>
-                    </div>
-                    {shiftOpen && (
-                      <div className="text-xs bg-white border rounded px-3 py-2">
-                        <span className="text-muted-foreground">Paid to this supplier during current shift: </span>
-                        <span className="font-semibold text-blue-700">{fmt(paidThisShift)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-end">
-                      <Button size="sm" onClick={() => setDetail(s)}>Manage</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    </td>
+                    <td className="px-5 py-4">
+                      {s.phone ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Phone className="h-3 w-3" />{s.phone}
+                        </div>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-5 py-4 text-right font-medium">{fmt(s.total_purchases)}</td>
+                    <td className="px-5 py-4 text-right font-medium text-green-600">{fmt(s.total_paid)}</td>
+                    <td className="px-5 py-4 text-right">
+                      <span className={`font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-green-600"}`}>
+                        {fmt(s.balance)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <Button size="sm" variant="outline" onClick={() => setDetail(s)}>Manage</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       </div>
 
