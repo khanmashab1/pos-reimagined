@@ -151,10 +151,25 @@ function Dashboard() {
     (async () => {
       try {
         setLoading(true);
-        const startIso = startOfPeriod(period).toISOString();
-        const days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
-
-        const startDate = startOfPeriod(period).toISOString().slice(0, 10);
+        let startAt: Date;
+        let endAt: Date;
+        let days: number;
+        if (period === "custom") {
+          startAt = new Date(customFrom + "T00:00:00");
+          endAt = new Date(customTo + "T23:59:59.999");
+          if (isNaN(startAt.getTime()) || isNaN(endAt.getTime()) || endAt < startAt) {
+            setLoading(false); return;
+          }
+          days = Math.max(1, Math.round((endAt.getTime() - startAt.getTime()) / 86400000) + 1);
+        } else {
+          startAt = startOfPeriod(period);
+          endAt = new Date();
+          days = period === "today" ? 1 : PERIODS.find(p => p.key === period)!.days;
+        }
+        const startIso = startAt.toISOString();
+        const endIso = endAt.toISOString();
+        const startDate = startAt.toISOString().slice(0, 10);
+        const endDate = endAt.toISOString().slice(0, 10);
         const [
           { data: summary },
           { data: inventory },
@@ -162,13 +177,13 @@ function Dashboard() {
           { data: personPay },
           { data: extrasRaw },
         ] = await Promise.all([
-          supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days }),
+          supabase.rpc("get_admin_dashboard_summary" as any, { _start_at: startIso, _days: days, _end_at: endIso }),
           supabase.rpc("get_admin_inventory_summary" as any),
           supabase.from("sales").select("id,total,bill_no,cashier_name,items_count,created_at")
-            .gte("created_at", startIso).order("created_at", { ascending: false }).limit(6),
+            .gte("created_at", startIso).lte("created_at", endIso).order("created_at", { ascending: false }).limit(6),
           supabase.from("person_payments" as any).select("person_name,amount,payment_method")
-            .gte("payment_date", startDate),
-          supabase.rpc("get_period_extras" as any, { _from: startIso }),
+            .gte("payment_date", startDate).lte("payment_date", endDate),
+          supabase.rpc("get_period_extras" as any, { _from: startIso, _to: endIso }),
         ]) as any;
 
         if (!active) return;
