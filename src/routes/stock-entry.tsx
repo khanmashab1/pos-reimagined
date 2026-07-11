@@ -649,6 +649,75 @@ function StockEntryPage() {
           </Button>
         )}
       </div>
+
+      <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Price Change</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <div className="font-medium">{selectedProduct.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  Current: Cost {Number(selectedProduct.purchase_price ?? 0).toFixed(2)} · Sale{" "}
+                  {Number(selectedProduct.sale_price ?? 0).toFixed(2)}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>New Cost Price</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={reqPurchase}
+                    onChange={(e) => setReqPurchase(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>New Sale Price</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={reqSale}
+                    onChange={(e) => setReqSale(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>
+                  Reason <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                </Label>
+                <Textarea
+                  placeholder="Why this change?"
+                  value={reqReason}
+                  onChange={(e) => setReqReason(e.target.value)}
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceDialogOpen(false)} disabled={submittingReq}>
+              Cancel
+            </Button>
+            <Button onClick={submitPriceRequest} disabled={submittingReq}>
+              {submittingReq ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...
+                </>
+              ) : (
+                "Send Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
