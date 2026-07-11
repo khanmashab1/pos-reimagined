@@ -35,10 +35,12 @@ function CashierReturnsPage() {
 
   async function loadMySales(uid: string) {
     setLoadingSales(true);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from("sales")
       .select("id,bill_no,created_at,cashier_name,payment_type,items_count,discount,total")
       .eq("cashier_id", uid)
+      .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(50);
     setMySales(data ?? []);
