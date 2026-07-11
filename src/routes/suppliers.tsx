@@ -171,45 +171,82 @@ function SuppliersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {busy ? (
-                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">
-                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    {search ? "No suppliers match your search." : "No suppliers yet. Add one to get started."}
-                  </td></tr>
-                ) : filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-foreground">{s.name}</div>
-                      {s.address && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin className="h-3 w-3" />{s.address}
-                        </div>
+        {/* Suppliers List (collapsible) */}
+        <Card className="bg-white shadow-sm overflow-hidden divide-y">
+          {busy ? (
+            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Truck className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              {search ? "No suppliers match your search." : "No suppliers yet. Add one to get started."}
+            </div>
+          ) : filtered.map(s => {
+            const isOpen = expanded.has(s.id);
+            const paidThisShift = shiftPaid[s.id] ?? 0;
+            return (
+              <div key={s.id}>
+                <button
+                  onClick={() => toggle(s.id)}
+                  className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-foreground truncate">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {Number(s.balance) > 0 ? (
+                        <span className="text-red-600 font-medium">Outstanding {fmt(s.balance)}</span>
+                      ) : (
+                        <span className="text-green-600 font-medium">Settled</span>
                       )}
-                    </td>
-                    <td className="px-5 py-4">
-                      {s.phone ? (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Phone className="h-3 w-3" />{s.phone}
-                        </div>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-5 py-4 text-right font-medium">{fmt(s.total_purchases)}</td>
-                    <td className="px-5 py-4 text-right font-medium text-green-600">{fmt(s.total_paid)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <span className={`font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-green-600"}`}>
-                        {fmt(s.balance)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <Button size="sm" variant="outline" onClick={() => setDetail(s)}>Manage</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {shiftOpen && paidThisShift > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium">
+                          Paid this shift: {fmt(paidThisShift)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-4 pt-1 bg-muted/20 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Contact</div>
+                        {s.phone ? (
+                          <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{s.phone}</div>
+                        ) : <div className="text-muted-foreground">—</div>}
+                        {s.address && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />{s.address}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Bills</div>
+                        <div className="font-medium">{fmt(s.total_purchases)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Paid</div>
+                        <div className="font-medium text-green-600">{fmt(s.total_paid)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase text-muted-foreground font-semibold">Outstanding</div>
+                        <div className={`font-bold ${Number(s.balance) > 0 ? "text-red-600" : "text-green-600"}`}>{fmt(s.balance)}</div>
+                      </div>
+                    </div>
+                    {shiftOpen && (
+                      <div className="text-xs bg-white border rounded px-3 py-2">
+                        <span className="text-muted-foreground">Paid to this supplier during current shift: </span>
+                        <span className="font-semibold text-blue-700">{fmt(paidThisShift)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-end">
+                      <Button size="sm" onClick={() => setDetail(s)}>Manage</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </Card>
       </div>
 
