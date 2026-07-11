@@ -654,7 +654,7 @@ function ProductsPage() {
           </DialogHeader>
           <TooltipProvider delayDuration={150}>
             <div className="space-y-5">
-              {/* Name + Barcode */}
+              {/* Name + Category */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Product Name</Label>
@@ -665,120 +665,40 @@ function ProductsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Barcode (Base Unit)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      className="flex-1 font-mono"
-                      value={form.barcode}
-                      onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setForm((f) => ({ ...f, barcode: genBarcode() }))}
-                    >
-                      Gen
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setScannerOpen(true)}
-                      title="Scan barcode"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Label>Category</Label>
+                  <Select
+                    value={form.category_id ?? "none"}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, category_id: v === "none" ? null : v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— None —</SelectItem>
+                      {cats.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Category + default prices + base-unit card */}
+              {/* Low stock + base-unit hint */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-                <div className="lg:col-span-2 space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>Category</Label>
-                    <Select
-                      value={form.category_id ?? "none"}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, category_id: v === "none" ? null : v }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— None —</SelectItem>
-                        {cats.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1 text-xs">
-                        Default Purchase ({baseName})
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help text-muted-foreground/70">
-                              <Info className="h-3 w-3" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Cost price for one {baseName.toLowerCase()}. Mirrors the base unit row
-                            below.
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={baseUnitForm?.purchase_price ?? 0}
-                        onChange={(e) =>
-                          setBaseUnit({ purchase_price: Math.max(0, Number(e.target.value) || 0) })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1 text-xs">
-                        Default Sale ({baseName})
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help text-muted-foreground/70">
-                              <Info className="h-3 w-3" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Selling price for one {baseName.toLowerCase()}. Mirrors the base unit
-                            row below.
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={baseUnitForm?.sale_price ?? 0}
-                        onChange={(e) =>
-                          setBaseUnit({ sale_price: Math.max(0, Number(e.target.value) || 0) })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Low Stock Alert</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.min_stock_alert}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, min_stock_alert: +e.target.value }))
-                        }
-                      />
-                    </div>
-                  </div>
+                <div className="lg:col-span-2 space-y-1.5">
+                  <Label className="text-xs">Low Stock Alert</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.min_stock_alert}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, min_stock_alert: +e.target.value }))
+                    }
+                  />
                 </div>
                 <div className="rounded-xl border bg-primary/5 p-4 flex flex-col justify-center">
                   <div className="text-sm font-semibold flex items-center gap-2">
@@ -790,10 +710,11 @@ function ProductsPage() {
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                     All inventory is stored in{" "}
                     <span className="font-medium text-foreground">{pluralize(baseName, 2)}</span>.
-                    Sell in any unit you like — the system converts and deducts stock automatically.
+                    Set the base unit's barcode and prices in the table below.
                   </p>
                 </div>
               </div>
+
 
               <ProductUnitsEditor units={units} onChange={setUnits} />
 
