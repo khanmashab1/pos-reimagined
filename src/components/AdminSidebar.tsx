@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart,
   LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList,
-  Truck, TrendingUp, AlertTriangle, Database, BookText,
+  Truck, TrendingUp, AlertTriangle, Database, BookText, DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
