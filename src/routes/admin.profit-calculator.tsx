@@ -772,7 +772,7 @@ function ProfitCalculator() {
 
         <Card className="p-6 space-y-2 border-l-4 border-l-purple-500">
           <div className="text-sm font-medium text-muted-foreground">Profit Margin</div>
-          <div className="text-3xl font-bold text-purple-600">{profitMargin.toFixed(2)}%</div>
+          <div className="text-3xl font-bold text-purple-600">{profitMargin == null ? "N/A" : `${profitMargin.toFixed(2)}%`}</div>
           <div className="text-xs text-muted-foreground">Revenue-to-profit ratio</div>
         </Card>
       </div>
