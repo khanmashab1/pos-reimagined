@@ -388,6 +388,8 @@ function SupplierDetail({ supplier, onClose }: { supplier: Supplier; onClose: ()
                     <SelectContent>
                       <SelectItem value="cash">Cash (from drawer)</SelectItem>
                       <SelectItem value="bank">Bank / Online</SelectItem>
+                      <SelectItem value="Junaid">Junaid (cash)</SelectItem>
+                      <SelectItem value="Usama">Usama (cash)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
