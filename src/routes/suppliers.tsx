@@ -461,7 +461,7 @@ function SupplierDetail({ supplier, onClose }: { supplier: Supplier; onClose: ()
                 </div>
                 <div><Label className="text-xs">Notes</Label><Input value={paf.notes} onChange={e => setPaf({ ...paf, notes: e.target.value })} placeholder="optional" /></div>
               </div>
-              <p className="text-xs text-muted-foreground">Cash reduces the open drawer at shift close.</p>
+              <p className="text-xs text-muted-foreground">Cash reduces the open drawer at shift close. Junaid / Usama are logged in the Daily Expenses report and deducted there.</p>
               <Button size="sm" className="w-full" onClick={addPayment} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />} Record Payment
               </Button>
