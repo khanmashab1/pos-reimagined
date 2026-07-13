@@ -210,6 +210,17 @@ function PosPage() {
     if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
     fetchTimerRef.current = setTimeout(async () => {
       try {
+        // If searching, also match per-unit barcodes so products whose Box/Half-Box barcode
+        // is scanned/typed still appear in the grid.
+        let extraIds: string[] = [];
+        if (search) {
+          const { data: unitMatches } = await supabase
+            .from("product_units")
+            .select("product_id")
+            .ilike("barcode", `%${search}%`)
+            .limit(50);
+          extraIds = Array.from(new Set((unitMatches ?? []).map((u: { product_id: string }) => u.product_id)));
+        }
         let q = supabase
           .from("products")
           .select("*", { count: "exact" })
@@ -217,13 +228,17 @@ function PosPage() {
           .order("name")
           .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
         if (cat !== "all") q = q.eq("category_id", cat);
-        if (search) q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%`);
+        if (search) {
+          const idFilter = extraIds.length ? `,id.in.(${extraIds.join(",")})` : "";
+          q = q.or(`name.ilike.%${search}%,barcode.ilike.%${search}%${idFilter}`);
+        }
         const { data: p, count, error } = await q;
         if (error) { console.error("Products fetch error:", error); return; }
         if (!cancelled) { setProducts((p ?? []) as Product[]); setTotalCount(count ?? 0); }
       } catch (err) { console.error("Products fetch error:", err); }
     }, search ? 350 : 0);
     return () => { cancelled = true; if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current); };
+
   }, [page, search, cat]);
 
   useEffect(() => { setPage(0); }, [search, cat]);
@@ -329,13 +344,27 @@ function PosPage() {
     if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current);
     manualSearchTimer.current = setTimeout(async () => {
       setManualLoading(true);
+      const term = manualSearch.trim();
+      let extraIds: string[] = [];
+      if (term) {
+        const { data: unitMatches } = await supabase
+          .from("product_units")
+          .select("product_id")
+          .ilike("barcode", `%${term}%`)
+          .limit(100);
+        extraIds = Array.from(new Set((unitMatches ?? []).map((u: { product_id: string }) => u.product_id)));
+      }
       let q = supabase.from("products").select("*").eq("is_active", true).order("name");
-      if (manualSearch.trim()) q = q.or(`name.ilike.%${manualSearch}%,barcode.ilike.%${manualSearch}%`);
+      if (term) {
+        const idFilter = extraIds.length ? `,id.in.(${extraIds.join(",")})` : "";
+        q = q.or(`name.ilike.%${term}%,barcode.ilike.%${term}%${idFilter}`);
+      }
       q = q.range(0, 99);
       const { data } = await q;
       setManualResults((data ?? []) as Product[]);
       setManualLoading(false);
     }, manualSearch ? 300 : 0);
+
     return () => { if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current); };
   }, [manualSearch, searchOpen]);
 
