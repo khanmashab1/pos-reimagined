@@ -106,15 +106,36 @@ function StockEntryPage() {
     const term = search.trim();
     if (!term) { setProducts([]); return; }
     const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("id,barcode,name,stock,purchase_price,sale_price")
-        .eq("is_active", true)
-        .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
-        .order("name")
-        .limit(20);
-      setProducts((data ?? []) as Product[]);
+      const [{ data: byProduct }, { data: unitMatches }] = await Promise.all([
+        supabase
+          .from("products")
+          .select("id,barcode,name,stock,purchase_price,sale_price")
+          .eq("is_active", true)
+          .or(`name.ilike.%${term}%,barcode.ilike.%${term}%`)
+          .order("name")
+          .limit(20),
+        supabase
+          .from("product_units")
+          .select("product_id")
+          .ilike("barcode", `%${term}%`)
+          .limit(20),
+      ]);
+      const found = new Map<string, Product>();
+      for (const p of (byProduct ?? []) as Product[]) found.set(p.id, p);
+      const missingIds = (unitMatches ?? [])
+        .map((u: { product_id: string }) => u.product_id)
+        .filter((id) => !found.has(id));
+      if (missingIds.length) {
+        const { data: extra } = await supabase
+          .from("products")
+          .select("id,barcode,name,stock,purchase_price,sale_price")
+          .eq("is_active", true)
+          .in("id", missingIds);
+        for (const p of (extra ?? []) as Product[]) found.set(p.id, p);
+      }
+      setProducts(Array.from(found.values()).sort((a, b) => a.name.localeCompare(b.name)));
     }, 250);
+
     return () => clearTimeout(t);
   }, [search, selectedProduct]);
 
