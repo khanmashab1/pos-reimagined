@@ -234,6 +234,15 @@ function ProductsPage() {
   const load = useCallback(
     async (currentPage: number, currentSearch: string, currentFilter: string) => {
       setLoadingItems(true);
+      let extraIds: string[] = [];
+      if (currentSearch) {
+        const { data: unitMatches } = await supabase
+          .from("product_units")
+          .select("product_id")
+          .ilike("barcode", `%${currentSearch}%`);
+        extraIds = Array.from(new Set((unitMatches ?? []).map((u: any) => u.product_id)));
+      }
+
       let query = supabase
         .from("products")
         .select("*", { count: "exact" })
@@ -242,7 +251,12 @@ function ProductsPage() {
 
       if (currentFilter !== "all") query = query.eq("category_id", currentFilter);
       if (currentSearch) {
-        query = query.or(`name.ilike.%${currentSearch}%,barcode.ilike.%${currentSearch}%`);
+        const orParts = [
+          `name.ilike.%${currentSearch}%`,
+          `barcode.ilike.%${currentSearch}%`,
+        ];
+        if (extraIds.length) orParts.push(`id.in.(${extraIds.join(",")})`);
+        query = query.or(orParts.join(","));
       }
 
       const [{ data: p, count }, { data: c }] = await Promise.all([
