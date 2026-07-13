@@ -344,13 +344,27 @@ function PosPage() {
     if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current);
     manualSearchTimer.current = setTimeout(async () => {
       setManualLoading(true);
+      const term = manualSearch.trim();
+      let extraIds: string[] = [];
+      if (term) {
+        const { data: unitMatches } = await supabase
+          .from("product_units")
+          .select("product_id")
+          .ilike("barcode", `%${term}%`)
+          .limit(100);
+        extraIds = Array.from(new Set((unitMatches ?? []).map((u: { product_id: string }) => u.product_id)));
+      }
       let q = supabase.from("products").select("*").eq("is_active", true).order("name");
-      if (manualSearch.trim()) q = q.or(`name.ilike.%${manualSearch}%,barcode.ilike.%${manualSearch}%`);
+      if (term) {
+        const idFilter = extraIds.length ? `,id.in.(${extraIds.join(",")})` : "";
+        q = q.or(`name.ilike.%${term}%,barcode.ilike.%${term}%${idFilter}`);
+      }
       q = q.range(0, 99);
       const { data } = await q;
       setManualResults((data ?? []) as Product[]);
       setManualLoading(false);
     }, manualSearch ? 300 : 0);
+
     return () => { if (manualSearchTimer.current) clearTimeout(manualSearchTimer.current); };
   }, [manualSearch, searchOpen]);
 
