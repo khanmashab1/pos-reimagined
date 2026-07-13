@@ -120,7 +120,16 @@ const ProductRow = memo(
           <div className="font-medium">{p.name}</div>
           <div className="text-xs text-muted-foreground">{catName}</div>
         </td>
-        <td className="px-4 py-3 font-mono text-xs">{p.barcode}</td>
+        <td className="px-4 py-3 font-mono text-xs">
+          <div>{p.barcode}</div>
+          {units
+            .filter((u) => u.barcode && u.barcode.trim() && u.barcode !== p.barcode)
+            .map((u) => (
+              <div key={u.id} className="text-muted-foreground text-[11px] mt-0.5">
+                <span className="text-foreground/60">{u.name}:</span> {u.barcode}
+              </div>
+            ))}
+        </td>
         <td className="px-4 py-3">
           <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             {baseName}
