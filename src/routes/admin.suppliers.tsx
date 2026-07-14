@@ -162,15 +162,21 @@ function SuppliersPage() {
       {/* All Bills (admin sees every supplier bill) */}
       {(() => {
         const nameById = new Map(items.map(s => [s.id, s.name]));
+        const balById = new Map(items.map(s => [s.id, Number(s.balance) || 0]));
         const q = billSearch.trim().toLowerCase();
-        const filtered = q
+        let filtered = q
           ? bills.filter(b =>
               (b.bill_no || "").toLowerCase().includes(q) ||
               (b.description || "").toLowerCase().includes(q) ||
               (nameById.get(b.supplier_id) || "").toLowerCase().includes(q) ||
               (b.created_by_name || "").toLowerCase().includes(q))
           : bills;
+        if (onlyOutstanding) {
+          filtered = filtered.filter(b => (balById.get(b.supplier_id) || 0) > 0);
+        }
         const shown = filtered.slice(0, 100);
+        const outstandingTotal = filtered.reduce(
+          (s, b) => s + ((balById.get(b.supplier_id) || 0) > 0 ? Number(b.amount) : 0), 0);
         return (
           <Card className="p-0 overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
@@ -183,8 +189,16 @@ function SuppliersPage() {
                 value={billSearch}
                 onChange={e => setBillSearch(e.target.value)}
               />
+              <Button
+                size="sm"
+                variant={onlyOutstanding ? "default" : "outline"}
+                onClick={() => setOnlyOutstanding(v => !v)}
+              >
+                {onlyOutstanding ? "Showing outstanding" : "Only outstanding"}
+              </Button>
               <div className="text-xs text-muted-foreground">
                 {shown.length} of {filtered.length}
+                {onlyOutstanding && <> · <span className="text-destructive font-semibold">{fmt(outstandingTotal)}</span></>}
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -197,23 +211,30 @@ function SuppliersPage() {
                     <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Cashier</th>
                     <th className="text-left px-3 py-2 text-[11px] uppercase text-muted-foreground">Description</th>
                     <th className="text-right px-3 py-2 text-[11px] uppercase text-muted-foreground">Amount</th>
+                    <th className="text-right px-3 py-2 text-[11px] uppercase text-muted-foreground">Outstanding</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</td></tr>
+                    <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</td></tr>
                   ) : shown.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">No bills.</td></tr>
-                  ) : shown.map(b => (
-                    <tr key={b.id} className="border-t hover:bg-muted/30">
-                      <td className="px-3 py-2 whitespace-nowrap">{b.purchase_date}</td>
-                      <td className="px-3 py-2 font-medium">{b.bill_no || "—"}</td>
-                      <td className="px-3 py-2">{nameById.get(b.supplier_id) || "—"}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{b.created_by_name || "—"}</td>
-                      <td className="px-3 py-2 text-muted-foreground max-w-xs truncate">{b.description || "—"}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{fmt(b.amount)}</td>
-                    </tr>
-                  ))}
+                    <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">No bills.</td></tr>
+                  ) : shown.map(b => {
+                    const bal = balById.get(b.supplier_id) || 0;
+                    return (
+                      <tr key={b.id} className="border-t hover:bg-muted/30">
+                        <td className="px-3 py-2 whitespace-nowrap">{b.purchase_date}</td>
+                        <td className="px-3 py-2 font-medium">{b.bill_no || "—"}</td>
+                        <td className="px-3 py-2">{nameById.get(b.supplier_id) || "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{b.created_by_name || "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground max-w-xs truncate">{b.description || "—"}</td>
+                        <td className="px-3 py-2 text-right font-semibold">{fmt(b.amount)}</td>
+                        <td className={`px-3 py-2 text-right font-semibold ${bal > 0 ? "text-destructive" : "text-success"}`}>
+                          {bal > 0 ? fmt(bal) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
