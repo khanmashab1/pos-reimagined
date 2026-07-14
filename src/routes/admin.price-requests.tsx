@@ -76,6 +76,23 @@ function PriceRequestsPage() {
     void load();
   };
 
+  const approveAll = async () => {
+    const pending = rows.filter((r) => r.status === "pending");
+    if (pending.length === 0) return;
+    if (!confirm(`Approve all ${pending.length} pending price change requests?`)) return;
+    setBusy("all");
+    const results = await Promise.all(
+      pending.map((r) =>
+        supabase.rpc("approve_price_change", { _request_id: r.id, _notes: undefined }),
+      ),
+    );
+    setBusy(null);
+    const errs = results.filter((r) => r.error);
+    if (errs.length) toast.error(`${errs.length} failed · ${pending.length - errs.length} approved`);
+    else toast.success(`Approved ${pending.length} price changes`);
+    void load();
+  };
+
   const doReject = async () => {
     if (!rejecting) return;
     setBusy(rejecting.id);
