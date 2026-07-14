@@ -277,6 +277,7 @@ function AdminStockSummary() {
             entries={entries}
             totals={totals}
             onApprove={approve}
+            onApproveAll={approveAll}
             onReject={setRejectTarget}
             actionLoading={actionLoading}
           />
