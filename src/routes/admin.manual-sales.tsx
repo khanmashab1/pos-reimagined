@@ -128,7 +128,7 @@ function ManualSalesPage() {
       today_expenses_override: draft.today_expenses_override,
       previous_expense_override: draft.previous_expense_override,
       notes: draft.notes,
-      created_by: userId ?? null,
+      created_by: user?.id ?? null,
       created_by_name: fullName ?? "",
     };
     const { error } = await supabase.from("manual_sale_days").upsert(payload, { onConflict: "entry_date" });
