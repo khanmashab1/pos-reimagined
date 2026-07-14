@@ -239,6 +239,57 @@ export type Database = {
           },
         ]
       }
+      manual_sale_days: {
+        Row: {
+          cash_junaid: number
+          cash_usama: number
+          cash_zahid: number
+          counter_cash: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          entry_date: string
+          id: string
+          notes: string
+          others: number
+          previous_expense_override: number | null
+          today_expenses_override: number | null
+          updated_at: string
+        }
+        Insert: {
+          cash_junaid?: number
+          cash_usama?: number
+          cash_zahid?: number
+          counter_cash?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          entry_date: string
+          id?: string
+          notes?: string
+          others?: number
+          previous_expense_override?: number | null
+          today_expenses_override?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cash_junaid?: number
+          cash_usama?: number
+          cash_zahid?: number
+          counter_cash?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          entry_date?: string
+          id?: string
+          notes?: string
+          others?: number
+          previous_expense_override?: number | null
+          today_expenses_override?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       operating_expenses: {
         Row: {
           amount: number
