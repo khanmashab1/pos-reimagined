@@ -241,6 +241,7 @@ export type Database = {
       }
       manual_sale_days: {
         Row: {
+          cash_by_person: Json
           cash_junaid: number
           cash_usama: number
           cash_zahid: number
@@ -257,6 +258,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cash_by_person?: Json
           cash_junaid?: number
           cash_usama?: number
           cash_zahid?: number
@@ -273,6 +275,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cash_by_person?: Json
           cash_junaid?: number
           cash_usama?: number
           cash_zahid?: number
@@ -287,6 +290,30 @@ export type Database = {
           previous_expense_override?: number | null
           today_expenses_override?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      manual_sale_persons: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
         }
         Relationships: []
       }
