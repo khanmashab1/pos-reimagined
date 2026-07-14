@@ -76,7 +76,7 @@ function ManualSalesPage() {
       supabase.from("shift_expenses").select("created_at, amount")
         .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
       supabase.from("sales").select("created_at, total")
-        .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
+        .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
     ]);
 
     const ex: Record<string, number> = {};
@@ -89,8 +89,9 @@ function ManualSalesPage() {
     setExpensesByDay(ex);
 
     const sm: Record<string, number> = {};
+    const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
     for (const r of (sales ?? []) as any[]) {
-      const d = String(r.created_at).slice(0, 10);
+      const d = tzFmt.format(new Date(r.created_at));
       sm[d] = (sm[d] ?? 0) + Number(r.total || 0);
     }
     setSalesByDay(sm);
