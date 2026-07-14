@@ -52,6 +52,7 @@ function SuppliersPage() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [detail, setDetail] = useState<Supplier | null>(null);
   const [billSearch, setBillSearch] = useState("");
+  const [onlyOutstanding, setOnlyOutstanding] = useState(false);
   const [period, setPeriod] = useState<PeriodKey | "custom">("7d");
   const [customFrom, setCustomFrom] = useState<string>(() => new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
   const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
