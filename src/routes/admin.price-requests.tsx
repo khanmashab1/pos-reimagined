@@ -120,7 +120,7 @@ function PriceRequestsPage() {
               Cashier-submitted requests to update product prices
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {(["pending", "approved", "rejected", "all"] as const).map((f) => (
               <Button
                 key={f}
@@ -131,8 +131,19 @@ function PriceRequestsPage() {
                 {f[0].toUpperCase() + f.slice(1)}
               </Button>
             ))}
+            {rows.some((r) => r.status === "pending") && (
+              <Button
+                size="sm"
+                onClick={approveAll}
+                disabled={busy !== null}
+                className="bg-green-600 hover:bg-green-700 ml-2"
+              >
+                <Check className="h-4 w-4 mr-1" /> Approve All
+              </Button>
+            )}
           </div>
         </div>
+
 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
