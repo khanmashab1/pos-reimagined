@@ -84,6 +84,7 @@ function DailyExpensesPage() {
   const [shiftExpTotal, setShiftExpTotal] = useState(0);
   // Operating expenses (rent, bills, salaries) for the scope, with per-category breakdown.
   const [opTotals, setOpTotals] = useState<{ total: number; byCat: Record<string, number> }>({ total: 0, byCat: {} });
+  const [opList, setOpList] = useState<any[]>([]);
   // Person payments (Junaid/Usama/Other) for the scope, grouped by person and method.
   const [personPay, setPersonPay] = useState<Record<string, { total: number; byMethod: Record<string, number> }>>({});
   const [opForm, setOpForm] = useState(blankOp);
