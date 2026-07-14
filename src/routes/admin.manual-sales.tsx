@@ -76,7 +76,7 @@ function ManualSalesPage() {
       supabase.from("shift_expenses").select("created_at, amount")
         .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
       supabase.from("sales").select("created_at, total")
-        .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
+        .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
     ]);
 
     const ex: Record<string, number> = {};
