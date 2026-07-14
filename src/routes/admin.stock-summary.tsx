@@ -166,6 +166,21 @@ function AdminStockSummary() {
     fetchData();
   };
 
+  const approveAll = async () => {
+    const pending = entries.filter((e) => e.status === "pending");
+    if (pending.length === 0) return;
+    if (!confirm(`Approve all ${pending.length} pending stock entries?`)) return;
+    setActionLoading(true);
+    const results = await Promise.all(
+      pending.map((e) => supabase.rpc("approve_stock_entry", { _entry_id: e.id })),
+    );
+    setActionLoading(false);
+    const errs = results.filter((r) => r.error);
+    if (errs.length) toast.error(`${errs.length} failed · ${pending.length - errs.length} approved`);
+    else toast.success(`Approved ${pending.length} entries · stock updated`);
+    fetchData();
+  };
+
   const confirmReject = async () => {
     if (!rejectTarget) return;
     setActionLoading(true);
@@ -262,6 +277,7 @@ function AdminStockSummary() {
             entries={entries}
             totals={totals}
             onApprove={approve}
+            onApproveAll={approveAll}
             onReject={setRejectTarget}
             actionLoading={actionLoading}
           />
@@ -324,12 +340,14 @@ function PendingView({
   entries,
   totals,
   onApprove,
+  onApproveAll,
   onReject,
   actionLoading,
 }: {
   entries: StockEntry[];
   totals: { pending: number; approved: number };
   onApprove: (e: StockEntry) => void;
+  onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
@@ -353,6 +371,14 @@ function PendingView({
             <div className="text-sm text-muted-foreground">Approved Today</div>
             <div className="text-3xl font-bold text-green-700">{totals.approved}</div>
           </Card>
+        </div>
+      )}
+
+      {pending.length > 0 && (
+        <div className="flex justify-end">
+          <Button onClick={onApproveAll} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+            <CheckCircle2 className="h-4 w-4 mr-1" /> Approve All ({pending.length})
+          </Button>
         </div>
       )}
 

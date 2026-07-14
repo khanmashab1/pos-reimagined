@@ -125,6 +125,20 @@ function ReturnsPage() {
     loadHistory();
   }
 
+  async function approveAll() {
+    const pending = history.filter((r) => r.status === "pending");
+    if (pending.length === 0) return;
+    if (!confirm(`Approve all ${pending.length} pending returns? Stock will be restored.`)) return;
+    const results = await Promise.all(
+      pending.map((r) => supabase.rpc("approve_return", { _return_id: r.id })),
+    );
+    const errs = results.filter((r) => r.error);
+    if (errs.length) toast.error(`${errs.length} failed · ${pending.length - errs.length} approved`);
+    else toast.success(`Approved ${pending.length} returns · stock restored`);
+    loadHistory();
+  }
+
+
   async function confirmVoid() {
     if (!voidTarget) return;
     const { error } = await supabase.rpc("void_return", {
@@ -261,7 +275,14 @@ function ReturnsPage() {
 
       <Card className="p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <h3 className="font-semibold">Returns</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">Returns</h3>
+            {isAdmin && history.some((r) => r.status === "pending") && (
+              <Button size="sm" onClick={approveAll} className="bg-success text-success-foreground hover:opacity-90">
+                <CheckCircle2 className="h-4 w-4 mr-1" /> Approve All Pending
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2 flex-1 md:max-w-xl md:ml-auto">
             <Input
               placeholder="Search by return #, bill #, or cashier"
