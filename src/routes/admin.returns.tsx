@@ -125,6 +125,20 @@ function ReturnsPage() {
     loadHistory();
   }
 
+  async function approveAll() {
+    const pending = history.filter((r) => r.status === "pending");
+    if (pending.length === 0) return;
+    if (!confirm(`Approve all ${pending.length} pending returns? Stock will be restored.`)) return;
+    const results = await Promise.all(
+      pending.map((r) => supabase.rpc("approve_return", { _return_id: r.id })),
+    );
+    const errs = results.filter((r) => r.error);
+    if (errs.length) toast.error(`${errs.length} failed · ${pending.length - errs.length} approved`);
+    else toast.success(`Approved ${pending.length} returns · stock restored`);
+    loadHistory();
+  }
+
+
   async function confirmVoid() {
     if (!voidTarget) return;
     const { error } = await supabase.rpc("void_return", {
