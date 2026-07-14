@@ -263,47 +263,53 @@ function ManualSalesPage() {
 
       <Card className="p-5">
         <h2 className="font-semibold mb-3 flex items-center gap-2"><Plus className="h-4 w-4" /> Add / Update Day</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><Label>Date</Label><Input type="date" value={draft.entry_date} onChange={(e) => setDraft({ ...draft, entry_date: e.target.value })} /></div>
+        <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 items-start">
+          <div>
+            <Label>Date</Label>
+            <Input type="date" value={draft.entry_date} onChange={(e) => setDraft({ ...draft, entry_date: e.target.value })} />
+          </div>
+          <div>
+            <Label>Cash by Person</Label>
+            <div className="mt-2 space-y-2">
+              {draftPersonEntries.length === 0 && (
+                <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
+              )}
+              {draftPersonEntries.map(([name, amt]) => (
+                <div key={name} className="flex items-center gap-2">
+                  <div className="w-40 font-medium text-sm">{name}</div>
+                  <Input type="number" className="w-40" value={amt} onChange={(e) => setDraftPerson(name, Number(e.target.value) || 0)} />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 pt-1">
+                <Select
+                  value=""
+                  onValueChange={(v) => {
+                    if (v === "__add__") setPersonDialog(true);
+                    else setDraftPerson(v, 0);
+                  }}
+                >
+                  <SelectTrigger className="w-56"><SelectValue placeholder="+ Add person…" /></SelectTrigger>
+                  <SelectContent>
+                    {availableToAdd.map((p) => (
+                      <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                    ))}
+                    <SelectItem value="__add__"><span className="flex items-center gap-1"><UserPlus className="h-3 w-3" /> Add new person…</span></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
           <div><Label>Others</Label><Input type="number" value={draft.others} onChange={(e) => setDraft({ ...draft, others: Number(e.target.value) || 0 })} /></div>
           <div><Label>Counter Cash</Label><Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} /></div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
         </div>
 
-        <div className="mt-4">
-          <Label>Cash by Person</Label>
-          <div className="mt-2 space-y-2">
-            {draftPersonEntries.length === 0 && (
-              <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
-            )}
-            {draftPersonEntries.map(([name, amt]) => (
-              <div key={name} className="flex items-center gap-2">
-                <div className="w-40 font-medium text-sm">{name}</div>
-                <Input type="number" className="w-40" value={amt} onChange={(e) => setDraftPerson(name, Number(e.target.value) || 0)} />
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <div className="flex items-center gap-2 pt-1">
-              <Select
-                value=""
-                onValueChange={(v) => {
-                  if (v === "__add__") setPersonDialog(true);
-                  else setDraftPerson(v, 0);
-                }}
-              >
-                <SelectTrigger className="w-56"><SelectValue placeholder="+ Add person…" /></SelectTrigger>
-                <SelectContent>
-                  {availableToAdd.map((p) => (
-                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
-                  ))}
-                  <SelectItem value="__add__"><span className="flex items-center gap-1"><UserPlus className="h-3 w-3" /> Add new person…</span></SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
 
         <div className="mt-4 flex items-end gap-3">
           <div className="flex-1"><Label>Notes</Label><Input value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></div>
