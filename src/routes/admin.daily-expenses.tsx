@@ -530,6 +530,57 @@ function DailyExpensesPage() {
         </Card>
       </div>
 
+      {/* Operating Expenses report */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-semibold flex items-center gap-2">
+            <Building2 className="h-4 w-4" /> Operating Expenses — {scopeLabel}
+          </h2>
+          <div className="text-sm text-muted-foreground">
+            {opList.length} entries · Total <span className="font-semibold text-foreground">{fmt(opTotals.total)}</span>
+          </div>
+        </div>
+        {opList.length === 0 ? (
+          <p className="p-8 text-center text-muted-foreground">No operating expenses for this filter.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead className="bg-muted/50 text-left text-xs uppercase">
+                <tr>
+                  <th className="px-3 py-3">Date</th>
+                  <th className="px-3 py-3">Category</th>
+                  <th className="px-3 py-3">Description</th>
+                  <th className="px-3 py-3">Paid To</th>
+                  <th className="px-3 py-3">Method</th>
+                  <th className="px-3 py-3">By</th>
+                  <th className="px-3 py-3 text-right">Amount</th>
+                  <th className="px-3 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {opList.map((r) => (
+                  <tr key={r.id} className="hover:bg-muted/30">
+                    <td className="px-3 py-2.5">{r.expense_date}</td>
+                    <td className="px-3 py-2.5">{r.category}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.description || "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.paid_to || "—"}</td>
+                    <td className="px-3 py-2.5">{METHOD_LABEL[r.payment_method] ?? r.payment_method}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.recorded_by_name || "—"}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold">{fmt(r.amount)}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => delOp(r.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+
       {/* Data table */}
       <Card className="overflow-hidden">
         {loading ? (
