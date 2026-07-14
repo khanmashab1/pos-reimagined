@@ -111,14 +111,17 @@ function DailyExpensesPage() {
         setShiftExpTotal(error ? 0 : (data ?? []).reduce((s: number, r: any) => s + num(r.amount), 0));
       });
 
-    supabase.from("operating_expenses" as any).select("amount, category")
+    supabase.from("operating_expenses" as any).select("id, expense_date, category, description, amount, paid_to, payment_method, recorded_by_name, created_at")
       .gte("expense_date", from).lte("expense_date", to)
+      .order("expense_date", { ascending: false })
       .then(({ data, error }) => {
         if (!active) return;
-        if (error) { setOpTotals({ total: 0, byCat: {} }); return; }
+        if (error) { setOpTotals({ total: 0, byCat: {} }); setOpList([]); return; }
+        const list = (data ?? []) as any[];
+        setOpList(list);
         const byCat: Record<string, number> = {};
         let total = 0;
-        (data ?? []).forEach((r: any) => {
+        list.forEach((r: any) => {
           const amt = num(r.amount);
           total += amt;
           const cat = String(r.category || "Miscellaneous");
