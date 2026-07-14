@@ -41,7 +41,7 @@ function monthRange(ym: string) {
 }
 
 function ManualSalesPage() {
-  const { fullName, userId } = useAuth() as any;
+  const { fullName, user } = useAuth();
   const [ym, setYm] = useState(() => today().slice(0, 7));
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
