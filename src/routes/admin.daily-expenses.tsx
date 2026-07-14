@@ -305,6 +305,9 @@ function DailyExpensesPage() {
     if (error) return toast.error(error.message);
     toast.success("Deleted");
     setRefreshTick((t) => t + 1);
+  }
+
+
 
   function editRow(r: Computed) {
     setForm({
