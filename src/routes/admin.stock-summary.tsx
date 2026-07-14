@@ -340,12 +340,14 @@ function PendingView({
   entries,
   totals,
   onApprove,
+  onApproveAll,
   onReject,
   actionLoading,
 }: {
   entries: StockEntry[];
   totals: { pending: number; approved: number };
   onApprove: (e: StockEntry) => void;
+  onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
