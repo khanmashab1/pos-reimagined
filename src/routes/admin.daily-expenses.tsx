@@ -299,6 +299,13 @@ function DailyExpensesPage() {
     setRefreshTick((t) => t + 1);
   }
 
+  async function delOp(id: string) {
+    if (!confirm("Delete this operating expense?")) return;
+    const { error } = await supabase.from("operating_expenses" as any).delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
+    setRefreshTick((t) => t + 1);
+
   function editRow(r: Computed) {
     setForm({
       id: r.id,
