@@ -374,6 +374,14 @@ function PendingView({
         </div>
       )}
 
+      {pending.length > 0 && (
+        <div className="flex justify-end">
+          <Button onClick={onApproveAll} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+            <CheckCircle2 className="h-4 w-4 mr-1" /> Approve All ({pending.length})
+          </Button>
+        </div>
+      )}
+
       {pending.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-50" />
