@@ -166,6 +166,21 @@ function AdminStockSummary() {
     fetchData();
   };
 
+  const approveAll = async () => {
+    const pending = entries.filter((e) => e.status === "pending");
+    if (pending.length === 0) return;
+    if (!confirm(`Approve all ${pending.length} pending stock entries?`)) return;
+    setActionLoading(true);
+    const results = await Promise.all(
+      pending.map((e) => supabase.rpc("approve_stock_entry", { _entry_id: e.id })),
+    );
+    setActionLoading(false);
+    const errs = results.filter((r) => r.error);
+    if (errs.length) toast.error(`${errs.length} failed · ${pending.length - errs.length} approved`);
+    else toast.success(`Approved ${pending.length} entries · stock updated`);
+    fetchData();
+  };
+
   const confirmReject = async () => {
     if (!rejectTarget) return;
     setActionLoading(true);
