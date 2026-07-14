@@ -89,8 +89,9 @@ function ManualSalesPage() {
     setExpensesByDay(ex);
 
     const sm: Record<string, number> = {};
+    const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
     for (const r of (sales ?? []) as any[]) {
-      const d = String(r.created_at).slice(0, 10);
+      const d = tzFmt.format(new Date(r.created_at));
       sm[d] = (sm[d] ?? 0) + Number(r.total || 0);
     }
     setSalesByDay(sm);
