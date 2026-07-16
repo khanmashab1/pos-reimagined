@@ -53,29 +53,25 @@ export function MidnightCounterCashDialog({
 
   const promptKey = (date: string) => `counter_cash_prompted_${date}`;
 
-  // Auto-trigger at midnight rollover (only when not already externally controlled open).
+  // Auto-trigger only at 11:45 PM (Asia/Karachi) as a reminder, once per day.
   useEffect(() => {
     if (!session) return;
 
     const check = () => {
       const nowDate = karachiDate();
-      const prevDate = lastDateRef.current;
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Karachi",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date());
+      const hh = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+      const mm = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
 
-      if (nowDate !== prevDate) {
-        const yday = prevDate;
-        lastDateRef.current = nowDate;
-        if (!localStorage.getItem(promptKey(yday))) {
-          setTargetDate(yday);
-          setAmount("");
-          setOpen(true);
-        }
-        return;
-      }
-
-      if (!open) {
-        const yday = yesterdayISO(nowDate);
-        if (!localStorage.getItem(promptKey(yday))) {
-          setTargetDate(yday);
+      // Fire only in the 11:45 PM - 11:59 PM window, once per day.
+      if (hh === 23 && mm >= 45) {
+        if (!localStorage.getItem(promptKey(nowDate)) && !open) {
+          setTargetDate(nowDate);
           setAmount("");
           setOpen(true);
         }
