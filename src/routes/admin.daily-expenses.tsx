@@ -77,16 +77,26 @@ function OperatingExpensesPage() {
   const [savingOp, setSavingOp] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  const range = useMemo(() => {
+    const t = today();
+    if (preset === "today") return { fromISO: t, toISO: addDaysISO(t, 1) };
+    if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
+    if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
+    if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "year") {
+      const y = new Date().getUTCFullYear();
+      return { fromISO: `${y}-01-01`, toISO: `${y + 1}-01-01` };
+    }
+    if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
+    return monthRange(ym);
+  }, [preset, ym, customFrom, customTo]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
-    const from = `${year}-${month === "all" ? "01" : month}-01`;
-    const lastDay = month === "all" ? 31 : new Date(Number(year), Number(month), 0).getDate();
-    const to = `${year}-${month === "all" ? "12" : month}-${String(month === "all" ? 31 : lastDay).padStart(2, "0")}`;
-
     supabase.from("operating_expenses" as any)
       .select("id, expense_date, category, description, amount, paid_to, payment_method, recorded_by_name, created_at")
-      .gte("expense_date", from).lte("expense_date", to)
+      .gte("expense_date", range.fromISO).lt("expense_date", range.toISO)
       .order("expense_date", { ascending: false })
       .then(({ data, error }) => {
         if (!active) return;
@@ -96,13 +106,7 @@ function OperatingExpensesPage() {
       });
 
     return () => { active = false; };
-  }, [year, month, refreshTick]);
-
-  const years = useMemo(() => {
-    const set = new Set<string>(opList.map((r) => String(r.expense_date).slice(0, 4)));
-    set.add(thisYear);
-    return Array.from(set).sort().reverse();
-  }, [opList, thisYear]);
+  }, [range.fromISO, range.toISO, refreshTick]);
 
   const totals = useMemo(() => {
     const byCat: Record<string, number> = {};
@@ -119,7 +123,12 @@ function OperatingExpensesPage() {
     return { total, byCat, byMethod };
   }, [opList]);
 
-  const scopeLabel = month === "all" ? year : `${MONTHS.find((m) => m.v === month)?.label} ${year}`;
+  const scopeLabel = preset === "month"
+    ? new Date(ym + "-02").toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : preset === "custom"
+      ? `${range.fromISO} → ${addDaysISO(range.toISO, -1)}`
+      : PRESET_LABEL[preset];
+
 
   async function saveOp() {
     if (!opForm.amount || num(opForm.amount) <= 0) return toast.error("Enter an amount");
