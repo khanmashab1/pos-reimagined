@@ -723,6 +723,7 @@ function PosPage() {
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
       <ExpenseDialog open={expenseOpen} onOpenChange={setExpenseOpen} onRecorded={() => refreshSession()} />
+      <MidnightCounterCashDialog session={session} />
       <QuickAddProductDialog
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
