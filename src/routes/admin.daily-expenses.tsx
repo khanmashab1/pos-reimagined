@@ -188,23 +188,45 @@ function OperatingExpensesPage() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-[160px_200px_1fr_auto] gap-3 items-end">
-          <Field label="Year">
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label className="text-xs">Range</Label>
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="year">This year</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
             </Select>
-          </Field>
-          <Field label="Month">
-            <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{MONTHS.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <div />
-          <Button variant="outline" onClick={exportCSV} disabled={opList.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Export to Excel
-          </Button>
+          </div>
+          {preset === "month" && (
+            <div>
+              <Label className="text-xs">Month</Label>
+              <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            </div>
+          )}
+          {preset === "custom" && (
+            <>
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="ml-auto">
+            <Button variant="outline" onClick={exportCSV} disabled={opList.length === 0}>
+              <Download className="h-4 w-4 mr-1" /> Export to Excel
+            </Button>
+          </div>
         </div>
       </Card>
 
