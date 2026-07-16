@@ -96,13 +96,23 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader><DialogTitle>Close Shift</DialogTitle></DialogHeader>
         <div className="space-y-2 py-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Expected Cash</span>
+            <span className="font-medium">Rs. {expected.toLocaleString()}</span>
+          </div>
           <label className="text-sm font-medium">Closing Cash (counted)</label>
           <Input type="number" autoFocus value={closing} onChange={e => setClosing(e.target.value)}
             placeholder="0" onKeyDown={e => e.key === "Enter" && submit()} />
-          <p className="text-xs text-muted-foreground">Count the cash in the drawer and enter the total.</p>
+          {isShort ? (
+            <p className="text-xs text-destructive">
+              Short by Rs. {shortBy.toLocaleString()}. Closing cash must be at least the expected amount.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Count the cash in the drawer and enter the total.</p>
+          )}
         </div>
         <DialogFooter>
-          <Button onClick={submit} disabled={busy} className="w-full">
+          <Button onClick={submit} disabled={busy || isShort || closing === ""} className="w-full">
             {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Close Shift
           </Button>
         </DialogFooter>
