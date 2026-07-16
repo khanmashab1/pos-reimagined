@@ -21,13 +21,6 @@ export const Route = createFileRoute("/admin/daily-expenses")({
 
 const num = (v: unknown) => Number(v) || 0;
 
-const MONTHS = [
-  { v: "all", label: "All months" },
-  { v: "01", label: "January" }, { v: "02", label: "February" }, { v: "03", label: "March" },
-  { v: "04", label: "April" }, { v: "05", label: "May" }, { v: "06", label: "June" },
-  { v: "07", label: "July" }, { v: "08", label: "August" }, { v: "09", label: "September" },
-  { v: "10", label: "October" }, { v: "11", label: "November" }, { v: "12", label: "December" },
-];
 
 const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Miscellaneous"];
 const PAY_METHODS = ["cash", "easypaisa", "jazzcash", "card", "bank"];
