@@ -480,6 +480,9 @@ function PosPage() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span>-{fmt(session.expenses)}</span></div>
                   <div className="flex justify-between pt-2 mt-2 border-t font-bold"><span>In Drawer</span><span>{fmt(session.expected_cash)}</span></div>
                 </div>
+                <Button size="sm" className="w-full mt-3" onClick={() => setCounterCashOpen(true)}>
+                  <Banknote className="h-4 w-4 mr-1" /> Enter Counter Cash
+                </Button>
               </PopoverContent>
             </Popover>
           )}
