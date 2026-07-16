@@ -328,6 +328,7 @@ function Dashboard() {
         <StatCard label="Net Profit" icon={Wallet} color="var(--success)" loading={loading}
           value={<span className={(kpis.grossProfit - extras.operatingExpenses) < 0 ? "text-destructive" : "text-green-600"}>{fmt(kpis.grossProfit - extras.operatingExpenses)}</span>} />
         <StatCard label="Total Inventory (Cost)" value={fmt(inventoryValue)} icon={Package} color="var(--success)" loading={loading} />
+        <StatCard label="Expected Sale Value" value={fmt(inventorySaleValue)} icon={Wallet} color="var(--info)" loading={loading} />
         <StatCard label="Expected Inventory Profit" value={fmt(inventoryProfit)} icon={TrendingUp} color="var(--primary)" loading={loading} />
         <StatCard label="Operating Expenses" value={fmt(extras.operatingExpenses)} icon={Percent} color="var(--destructive)" loading={loading} />
         <StatCard label="Stock Purchased" value={fmt(extras.stockPurchased)} icon={Package} color="var(--info)" loading={loading} />
