@@ -21,19 +21,32 @@ export const Route = createFileRoute("/admin/daily-expenses")({
 
 const num = (v: unknown) => Number(v) || 0;
 
-const MONTHS = [
-  { v: "all", label: "All months" },
-  { v: "01", label: "January" }, { v: "02", label: "February" }, { v: "03", label: "March" },
-  { v: "04", label: "April" }, { v: "05", label: "May" }, { v: "06", label: "June" },
-  { v: "07", label: "July" }, { v: "08", label: "August" }, { v: "09", label: "September" },
-  { v: "10", label: "October" }, { v: "11", label: "November" }, { v: "12", label: "December" },
-];
 
 const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Miscellaneous"];
 const PAY_METHODS = ["cash", "easypaisa", "jazzcash", "card", "bank"];
 
 const METHOD_LABEL: Record<string, string> = {
   cash: "Cash", easypaisa: "EasyPaisa", jazzcash: "JazzCash", card: "Card", bank: "Bank",
+};
+
+type Preset = "today" | "7d" | "30d" | "90d" | "year" | "month" | "custom";
+
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthRange(ym: string) {
+  const [y, m] = ym.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1));
+  const to = new Date(Date.UTC(y, m, 1));
+  return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
+}
+
+const PRESET_LABEL: Record<Preset, string> = {
+  today: "Today", "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days",
+  year: "This year", month: "Month", custom: "Custom",
 };
 
 const blankOp = {
@@ -47,25 +60,36 @@ const blankOp = {
 
 function OperatingExpensesPage() {
   const { fullName } = useAuth();
-  const thisYear = String(new Date().getFullYear());
-  const [year, setYear] = useState(thisYear);
-  const [month, setMonth] = useState("all");
+  const [preset, setPreset] = useState<Preset>("month");
+  const [ym, setYm] = useState(() => today().slice(0, 7));
+  const [customFrom, setCustomFrom] = useState(() => today());
+  const [customTo, setCustomTo] = useState(() => today());
   const [opList, setOpList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [opForm, setOpForm] = useState(blankOp);
   const [savingOp, setSavingOp] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  const range = useMemo(() => {
+    const t = today();
+    if (preset === "today") return { fromISO: t, toISO: addDaysISO(t, 1) };
+    if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
+    if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
+    if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "year") {
+      const y = new Date().getUTCFullYear();
+      return { fromISO: `${y}-01-01`, toISO: `${y + 1}-01-01` };
+    }
+    if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
+    return monthRange(ym);
+  }, [preset, ym, customFrom, customTo]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
-    const from = `${year}-${month === "all" ? "01" : month}-01`;
-    const lastDay = month === "all" ? 31 : new Date(Number(year), Number(month), 0).getDate();
-    const to = `${year}-${month === "all" ? "12" : month}-${String(month === "all" ? 31 : lastDay).padStart(2, "0")}`;
-
     supabase.from("operating_expenses" as any)
       .select("id, expense_date, category, description, amount, paid_to, payment_method, recorded_by_name, created_at")
-      .gte("expense_date", from).lte("expense_date", to)
+      .gte("expense_date", range.fromISO).lt("expense_date", range.toISO)
       .order("expense_date", { ascending: false })
       .then(({ data, error }) => {
         if (!active) return;
@@ -75,13 +99,7 @@ function OperatingExpensesPage() {
       });
 
     return () => { active = false; };
-  }, [year, month, refreshTick]);
-
-  const years = useMemo(() => {
-    const set = new Set<string>(opList.map((r) => String(r.expense_date).slice(0, 4)));
-    set.add(thisYear);
-    return Array.from(set).sort().reverse();
-  }, [opList, thisYear]);
+  }, [range.fromISO, range.toISO, refreshTick]);
 
   const totals = useMemo(() => {
     const byCat: Record<string, number> = {};
@@ -98,7 +116,12 @@ function OperatingExpensesPage() {
     return { total, byCat, byMethod };
   }, [opList]);
 
-  const scopeLabel = month === "all" ? year : `${MONTHS.find((m) => m.v === month)?.label} ${year}`;
+  const scopeLabel = preset === "month"
+    ? new Date(ym + "-02").toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : preset === "custom"
+      ? `${range.fromISO} → ${addDaysISO(range.toISO, -1)}`
+      : PRESET_LABEL[preset];
+
 
   async function saveOp() {
     if (!opForm.amount || num(opForm.amount) <= 0) return toast.error("Enter an amount");
@@ -140,7 +163,7 @@ function OperatingExpensesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `operating-expenses-${year}${month !== "all" ? "-" + month : ""}.csv`;
+    a.download = `operating-expenses-${range.fromISO}_to_${addDaysISO(range.toISO, -1)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -158,23 +181,45 @@ function OperatingExpensesPage() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-[160px_200px_1fr_auto] gap-3 items-end">
-          <Field label="Year">
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label className="text-xs">Range</Label>
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="year">This year</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
             </Select>
-          </Field>
-          <Field label="Month">
-            <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{MONTHS.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <div />
-          <Button variant="outline" onClick={exportCSV} disabled={opList.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Export to Excel
-          </Button>
+          </div>
+          {preset === "month" && (
+            <div>
+              <Label className="text-xs">Month</Label>
+              <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            </div>
+          )}
+          {preset === "custom" && (
+            <>
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="ml-auto">
+            <Button variant="outline" onClick={exportCSV} disabled={opList.length === 0}>
+              <Download className="h-4 w-4 mr-1" /> Export to Excel
+            </Button>
+          </div>
         </div>
       </Card>
 
