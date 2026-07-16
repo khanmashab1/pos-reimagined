@@ -131,6 +131,7 @@ function Dashboard() {
   const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [stats, setStats] = useState({ products: 0, lowStock: 0 });
   const [inventoryValue, setInventoryValue] = useState(0);
+  const [inventoryProfit, setInventoryProfit] = useState(0);
   const [kpis, setKpis] = useState({
     grossSales: 0, bills: 0, refunds: 0, net: 0, rate: 0, returnsCount: 0,
     cashSales: 0, onlineSales: 0, grossProfit: 0,
@@ -193,22 +194,27 @@ function Dashboard() {
         const i = (inventory as any) ?? {};
         setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
 
-        // Total inventory value = sum(stock * purchase_price) across active products
+        // Total inventory value = sum(stock * purchase_price); expected profit = sum(stock * (sale_price - purchase_price))
         let invTotal = 0;
+        let profitTotal = 0;
         const pageSize = 1000;
         for (let from = 0; ; from += pageSize) {
           const { data: rows, error } = await supabase
             .from("products")
-            .select("stock,purchase_price")
+            .select("stock,purchase_price,sale_price")
             .eq("is_active", true)
             .range(from, from + pageSize - 1);
           if (error || !rows || rows.length === 0) break;
           for (const r of rows as any[]) {
-            invTotal += (Number(r.stock) || 0) * (Number(r.purchase_price) || 0);
+            const stock = Number(r.stock) || 0;
+            const cost = Number(r.purchase_price) || 0;
+            const sale = Number(r.sale_price) || 0;
+            invTotal += stock * cost;
+            profitTotal += stock * (sale - cost);
           }
           if (rows.length < pageSize) break;
         }
-        if (active) setInventoryValue(invTotal);
+        if (active) { setInventoryValue(invTotal); setInventoryProfit(profitTotal); }
         setKpis({
           grossSales: Number(s.grossSales ?? 0),
           bills: Number(s.bills ?? 0),
@@ -319,6 +325,7 @@ function Dashboard() {
         <StatCard label="Net Profit" icon={Wallet} color="var(--success)" loading={loading}
           value={<span className={(kpis.grossProfit - extras.operatingExpenses) < 0 ? "text-destructive" : "text-green-600"}>{fmt(kpis.grossProfit - extras.operatingExpenses)}</span>} />
         <StatCard label="Total Inventory (Cost)" value={fmt(inventoryValue)} icon={Package} color="var(--success)" loading={loading} />
+        <StatCard label="Expected Inventory Profit" value={fmt(inventoryProfit)} icon={TrendingUp} color="var(--primary)" loading={loading} />
         <StatCard label="Operating Expenses" value={fmt(extras.operatingExpenses)} icon={Percent} color="var(--destructive)" loading={loading} />
         <StatCard label="Stock Purchased" value={fmt(extras.stockPurchased)} icon={Package} color="var(--info)" loading={loading} />
         <StatCard label="Total Discounts Given" value={fmt(extras.discounts)} icon={ShoppingCart} color="var(--warning)" loading={loading} />
