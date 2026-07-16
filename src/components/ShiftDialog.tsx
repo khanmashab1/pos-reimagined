@@ -67,8 +67,9 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
 }) {
   const [closing, setClosing] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
 
-  useEffect(() => { if (open) setClosing(""); }, [open]);
+  useEffect(() => { if (open) { setClosing(""); setWrongAttempts(0); } }, [open]);
 
   if (!session) return null;
 
@@ -76,11 +77,17 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
   const closingNum = Number(closing) || 0;
   const shortBy = expected - closingNum;
   const isShort = closing !== "" && closingNum < expected;
+  const revealExpected = wrongAttempts >= 3;
 
   const submit = async () => {
     if (closing === "") return toast.error("Enter closing cash");
     if (closingNum < expected) {
-      return toast.error(`Closing cash is short by Rs. ${shortBy.toLocaleString()}. Must be at least Rs. ${expected.toLocaleString()}.`);
+      setWrongAttempts(n => n + 1);
+      const next = wrongAttempts + 1;
+      if (next >= 3) {
+        return toast.error(`Closing cash is short by Rs. ${shortBy.toLocaleString()}. Must be at least Rs. ${expected.toLocaleString()}.`);
+      }
+      return toast.error(`Closing cash is less than expected. Please recount. (${next}/3)`);
     }
     setBusy(true);
     const { error } = await supabase.rpc("close_shift", { _closing_cash: closingNum });
@@ -96,23 +103,29 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader><DialogTitle>Close Shift</DialogTitle></DialogHeader>
         <div className="space-y-2 py-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Expected Cash</span>
-            <span className="font-medium">Rs. {expected.toLocaleString()}</span>
-          </div>
+          {revealExpected && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Expected Cash</span>
+              <span className="font-medium">Rs. {expected.toLocaleString()}</span>
+            </div>
+          )}
           <label className="text-sm font-medium">Closing Cash (counted)</label>
           <Input type="number" autoFocus value={closing} onChange={e => setClosing(e.target.value)}
             placeholder="0" onKeyDown={e => e.key === "Enter" && submit()} />
-          {isShort ? (
+          {revealExpected && isShort ? (
             <p className="text-xs text-destructive">
               Short by Rs. {shortBy.toLocaleString()}. Closing cash must be at least the expected amount.
+            </p>
+          ) : wrongAttempts > 0 && wrongAttempts < 3 ? (
+            <p className="text-xs text-destructive">
+              Amount doesn't match. Please recount. ({wrongAttempts}/3)
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">Count the cash in the drawer and enter the total.</p>
           )}
         </div>
         <DialogFooter>
-          <Button onClick={submit} disabled={busy || isShort || closing === ""} className="w-full">
+          <Button onClick={submit} disabled={busy || closing === "" || (revealExpected && isShort)} className="w-full">
             {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Close Shift
           </Button>
         </DialogFooter>
@@ -120,6 +133,7 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
     </Dialog>
   );
 }
+
 
 /**
  * Records an expense (cash handed out from the drawer) against the open shift.
