@@ -72,10 +72,18 @@ export function CloseShiftDialog({ open, onOpenChange, session, onClosed }: {
 
   if (!session) return null;
 
+  const expected = Number(session.expected_cash) || 0;
+  const closingNum = Number(closing) || 0;
+  const shortBy = expected - closingNum;
+  const isShort = closing !== "" && closingNum < expected;
+
   const submit = async () => {
     if (closing === "") return toast.error("Enter closing cash");
+    if (closingNum < expected) {
+      return toast.error(`Closing cash is short by Rs. ${shortBy.toLocaleString()}. Must be at least Rs. ${expected.toLocaleString()}.`);
+    }
     setBusy(true);
-    const { error } = await supabase.rpc("close_shift", { _closing_cash: Number(closing) || 0 });
+    const { error } = await supabase.rpc("close_shift", { _closing_cash: closingNum });
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Shift closed");
