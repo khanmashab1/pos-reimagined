@@ -315,9 +315,10 @@ function Dashboard() {
       </div>
 
       {/* Profit, expenses & investment (supplier payments are investment, not profit) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard label="Net Profit" icon={Wallet} color="var(--success)" loading={loading}
           value={<span className={(kpis.grossProfit - extras.operatingExpenses) < 0 ? "text-destructive" : "text-green-600"}>{fmt(kpis.grossProfit - extras.operatingExpenses)}</span>} />
+        <StatCard label="Total Inventory (Cost)" value={fmt(inventoryValue)} icon={Package} color="var(--success)" loading={loading} />
         <StatCard label="Operating Expenses" value={fmt(extras.operatingExpenses)} icon={Percent} color="var(--destructive)" loading={loading} />
         <StatCard label="Stock Purchased" value={fmt(extras.stockPurchased)} icon={Package} color="var(--info)" loading={loading} />
         <StatCard label="Total Discounts Given" value={fmt(extras.discounts)} icon={ShoppingCart} color="var(--warning)" loading={loading} />
