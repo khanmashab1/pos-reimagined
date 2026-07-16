@@ -75,7 +75,20 @@ function RootComponent() {
   return (
     <AuthProvider>
       <Outlet />
-      <Toaster richColors position="top-right" />
+      <Toaster
+        richColors
+        position="top-right"
+        duration={2000}
+        closeButton
+        toastOptions={{ onClick: (t) => (window as any).sonner?.dismiss?.(t.id) }}
+      />
+      <div
+        onClickCapture={() => {
+          // Dismiss all sonner toasts when user clicks anywhere
+          import("sonner").then(({ toast }) => toast.dismiss());
+        }}
+        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1 }}
+      />
     </AuthProvider>
   );
 }
