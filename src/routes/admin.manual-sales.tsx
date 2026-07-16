@@ -243,7 +243,7 @@ function ManualSalesPage() {
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
-    a.href = url; a.download = `manual-sale-${ym}.csv`; a.click();
+    a.href = url; a.download = `manual-sale-${range.fromISO}_to_${addDaysISO(range.toISO, -1)}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
 
