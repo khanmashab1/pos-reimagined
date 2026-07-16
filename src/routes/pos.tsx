@@ -148,6 +148,7 @@ function PosPage() {
   const [startOpen, setStartOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [counterCashOpen, setCounterCashOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualResults, setManualResults] = useState<Product[]>([]);
