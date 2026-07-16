@@ -43,9 +43,21 @@ function monthRange(ym: string) {
   return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
 }
 
+type Preset = "today" | "7d" | "30d" | "90d" | "month" | "custom";
+
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+
 function ManualSalesPage() {
   const { fullName, user } = useAuth();
+  const [preset, setPreset] = useState<Preset>("month");
   const [ym, setYm] = useState(() => today().slice(0, 7));
+  const [customFrom, setCustomFrom] = useState(() => today());
+  const [customTo, setCustomTo] = useState(() => today());
   const [persons, setPersons] = useState<Person[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
@@ -56,6 +68,17 @@ function ManualSalesPage() {
   const [personDialog, setPersonDialog] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
 
+  const range = useMemo(() => {
+    const t = today();
+    // toISO is exclusive upper bound
+    if (preset === "today") return { fromISO: t, toISO: addDaysISO(t, 1) };
+    if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
+    if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
+    if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
+    return monthRange(ym);
+  }, [preset, ym, customFrom, customTo]);
+
   async function loadPersons() {
     const { data } = await supabase.from("manual_sale_persons").select("*")
       .eq("is_active", true).order("sort_order").order("name");
@@ -64,11 +87,12 @@ function ManualSalesPage() {
 
   async function load() {
     setLoading(true);
-    const { fromISO, toISO } = monthRange(ym);
+    const { fromISO, toISO } = range;
     const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
+
       supabase.from("operating_expenses").select("expense_date, amount")
         .gte("expense_date", fromISO).lt("expense_date", toISO),
       supabase.from("daily_expenses").select("expense_date, amount")
@@ -114,7 +138,7 @@ function ManualSalesPage() {
   }
 
   useEffect(() => { loadPersons(); }, []);
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [ym]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [range.fromISO, range.toISO]);
 
   const computed = useMemo(() => {
     let prevGrand = 0;
@@ -219,7 +243,7 @@ function ManualSalesPage() {
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
-    a.href = url; a.download = `manual-sale-${ym}.csv`; a.click();
+    a.href = url; a.download = `manual-sale-${range.fromISO}_to_${addDaysISO(range.toISO, -1)}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -245,14 +269,43 @@ function ManualSalesPage() {
           </h1>
           <p className="text-muted-foreground">Daily cash-in-hand ledger. Choose a person, enter their cash. Add new persons anytime.</p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2 flex-wrap">
           <div>
-            <Label>Month</Label>
-            <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            <Label>Range</Label>
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {preset === "month" && (
+            <div>
+              <Label>Month</Label>
+              <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            </div>
+          )}
+          {preset === "custom" && (
+            <>
+              <div>
+                <Label>From</Label>
+                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label>To</Label>
+                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              </div>
+            </>
+          )}
           <Button variant="outline" onClick={() => setPersonDialog(true)}><Users className="h-4 w-4 mr-1" /> Persons</Button>
           <Button variant="outline" onClick={exportCSV} disabled={computed.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
         </div>
+
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
