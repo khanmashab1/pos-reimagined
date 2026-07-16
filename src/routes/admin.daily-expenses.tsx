@@ -170,7 +170,7 @@ function OperatingExpensesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `operating-expenses-${year}${month !== "all" ? "-" + month : ""}.csv`;
+    a.download = `operating-expenses-${range.fromISO}_to_${addDaysISO(range.toISO, -1)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
