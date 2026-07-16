@@ -121,11 +121,19 @@ export function MidnightCounterCashDialog({
             <Banknote className="h-5 w-5" /> Enter Counter Cash
           </DialogTitle>
           <DialogDescription>
-            Counter cash for <span className="font-semibold">{targetDate}</span>.
-            Please count the drawer and enter the amount manually — this goes into the Manual Sale Report.
+            Select the date and enter counter cash. Use this to fill in any previous day you missed — it goes into the Manual Sale Report.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
+          <div>
+            <Label>Date</Label>
+            <Input
+              type="date"
+              max={karachiDate()}
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+            />
+          </div>
           <div>
             <Label>Counter Cash (Rs.)</Label>
             <Input
