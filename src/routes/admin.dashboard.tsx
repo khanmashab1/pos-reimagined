@@ -132,6 +132,7 @@ function Dashboard() {
   const [stats, setStats] = useState({ products: 0, lowStock: 0 });
   const [inventoryValue, setInventoryValue] = useState(0);
   const [inventoryProfit, setInventoryProfit] = useState(0);
+  const [inventorySaleValue, setInventorySaleValue] = useState(0);
   const [kpis, setKpis] = useState({
     grossSales: 0, bills: 0, refunds: 0, net: 0, rate: 0, returnsCount: 0,
     cashSales: 0, onlineSales: 0, grossProfit: 0,
