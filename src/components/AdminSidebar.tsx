@@ -23,7 +23,7 @@ const items = [
   { to: "/admin/cashier-report", label: "Cashier Report", icon: Users },
   { to: "/admin/stock-summary", label: "Stock Summary", icon: Package },
   { to: "/admin/price-requests", label: "Price Requests", icon: DollarSign },
-  { to: "/admin/daily-expenses", label: "Daily Expenses Report", icon: BookText },
+  { to: "/admin/daily-expenses", label: "Operating Expenses", icon: BookText },
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
   { to: "/admin/feedback", label: "Customer Feedback", icon: MessageSquare },
   { to: "/admin/users", label: "Users", icon: Users },
