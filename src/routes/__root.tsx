@@ -1,5 +1,6 @@
 import { Outlet, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
@@ -66,16 +67,28 @@ function RootComponent() {
     window.addEventListener("error", handleError);
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
+    // Dismiss all toasts on any click / key press anywhere
+    const dismissAll = () => toast.dismiss();
+    window.addEventListener("pointerdown", dismissAll, true);
+    window.addEventListener("keydown", dismissAll, true);
+
     return () => {
       window.removeEventListener("error", handleError);
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+      window.removeEventListener("pointerdown", dismissAll, true);
+      window.removeEventListener("keydown", dismissAll, true);
     };
   }, []);
 
   return (
     <AuthProvider>
       <Outlet />
-      <Toaster richColors position="top-right" />
+      <Toaster
+        richColors
+        position="top-right"
+        duration={2000}
+        closeButton
+      />
     </AuthProvider>
   );
 }
