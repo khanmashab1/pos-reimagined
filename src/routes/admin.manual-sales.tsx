@@ -269,14 +269,43 @@ function ManualSalesPage() {
           </h1>
           <p className="text-muted-foreground">Daily cash-in-hand ledger. Choose a person, enter their cash. Add new persons anytime.</p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2 flex-wrap">
           <div>
-            <Label>Month</Label>
-            <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            <Label>Range</Label>
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {preset === "month" && (
+            <div>
+              <Label>Month</Label>
+              <Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} />
+            </div>
+          )}
+          {preset === "custom" && (
+            <>
+              <div>
+                <Label>From</Label>
+                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label>To</Label>
+                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              </div>
+            </>
+          )}
           <Button variant="outline" onClick={() => setPersonDialog(true)}><Users className="h-4 w-4 mr-1" /> Persons</Button>
           <Button variant="outline" onClick={exportCSV} disabled={computed.length === 0}><Download className="h-4 w-4 mr-1" /> CSV</Button>
         </div>
+
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
