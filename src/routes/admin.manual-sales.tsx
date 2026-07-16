@@ -283,6 +283,7 @@ function ManualSalesPage() {
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="year">This year</SelectItem>
                 <SelectItem value="month">Month</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
