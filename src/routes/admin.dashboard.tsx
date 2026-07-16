@@ -198,6 +198,7 @@ function Dashboard() {
         // Total inventory value = sum(stock * purchase_price); expected profit = sum(stock * (sale_price - purchase_price))
         let invTotal = 0;
         let profitTotal = 0;
+        let saleTotal = 0;
         const pageSize = 1000;
         for (let from = 0; ; from += pageSize) {
           const { data: rows, error } = await supabase
@@ -211,11 +212,12 @@ function Dashboard() {
             const cost = Number(r.purchase_price) || 0;
             const sale = Number(r.sale_price) || 0;
             invTotal += stock * cost;
+            saleTotal += stock * sale;
             profitTotal += stock * (sale - cost);
           }
           if (rows.length < pageSize) break;
         }
-        if (active) { setInventoryValue(invTotal); setInventoryProfit(profitTotal); }
+        if (active) { setInventoryValue(invTotal); setInventoryProfit(profitTotal); setInventorySaleValue(saleTotal); }
         setKpis({
           grossSales: Number(s.grossSales ?? 0),
           bills: Number(s.bills ?? 0),
