@@ -130,12 +130,6 @@ export function MidnightCounterCashDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
-          {session && (
-            <div className="rounded-md border p-3 text-sm bg-muted/40">
-              <div className="flex justify-between"><span className="text-muted-foreground">System expected</span><span className="font-medium">{fmt(session.expected_cash)}</span></div>
-              <div className="text-xs text-muted-foreground mt-1">Verify by physically counting the drawer.</div>
-            </div>
-          )}
           <div>
             <Label>Counter Cash (Rs.)</Label>
             <Input
