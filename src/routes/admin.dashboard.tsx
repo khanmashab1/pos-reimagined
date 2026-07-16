@@ -194,22 +194,27 @@ function Dashboard() {
         const i = (inventory as any) ?? {};
         setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
 
-        // Total inventory value = sum(stock * purchase_price) across active products
+        // Total inventory value = sum(stock * purchase_price); expected profit = sum(stock * (sale_price - purchase_price))
         let invTotal = 0;
+        let profitTotal = 0;
         const pageSize = 1000;
         for (let from = 0; ; from += pageSize) {
           const { data: rows, error } = await supabase
             .from("products")
-            .select("stock,purchase_price")
+            .select("stock,purchase_price,sale_price")
             .eq("is_active", true)
             .range(from, from + pageSize - 1);
           if (error || !rows || rows.length === 0) break;
           for (const r of rows as any[]) {
-            invTotal += (Number(r.stock) || 0) * (Number(r.purchase_price) || 0);
+            const stock = Number(r.stock) || 0;
+            const cost = Number(r.purchase_price) || 0;
+            const sale = Number(r.sale_price) || 0;
+            invTotal += stock * cost;
+            profitTotal += stock * (sale - cost);
           }
           if (rows.length < pageSize) break;
         }
-        if (active) setInventoryValue(invTotal);
+        if (active) { setInventoryValue(invTotal); setInventoryProfit(profitTotal); }
         setKpis({
           grossSales: Number(s.grossSales ?? 0),
           bills: Number(s.bills ?? 0),
