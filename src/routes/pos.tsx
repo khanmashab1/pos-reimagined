@@ -464,27 +464,10 @@ function PosPage() {
             </Button>
           )}
           {session && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3">
-                  <Banknote className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-1 text-xs">Counter Cash</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-64 text-sm">
-                <div className="font-semibold mb-2">Counter Cash</div>
-                <div className="space-y-1">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Opening</span><span>{fmt(session.opening_cash)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Cash Sales</span><span>+{fmt(session.cash_sales)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Paid to Suppliers</span><span>-{fmt(session.cash_paid_out)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span>-{fmt(session.expenses)}</span></div>
-                  <div className="flex justify-between pt-2 mt-2 border-t font-bold"><span>In Drawer</span><span>{fmt(session.expected_cash)}</span></div>
-                </div>
-                <Button size="sm" className="w-full mt-3" onClick={() => setCounterCashOpen(true)}>
-                  <Banknote className="h-4 w-4 mr-1" /> Enter Counter Cash
-                </Button>
-              </PopoverContent>
-            </Popover>
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={() => setCounterCashOpen(true)}>
+              <Banknote className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1 text-xs">Enter Counter Cash</span>
+            </Button>
           )}
           {session && (
             <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={() => setExpenseOpen(true)}>
