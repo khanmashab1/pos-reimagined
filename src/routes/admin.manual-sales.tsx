@@ -54,7 +54,10 @@ function addDaysISO(iso: string, days: number) {
 
 function ManualSalesPage() {
   const { fullName, user } = useAuth();
+  const [preset, setPreset] = useState<Preset>("month");
   const [ym, setYm] = useState(() => today().slice(0, 7));
+  const [customFrom, setCustomFrom] = useState(() => today());
+  const [customTo, setCustomTo] = useState(() => today());
   const [persons, setPersons] = useState<Person[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
@@ -65,6 +68,17 @@ function ManualSalesPage() {
   const [personDialog, setPersonDialog] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
 
+  const range = useMemo(() => {
+    const t = today();
+    // toISO is exclusive upper bound
+    if (preset === "today") return { fromISO: t, toISO: addDaysISO(t, 1) };
+    if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
+    if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
+    if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
+    return monthRange(ym);
+  }, [preset, ym, customFrom, customTo]);
+
   async function loadPersons() {
     const { data } = await supabase.from("manual_sale_persons").select("*")
       .eq("is_active", true).order("sort_order").order("name");
@@ -73,11 +87,12 @@ function ManualSalesPage() {
 
   async function load() {
     setLoading(true);
-    const { fromISO, toISO } = monthRange(ym);
+    const { fromISO, toISO } = range;
     const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
+
       supabase.from("operating_expenses").select("expense_date, amount")
         .gte("expense_date", fromISO).lt("expense_date", toISO),
       supabase.from("daily_expenses").select("expense_date, amount")
