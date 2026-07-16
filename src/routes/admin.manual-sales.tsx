@@ -43,7 +43,7 @@ function monthRange(ym: string) {
   return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
 }
 
-type Preset = "today" | "7d" | "30d" | "90d" | "month" | "custom";
+type Preset = "today" | "7d" | "30d" | "90d" | "year" | "month" | "custom";
 
 function addDaysISO(iso: string, days: number) {
   const d = new Date(iso + "T00:00:00Z");
