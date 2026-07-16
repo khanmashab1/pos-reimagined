@@ -43,6 +43,15 @@ function monthRange(ym: string) {
   return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
 }
 
+type Preset = "today" | "7d" | "30d" | "90d" | "month" | "custom";
+
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+
 function ManualSalesPage() {
   const { fullName, user } = useAuth();
   const [ym, setYm] = useState(() => today().slice(0, 7));
