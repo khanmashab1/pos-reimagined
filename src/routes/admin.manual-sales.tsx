@@ -364,7 +364,7 @@ function ManualSalesPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-          <div><Label>Others</Label><Input type="number" value={draft.others} onChange={(e) => setDraft({ ...draft, others: Number(e.target.value) || 0 })} /></div>
+          
           <div><Label>Counter Cash</Label><Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} /></div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
         </div>
