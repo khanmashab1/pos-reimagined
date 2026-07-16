@@ -138,7 +138,7 @@ function ManualSalesPage() {
   }
 
   useEffect(() => { loadPersons(); }, []);
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [ym]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [range.fromISO, range.toISO]);
 
   const computed = useMemo(() => {
     let prevGrand = 0;
