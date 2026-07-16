@@ -192,6 +192,23 @@ function Dashboard() {
         const s = (summary as any) ?? {};
         const i = (inventory as any) ?? {};
         setStats({ products: Number(i.products ?? 0), lowStock: Number(i.lowStock ?? 0) });
+
+        // Total inventory value = sum(stock * purchase_price) across active products
+        let invTotal = 0;
+        const pageSize = 1000;
+        for (let from = 0; ; from += pageSize) {
+          const { data: rows, error } = await supabase
+            .from("products")
+            .select("stock,purchase_price")
+            .eq("is_active", true)
+            .range(from, from + pageSize - 1);
+          if (error || !rows || rows.length === 0) break;
+          for (const r of rows as any[]) {
+            invTotal += (Number(r.stock) || 0) * (Number(r.purchase_price) || 0);
+          }
+          if (rows.length < pageSize) break;
+        }
+        if (active) setInventoryValue(invTotal);
         setKpis({
           grossSales: Number(s.grossSales ?? 0),
           bills: Number(s.bills ?? 0),
