@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, ExpenseDialog, type OpenSession } from "@/components/ShiftDialog";
+import { MidnightCounterCashDialog } from "@/components/MidnightCounterCashDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
@@ -722,6 +723,7 @@ function PosPage() {
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
       <ExpenseDialog open={expenseOpen} onOpenChange={setExpenseOpen} onRecorded={() => refreshSession()} />
+      <MidnightCounterCashDialog session={session} />
       <QuickAddProductDialog
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
