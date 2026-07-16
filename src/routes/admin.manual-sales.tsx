@@ -75,6 +75,10 @@ function ManualSalesPage() {
     if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
     if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
     if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "year") {
+      const y = new Date().getUTCFullYear();
+      return { fromISO: `${y}-01-01`, toISO: `${y + 1}-01-01` };
+    }
     if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
     return monthRange(ym);
   }, [preset, ym, customFrom, customTo]);
