@@ -43,7 +43,7 @@ function monthRange(ym: string) {
   return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
 }
 
-type Preset = "today" | "7d" | "30d" | "90d" | "month" | "custom";
+type Preset = "today" | "7d" | "30d" | "90d" | "year" | "month" | "custom";
 
 function addDaysISO(iso: string, days: number) {
   const d = new Date(iso + "T00:00:00Z");
@@ -75,6 +75,10 @@ function ManualSalesPage() {
     if (preset === "7d") return { fromISO: addDaysISO(t, -6), toISO: addDaysISO(t, 1) };
     if (preset === "30d") return { fromISO: addDaysISO(t, -29), toISO: addDaysISO(t, 1) };
     if (preset === "90d") return { fromISO: addDaysISO(t, -89), toISO: addDaysISO(t, 1) };
+    if (preset === "year") {
+      const y = new Date().getUTCFullYear();
+      return { fromISO: `${y}-01-01`, toISO: `${y + 1}-01-01` };
+    }
     if (preset === "custom") return { fromISO: customFrom, toISO: addDaysISO(customTo, 1) };
     return monthRange(ym);
   }, [preset, ym, customFrom, customTo]);
@@ -279,6 +283,7 @@ function ManualSalesPage() {
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="year">This year</SelectItem>
                 <SelectItem value="month">Month</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
