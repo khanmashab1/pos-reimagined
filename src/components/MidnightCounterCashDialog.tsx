@@ -11,7 +11,7 @@ import { Loader2, Banknote } from "lucide-react";
 import type { OpenSession } from "@/components/ShiftDialog";
 
 /** Returns YYYY-MM-DD in Asia/Karachi timezone. */
-function karachiDate(d: Date = new Date()) {
+export function karachiDate(d: Date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Karachi",
     year: "numeric", month: "2-digit", day: "2-digit",
@@ -26,20 +26,34 @@ function yesterdayISO(iso: string) {
 
 /**
  * At/after 12 AM (Asia/Karachi) prompts the cashier to manually record the
- * previous day's counter cash into the Manual Sale Report. Fires once per date
- * per browser (tracked via localStorage). Also fires immediately if the cashier
- * opens POS after midnight without having entered it yet.
+ * previous day's counter cash into the Manual Sale Report. Can also be opened
+ * manually from the cashier UI via controlled `open`/`onOpenChange` props.
  */
-export function MidnightCounterCashDialog({ session }: { session: OpenSession | null }) {
+export function MidnightCounterCashDialog({
+  session,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: {
+  session: OpenSession | null;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+}) {
   const { fullName, user } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [targetDate, setTargetDate] = useState<string>(""); // date the counter cash belongs to
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp ?? openInternal;
+  const setOpen = (v: boolean) => {
+    onOpenChangeProp?.(v);
+    if (openProp === undefined) setOpenInternal(v);
+  };
+
+  const [targetDate, setTargetDate] = useState<string>(karachiDate());
   const [amount, setAmount] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const lastDateRef = useRef<string>(karachiDate());
 
   const promptKey = (date: string) => `counter_cash_prompted_${date}`;
 
+  // Auto-trigger at midnight rollover (only when not already externally controlled open).
   useEffect(() => {
     if (!session) return;
 
@@ -47,7 +61,6 @@ export function MidnightCounterCashDialog({ session }: { session: OpenSession | 
       const nowDate = karachiDate();
       const prevDate = lastDateRef.current;
 
-      // Midnight rollover while POS is open → prompt for the day that just ended.
       if (nowDate !== prevDate) {
         const yday = prevDate;
         lastDateRef.current = nowDate;
@@ -59,7 +72,6 @@ export function MidnightCounterCashDialog({ session }: { session: OpenSession | 
         return;
       }
 
-      // POS opened after midnight; yesterday's entry may still be missing.
       if (!open) {
         const yday = yesterdayISO(nowDate);
         if (!localStorage.getItem(promptKey(yday))) {
@@ -73,7 +85,13 @@ export function MidnightCounterCashDialog({ session }: { session: OpenSession | 
     check();
     const id = setInterval(check, 30_000);
     return () => clearInterval(id);
-  }, [session, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // When opened manually with no target date context, default to today.
+  useEffect(() => {
+    if (open && !targetDate) setTargetDate(karachiDate());
+  }, [open, targetDate]);
 
   const save = async () => {
     const n = Number(amount);
@@ -95,29 +113,19 @@ export function MidnightCounterCashDialog({ session }: { session: OpenSession | 
     if (error) { toast.error(error.message); return; }
     localStorage.setItem(promptKey(targetDate), "1");
     toast.success("Counter cash saved to Manual Sale Report");
+    setAmount("");
     setOpen(false);
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        // Force manual entry — don't allow dismissing without saving.
-        if (o) setOpen(true);
-      }}
-    >
-      <DialogContent
-        className="sm:max-w-md"
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5" /> Enter Counter Cash
           </DialogTitle>
           <DialogDescription>
-            End-of-day counter cash for <span className="font-semibold">{targetDate}</span>.
+            Counter cash for <span className="font-semibold">{targetDate}</span>.
             Please count the drawer and enter the amount manually — this goes into the Manual Sale Report.
           </DialogDescription>
         </DialogHeader>
@@ -137,6 +145,7 @@ export function MidnightCounterCashDialog({ session }: { session: OpenSession | 
               placeholder="Enter counted amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
             />
           </div>
         </div>

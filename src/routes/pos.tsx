@@ -148,6 +148,7 @@ function PosPage() {
   const [startOpen, setStartOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [counterCashOpen, setCounterCashOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualResults, setManualResults] = useState<Product[]>([]);
@@ -479,6 +480,9 @@ function PosPage() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Expenses</span><span>-{fmt(session.expenses)}</span></div>
                   <div className="flex justify-between pt-2 mt-2 border-t font-bold"><span>In Drawer</span><span>{fmt(session.expected_cash)}</span></div>
                 </div>
+                <Button size="sm" className="w-full mt-3" onClick={() => setCounterCashOpen(true)}>
+                  <Banknote className="h-4 w-4 mr-1" /> Enter Counter Cash
+                </Button>
               </PopoverContent>
             </Popover>
           )}
@@ -723,7 +727,7 @@ function PosPage() {
       <CloseShiftDialog open={closeOpen} onOpenChange={setCloseOpen} session={session}
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
       <ExpenseDialog open={expenseOpen} onOpenChange={setExpenseOpen} onRecorded={() => refreshSession()} />
-      <MidnightCounterCashDialog session={session} />
+      <MidnightCounterCashDialog session={session} open={counterCashOpen} onOpenChange={setCounterCashOpen} />
       <QuickAddProductDialog
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
