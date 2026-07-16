@@ -36,6 +36,26 @@ const METHOD_LABEL: Record<string, string> = {
   cash: "Cash", easypaisa: "EasyPaisa", jazzcash: "JazzCash", card: "Card", bank: "Bank",
 };
 
+type Preset = "today" | "7d" | "30d" | "90d" | "year" | "month" | "custom";
+
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthRange(ym: string) {
+  const [y, m] = ym.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1));
+  const to = new Date(Date.UTC(y, m, 1));
+  return { fromISO: from.toISOString().slice(0, 10), toISO: to.toISOString().slice(0, 10) };
+}
+
+const PRESET_LABEL: Record<Preset, string> = {
+  today: "Today", "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days",
+  year: "This year", month: "Month", custom: "Custom",
+};
+
 const blankOp = {
   expense_date: today(),
   category: "Rent",
@@ -47,9 +67,10 @@ const blankOp = {
 
 function OperatingExpensesPage() {
   const { fullName } = useAuth();
-  const thisYear = String(new Date().getFullYear());
-  const [year, setYear] = useState(thisYear);
-  const [month, setMonth] = useState("all");
+  const [preset, setPreset] = useState<Preset>("month");
+  const [ym, setYm] = useState(() => today().slice(0, 7));
+  const [customFrom, setCustomFrom] = useState(() => today());
+  const [customTo, setCustomTo] = useState(() => today());
   const [opList, setOpList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [opForm, setOpForm] = useState(blankOp);
