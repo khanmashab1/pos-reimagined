@@ -116,7 +116,7 @@ function AdminStockSummary() {
       const productIds = [...new Set(data.map((e) => e.product_id))];
       const { data: products } = await supabase
         .from("products")
-        .select("id, name, barcode")
+        .select("id, name, barcode, purchase_price, sale_price")
         .in("id", productIds);
 
       const productMap = new Map(products?.map((p) => [p.id, p]) ?? []);
@@ -125,7 +125,10 @@ function AdminStockSummary() {
         ...e,
         product_name: productMap.get(e.product_id)?.name ?? "Unknown",
         barcode: productMap.get(e.product_id)?.barcode ?? "",
+        purchase_price: productMap.get(e.product_id)?.purchase_price ?? 0,
+        sale_price: productMap.get(e.product_id)?.sale_price ?? 0,
       })) as StockEntry[];
+
 
       setEntries(enriched);
 
