@@ -62,6 +62,7 @@ function ManualSalesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
   const [salesByDay, setSalesByDay] = useState<Record<string, number>>({});
+  const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
@@ -92,7 +93,7 @@ function ManualSalesPage() {
   async function load() {
     setLoading(true);
     const { fromISO, toISO } = range;
-    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }] = await Promise.all([
+    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
@@ -105,7 +106,10 @@ function ManualSalesPage() {
         .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
       supabase.from("sales").select("created_at, total")
         .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
+      supabase.from("supplier_payments").select("amount, payment_date")
+        .gte("payment_date", fromISO).lt("payment_date", toISO),
     ]);
+    setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
     const ex: Record<string, number> = {};
     for (const r of (op ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
@@ -313,11 +317,13 @@ function ManualSalesPage() {
 
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Stat label="Days" value={String(computed.length)} />
         <Stat label="Total Sale (ledger)" value={fmt(totals.sale)} accent="text-emerald-600" />
-        <Stat label="POS Sale (system)" value={fmt(totals.pos)} accent="text-blue-600" />
+        <Stat label="System Sale (POS)" value={fmt(totals.pos)} accent="text-blue-600" />
         <Stat label="Today Expenses" value={fmt(totals.expenses)} accent="text-destructive" />
+        <Stat label="System Expenses (Suppliers Paid)" value={fmt(supplierPaid)} accent="text-orange-600" />
+        <Stat label="Cash in Hand" value={fmt(totals.cash)} accent="text-emerald-700" />
       </div>
 
       <Card className="p-5">
