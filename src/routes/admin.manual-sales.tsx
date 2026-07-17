@@ -62,6 +62,7 @@ function ManualSalesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
   const [salesByDay, setSalesByDay] = useState<Record<string, number>>({});
+  const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
