@@ -78,6 +78,7 @@ function ManualSalesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
   const [salesByDay, setSalesByDay] = useState<Record<string, number>>({});
+  const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
@@ -109,7 +110,7 @@ function ManualSalesPage() {
   async function load() {
     setLoading(true);
     const { fromISO, toISO } = range;
-    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }] = await Promise.all([
+    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }, { data: sessions }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
@@ -124,6 +125,8 @@ function ManualSalesPage() {
         .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
+      supabase.from("cash_sessions").select("opening_cash, cash_sales, cash_paid_out, expenses, expected_cash, opened_at")
+        .gte("opened_at", fromISO + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
@@ -143,6 +146,16 @@ function ManualSalesPage() {
       sm[d] = (sm[d] ?? 0) + Number(r.total || 0);
     }
     setSalesByDay(sm);
+
+    // Expected counter cash at midnight per day = sum over that day's shifts of
+    // (opening + cash_sales − cash_paid_out − expenses). Uses Asia/Karachi date.
+    const ec: Record<string, number> = {};
+    for (const s of (sessions ?? []) as any[]) {
+      const d = tzFmt.format(new Date(s.opened_at));
+      const val = Number(s.expected_cash ?? (Number(s.opening_cash || 0) + Number(s.cash_sales || 0) - Number(s.cash_paid_out || 0) - Number(s.expenses || 0))) || 0;
+      ec[d] = (ec[d] ?? 0) + val;
+    }
+    setExpectedCounterByDay(ec);
 
     // Merge legacy fixed columns into cash_by_person for display.
     const mapped: Row[] = ((entries ?? []) as any[]).map((r) => {
@@ -409,7 +422,13 @@ function ManualSalesPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
           
-          <div><Label>Counter Cash</Label><Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} /></div>
+          <div>
+            <Label>Counter Cash</Label>
+            <Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[draft.entry_date] ?? 0)}</span>
+            </p>
+          </div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
         </div>
 
@@ -475,6 +494,9 @@ function ManualSalesPage() {
                   <td className="p-1 text-right">
                     <Input type="number" value={r.counter_cash} onChange={(e) => updateRow(r, { counter_cash: Number(e.target.value) || 0 })}
                       className="h-8 w-24 text-right font-mono" />
+                    <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                      exp: {Number(expectedCounterByDay[r.entry_date] ?? 0).toLocaleString()}
+                    </div>
                   </td>
                   <td className="p-1 text-right">
                     <Input type="number" placeholder={String(expensesByDay[r.entry_date] ?? 0)}
