@@ -78,6 +78,8 @@ function ManualSalesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
   const [salesByDay, setSalesByDay] = useState<Record<string, number>>({});
+  const [salesMorningByDay, setSalesMorningByDay] = useState<Record<string, number>>({});
+  const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -140,12 +142,41 @@ function ManualSalesPage() {
     setExpensesByDay(ex);
 
     const sm: Record<string, number> = {};
+    const smMorning: Record<string, number> = {};
+    const smNight: Record<string, number> = {};
     const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
+    const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hour12: false });
+
+    // Build shift windows per business day from cash_sessions (earliest = morning).
+    const sessionsByDay: Record<string, { opened: number; closed: number }[]> = {};
+    for (const s of (sessions ?? []) as any[]) {
+      const d = tzFmt.format(new Date(s.opened_at));
+      const opened = new Date(s.opened_at).getTime();
+      const closed = s.closed_at ? new Date(s.closed_at).getTime() : Number.POSITIVE_INFINITY;
+      (sessionsByDay[d] ??= []).push({ opened, closed });
+    }
+    for (const d of Object.keys(sessionsByDay)) sessionsByDay[d].sort((a, b) => a.opened - b.opened);
+
     for (const r of (sales ?? []) as any[]) {
+      const ts = new Date(r.created_at).getTime();
       const d = tzFmt.format(new Date(r.created_at));
-      sm[d] = (sm[d] ?? 0) + Number(r.total || 0);
+      const total = Number(r.total || 0);
+      sm[d] = (sm[d] ?? 0) + total;
+      const daySessions = sessionsByDay[d] ?? [];
+      const idx = daySessions.findIndex((s) => ts >= s.opened && ts <= s.closed);
+      let isMorning: boolean;
+      if (idx === 0) isMorning = true;
+      else if (idx > 0) isMorning = false;
+      else {
+        const h = Number(hourFmt.format(new Date(r.created_at)));
+        isMorning = h < 16;
+      }
+      if (isMorning) smMorning[d] = (smMorning[d] ?? 0) + total;
+      else smNight[d] = (smNight[d] ?? 0) + total;
     }
     setSalesByDay(sm);
+    setSalesMorningByDay(smMorning);
+    setSalesNightByDay(smNight);
 
     // Counter cash at midnight per day = the actual closing cash counted for
     // that business day. A close just after midnight belongs to the day that
@@ -198,10 +229,12 @@ function ManualSalesPage() {
       const previousTotal = prevGrand;
       const saleCalc = grandTotal - previousTotal;
       const salePos = salesByDay[r.entry_date] ?? 0;
+      const salePosMorning = salesMorningByDay[r.entry_date] ?? 0;
+      const salePosNight = salesNightByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
-      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos };
+      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
-  }, [rows, expensesByDay, salesByDay]);
+  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
 
   const totals = useMemo(() => {
     const agg = computed.reduce((a, r) => ({
@@ -287,11 +320,11 @@ function ManualSalesPage() {
   }, [persons, rows]);
 
   function exportCSV() {
-    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Sale", "Notes"];
+    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Morning", "POS Night", "POS Total", "Notes"];
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
       ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
-      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, r.notes,
+      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePosMorning, r.salePosNight, r.salePos, r.notes,
     ]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -462,15 +495,17 @@ function ManualSalesPage() {
                 <th className="p-2 text-right">Grand Total</th>
                 <th className="p-2 text-right">Prev Total</th>
                 <th className="p-2 text-right text-emerald-700">Sale</th>
-                <th className="p-2 text-right text-blue-700">POS</th>
+                <th className="p-2 text-right text-blue-700">POS Morning</th>
+                <th className="p-2 text-right text-blue-700">POS Night</th>
+                <th className="p-2 text-right text-blue-700">POS Total</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={13 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={13 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
@@ -515,7 +550,9 @@ function ManualSalesPage() {
                   <td className="p-2 text-right font-mono font-semibold">{Number(r.grandTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono text-muted-foreground">{Number(r.previousTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono font-bold text-emerald-700">{Number(r.saleCalc).toLocaleString()}</td>
-                  <td className="p-2 text-right font-mono text-blue-700">{Number(r.salePos).toLocaleString()}</td>
+                  <td className="p-2 text-right font-mono text-blue-700">{Number(r.salePosMorning).toLocaleString()}</td>
+                  <td className="p-2 text-right font-mono text-blue-700">{Number(r.salePosNight).toLocaleString()}</td>
+                  <td className="p-2 text-right font-mono text-blue-700 font-semibold">{Number(r.salePos).toLocaleString()}</td>
                   <td className="p-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => delRow(r)}>
                       <Trash2 className="h-3.5 w-3.5" />
