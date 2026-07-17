@@ -286,8 +286,9 @@ function ManualSalesPage() {
   const draftPersonEntries = Object.entries(draft.cash_by_person);
   const availableToAdd = persons.filter((p) => draft.cash_by_person[p.name] == null);
 
-  function setDraftPerson(name: string, amount: number) {
-    setDraft({ ...draft, cash_by_person: { ...draft.cash_by_person, [name]: amount } });
+  function setDraftPerson(name: string, patch: Partial<PersonCash>) {
+    const cur = draft.cash_by_person[name] ?? { taken: 0, paid: 0 };
+    setDraft({ ...draft, cash_by_person: { ...draft.cash_by_person, [name]: { ...cur, ...patch } } });
   }
   function removeDraftPerson(name: string) {
     const cp = { ...draft.cash_by_person };
