@@ -502,11 +502,14 @@ function HistoryView({
   entries,
   summary,
   tab,
+  onEditPrices,
 }: {
   entries: StockEntry[];
   summary: StockSummary[];
   tab: string;
+  onEditPrices: (e: StockEntry) => void;
 }) {
+
   const [search, setSearch] = useState("");
 
   const filtered = search.trim()
