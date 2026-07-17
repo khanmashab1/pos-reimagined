@@ -76,6 +76,39 @@ function AdminStockSummary() {
   const [rejectTarget, setRejectTarget] = useState<StockEntry | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [priceTarget, setPriceTarget] = useState<StockEntry | null>(null);
+  const [priceCost, setPriceCost] = useState("");
+  const [priceSale, setPriceSale] = useState("");
+
+  const openPriceEdit = (entry: StockEntry) => {
+    setPriceTarget(entry);
+    setPriceCost(String(entry.purchase_price ?? 0));
+    setPriceSale(String(entry.sale_price ?? 0));
+  };
+
+  const savePrices = async () => {
+    if (!priceTarget) return;
+    const cost = Number(priceCost);
+    const sale = Number(priceSale);
+    if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(sale) || sale < 0) {
+      toast.error("Enter valid prices");
+      return;
+    }
+    setActionLoading(true);
+    const { error } = await supabase
+      .from("products")
+      .update({ purchase_price: cost, sale_price: sale })
+      .eq("id", priceTarget.product_id);
+    setActionLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Updated prices for ${priceTarget.product_name}`);
+    setPriceTarget(null);
+    fetchData();
+  };
+
 
   useEffect(() => {
     if (role !== "admin") {
