@@ -40,7 +40,10 @@ interface StockEntry {
   rejected_by_name?: string;
   rejected_at?: string;
   rejection_reason?: string;
+  purchase_price?: number;
+  sale_price?: number;
 }
+
 
 interface StockSummary {
   product_id: string;
@@ -51,6 +54,7 @@ interface StockSummary {
   first_entry: string;
   last_entry: string;
 }
+
 
 type Tab = "pending" | "approved" | "rejected";
 
@@ -112,7 +116,7 @@ function AdminStockSummary() {
       const productIds = [...new Set(data.map((e) => e.product_id))];
       const { data: products } = await supabase
         .from("products")
-        .select("id, name, barcode")
+        .select("id, name, barcode, purchase_price, sale_price")
         .in("id", productIds);
 
       const productMap = new Map(products?.map((p) => [p.id, p]) ?? []);
@@ -121,7 +125,10 @@ function AdminStockSummary() {
         ...e,
         product_name: productMap.get(e.product_id)?.name ?? "Unknown",
         barcode: productMap.get(e.product_id)?.barcode ?? "",
+        purchase_price: productMap.get(e.product_id)?.purchase_price ?? 0,
+        sale_price: productMap.get(e.product_id)?.sale_price ?? 0,
       })) as StockEntry[];
+
 
       setEntries(enriched);
 
@@ -399,6 +406,8 @@ function PendingView({
                   <th className="text-left p-3">Barcode</th>
                   <th className="text-left p-3">Cashier</th>
                   <th className="text-right p-3">Qty</th>
+                  <th className="text-right p-3">Cost</th>
+                  <th className="text-right p-3">Sale</th>
                   <th className="text-left p-3">Notes</th>
                   <th className="text-right p-3">Actions</th>
                 </tr>
@@ -413,9 +422,12 @@ function PendingView({
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
                     <td className="p-3 text-xs text-muted-foreground truncate max-w-[120px]" title={entry.notes || undefined}>
                       {entry.notes || "-"}
                     </td>
+
                     <td className="p-3 text-right whitespace-nowrap">
                       <div className="flex gap-1 justify-end">
                         <Button
@@ -514,6 +526,8 @@ function HistoryView({
                 <th className="text-left p-3">Barcode</th>
                 <th className="text-left p-3">Cashier</th>
                 <th className="text-right p-3">Qty</th>
+                <th className="text-right p-3">Cost</th>
+                <th className="text-right p-3">Sale</th>
                 <th className="text-left p-3">Status</th>
                 <th className="text-left p-3">Notes</th>
                 {tab === "rejected" && <th className="text-left p-3">Reason</th>}
@@ -523,7 +537,7 @@ function HistoryView({
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={tab === "rejected" ? 8 : 7}
+                    colSpan={tab === "rejected" ? 10 : 9}
                     className="text-center py-12 text-muted-foreground"
                   >
                     No entries found
@@ -539,6 +553,9 @@ function HistoryView({
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
+
                     <td className="p-3">
                       {entry.status === "approved" ? (
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
