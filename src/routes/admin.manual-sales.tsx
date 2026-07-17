@@ -126,7 +126,7 @@ function ManualSalesPage() {
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
       supabase.from("cash_sessions").select("opening_cash, cash_sales, cash_paid_out, expenses, expected_cash, opened_at")
-        .gte("opened_at", fromISO + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
+        .gte("opened_at", addDaysISO(fromISO, -1) + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
