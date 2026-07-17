@@ -78,6 +78,8 @@ function ManualSalesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [expensesByDay, setExpensesByDay] = useState<Record<string, number>>({});
   const [salesByDay, setSalesByDay] = useState<Record<string, number>>({});
+  const [salesMorningByDay, setSalesMorningByDay] = useState<Record<string, number>>({});
+  const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [loading, setLoading] = useState(false);
