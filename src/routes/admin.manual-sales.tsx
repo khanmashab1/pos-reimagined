@@ -229,10 +229,12 @@ function ManualSalesPage() {
       const previousTotal = prevGrand;
       const saleCalc = grandTotal - previousTotal;
       const salePos = salesByDay[r.entry_date] ?? 0;
+      const salePosMorning = salesMorningByDay[r.entry_date] ?? 0;
+      const salePosNight = salesNightByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
-      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos };
+      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
-  }, [rows, expensesByDay, salesByDay]);
+  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
 
   const totals = useMemo(() => {
     const agg = computed.reduce((a, r) => ({
