@@ -18,16 +18,32 @@ export const Route = createFileRoute("/admin/manual-sales")({
 
 type Person = { id: string; name: string; sort_order: number; is_active: boolean };
 
+// Per-person cash breakdown for a given day.
+// `taken` = cash the person received/holds. `paid` = cash they paid out.
+// Net contribution to cash-in-hand = taken - paid.
+export type PersonCash = { taken: number; paid: number };
+
 type Row = {
   id?: string;
   entry_date: string;
-  cash_by_person: Record<string, number>;
+  cash_by_person: Record<string, PersonCash>;
   others: number;
   counter_cash: number;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
 };
+
+// Legacy rows stored a plain number per person. Normalize to {taken, paid}.
+function normalizePersonCash(v: unknown): PersonCash {
+  if (typeof v === "number") return { taken: Number(v) || 0, paid: 0 };
+  if (v && typeof v === "object") {
+    const o = v as any;
+    return { taken: Number(o.taken) || 0, paid: Number(o.paid) || 0 };
+  }
+  return { taken: 0, paid: 0 };
+}
+const personNet = (p: PersonCash) => Number(p.taken || 0) - Number(p.paid || 0);
 
 const emptyRow = (): Row => ({
   entry_date: today(),
@@ -130,10 +146,12 @@ function ManualSalesPage() {
 
     // Merge legacy fixed columns into cash_by_person for display.
     const mapped: Row[] = ((entries ?? []) as any[]).map((r) => {
-      const cbp: Record<string, number> = { ...(r.cash_by_person ?? {}) };
-      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = Number(r.cash_junaid);
-      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = Number(r.cash_usama);
-      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = Number(r.cash_zahid);
+      const raw = (r.cash_by_person ?? {}) as Record<string, unknown>;
+      const cbp: Record<string, PersonCash> = {};
+      for (const [k, v] of Object.entries(raw)) cbp[k] = normalizePersonCash(v);
+      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = { taken: Number(r.cash_junaid), paid: 0 };
+      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = { taken: Number(r.cash_usama), paid: 0 };
+      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = { taken: Number(r.cash_zahid), paid: 0 };
       return {
         id: r.id, entry_date: r.entry_date, cash_by_person: cbp,
         others: Number(r.others || 0), counter_cash: Number(r.counter_cash || 0),
@@ -154,14 +172,16 @@ function ManualSalesPage() {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
       const prevExp = r.previous_expense_override ?? prevGrand;
       const grandExp = Number(todayExp) + Number(prevExp);
-      const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b || 0), 0);
+      const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + personNet(b), 0);
+      const personTaken = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.taken || 0), 0);
+      const personPaid = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.paid || 0), 0);
       const totalCash = personSum + Number(r.others) + Number(r.counter_cash);
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
       const saleCalc = grandTotal - previousTotal;
       const salePos = salesByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
-      return { ...r, todayExp, prevExp, grandExp, personSum, totalCash, grandTotal, previousTotal, saleCalc, salePos };
+      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos };
     });
   }, [rows, expensesByDay, salesByDay]);
 
@@ -208,10 +228,10 @@ function ManualSalesPage() {
       notes: draft.notes,
       created_by: user?.id ?? null,
       created_by_name: fullName ?? "",
-      // Legacy columns kept in sync so old reports still work
-      cash_junaid: draft.cash_by_person["Junaid"] ?? 0,
-      cash_usama: draft.cash_by_person["Usama"] ?? 0,
-      cash_zahid: draft.cash_by_person["Zahid Ali"] ?? 0,
+      // Legacy columns kept in sync (net = taken - paid) so old reports still work
+      cash_junaid: personNet(draft.cash_by_person["Junaid"] ?? { taken: 0, paid: 0 }),
+      cash_usama: personNet(draft.cash_by_person["Usama"] ?? { taken: 0, paid: 0 }),
+      cash_zahid: personNet(draft.cash_by_person["Zahid Ali"] ?? { taken: 0, paid: 0 }),
     };
     const { error } = await supabase.from("manual_sale_days").upsert(payload, { onConflict: "entry_date" });
     setSaving(false);
@@ -226,9 +246,9 @@ function ManualSalesPage() {
     setRows((prev) => prev.map((r) => (r.id === row.id ? merged : r)));
     const upd: any = { ...patch };
     if (patch.cash_by_person) {
-      upd.cash_junaid = patch.cash_by_person["Junaid"] ?? 0;
-      upd.cash_usama = patch.cash_by_person["Usama"] ?? 0;
-      upd.cash_zahid = patch.cash_by_person["Zahid Ali"] ?? 0;
+      upd.cash_junaid = personNet(patch.cash_by_person["Junaid"] ?? { taken: 0, paid: 0 });
+      upd.cash_usama = personNet(patch.cash_by_person["Usama"] ?? { taken: 0, paid: 0 });
+      upd.cash_zahid = personNet(patch.cash_by_person["Zahid Ali"] ?? { taken: 0, paid: 0 });
     }
     const { error } = await supabase.from("manual_sale_days").update(upd).eq("id", row.id!);
     if (error) toast.error(error.message);
@@ -252,7 +272,7 @@ function ManualSalesPage() {
     const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Sale", "Notes"];
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
-      ...columnPersons.map((n) => r.cash_by_person[n] ?? 0),
+      ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
       r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, r.notes,
     ]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -266,8 +286,9 @@ function ManualSalesPage() {
   const draftPersonEntries = Object.entries(draft.cash_by_person);
   const availableToAdd = persons.filter((p) => draft.cash_by_person[p.name] == null);
 
-  function setDraftPerson(name: string, amount: number) {
-    setDraft({ ...draft, cash_by_person: { ...draft.cash_by_person, [name]: amount } });
+  function setDraftPerson(name: string, patch: Partial<PersonCash>) {
+    const cur = draft.cash_by_person[name] ?? { taken: 0, paid: 0 };
+    setDraft({ ...draft, cash_by_person: { ...draft.cash_by_person, [name]: { ...cur, ...patch } } });
   }
   function removeDraftPerson(name: string) {
     const cp = { ...draft.cash_by_person };
@@ -347,9 +368,19 @@ function ManualSalesPage() {
                 <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
               )}
               {draftPersonEntries.map(([name, amt]) => (
-                <div key={name} className="flex items-center gap-2">
+                <div key={name} className="flex items-center gap-2 flex-wrap">
                   <div className="w-40 font-medium text-sm">{name}</div>
-                  <Input type="number" className="w-40" value={amt} onChange={(e) => setDraftPerson(name, Number(e.target.value) || 0)} />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase text-muted-foreground">Taken</span>
+                    <Input type="number" className="w-28" value={amt.taken}
+                      onChange={(e) => setDraftPerson(name, { taken: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase text-muted-foreground">Paid</span>
+                    <Input type="number" className="w-28" value={amt.paid}
+                      onChange={(e) => setDraftPerson(name, { paid: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div className="text-xs text-muted-foreground">Net: <span className="font-mono">{personNet(amt).toLocaleString()}</span></div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -360,7 +391,7 @@ function ManualSalesPage() {
                   value=""
                   onValueChange={(v) => {
                     if (v === "__add__") setPersonDialog(true);
-                    else setDraftPerson(v, 0);
+                    else setDraftPerson(v, { taken: 0, paid: 0 });
                   }}
                 >
                   <SelectTrigger className="w-56"><SelectValue placeholder="+ Add person…" /></SelectTrigger>
@@ -397,7 +428,7 @@ function ManualSalesPage() {
               <tr>
                 <th className="p-2 text-left">#</th>
                 <th className="p-2 text-left">Date</th>
-                {columnPersons.map((n) => <th key={n} className="p-2 text-right">{n}</th>)}
+                {columnPersons.map((n) => <th key={n} className="p-2 text-right" colSpan={2}>{n} <span className="text-[9px] text-muted-foreground">(taken/paid)</span></th>)}
                 <th className="p-2 text-right">Others</th>
                 <th className="p-2 text-right">Counter</th>
                 <th className="p-2 text-right">Today Exp.</th>
@@ -413,20 +444,30 @@ function ManualSalesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={13 + columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={13 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={13 + columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={13 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
                   <td className="p-2 whitespace-nowrap">{r.entry_date}</td>
-                  {columnPersons.map((n) => (
-                    <td key={n} className="p-1 text-right">
-                      <Input type="number" value={r.cash_by_person[n] ?? 0}
-                        onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: Number(e.target.value) || 0 } })}
-                        className="h-8 w-24 text-right font-mono" />
-                    </td>
-                  ))}
+                  {columnPersons.map((n) => {
+                    const pc = r.cash_by_person[n] ?? { taken: 0, paid: 0 };
+                    return (
+                      <>
+                        <td key={n + "-t"} className="p-1 text-right">
+                          <Input type="number" value={pc.taken}
+                            onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, taken: Number(e.target.value) || 0 } } })}
+                            className="h-8 w-20 text-right font-mono" placeholder="taken" />
+                        </td>
+                        <td key={n + "-p"} className="p-1 text-right">
+                          <Input type="number" value={pc.paid}
+                            onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, paid: Number(e.target.value) || 0 } } })}
+                            className="h-8 w-20 text-right font-mono" placeholder="paid" />
+                        </td>
+                      </>
+                    );
+                  })}
                   <td className="p-1 text-right">
                     <Input type="number" value={r.others} onChange={(e) => updateRow(r, { others: Number(e.target.value) || 0 })}
                       className="h-8 w-24 text-right font-mono" />
