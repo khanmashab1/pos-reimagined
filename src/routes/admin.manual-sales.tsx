@@ -228,10 +228,10 @@ function ManualSalesPage() {
       notes: draft.notes,
       created_by: user?.id ?? null,
       created_by_name: fullName ?? "",
-      // Legacy columns kept in sync so old reports still work
-      cash_junaid: draft.cash_by_person["Junaid"] ?? 0,
-      cash_usama: draft.cash_by_person["Usama"] ?? 0,
-      cash_zahid: draft.cash_by_person["Zahid Ali"] ?? 0,
+      // Legacy columns kept in sync (net = taken - paid) so old reports still work
+      cash_junaid: personNet(draft.cash_by_person["Junaid"] ?? { taken: 0, paid: 0 }),
+      cash_usama: personNet(draft.cash_by_person["Usama"] ?? { taken: 0, paid: 0 }),
+      cash_zahid: personNet(draft.cash_by_person["Zahid Ali"] ?? { taken: 0, paid: 0 }),
     };
     const { error } = await supabase.from("manual_sale_days").upsert(payload, { onConflict: "entry_date" });
     setSaving(false);
