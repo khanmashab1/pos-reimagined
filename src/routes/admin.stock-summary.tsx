@@ -374,6 +374,59 @@ function AdminStockSummary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!priceTarget} onOpenChange={() => setPriceTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Edit Prices
+            </DialogTitle>
+          </DialogHeader>
+          {priceTarget && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm">
+                <strong>{priceTarget.product_name}</strong>
+                <span className="text-muted-foreground ml-2">{priceTarget.barcode}</span>
+              </p>
+              <div>
+                <Label>Cost (Purchase price)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={priceCost}
+                  onChange={(e) => setPriceCost(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Sale price</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={priceSale}
+                  onChange={(e) => setPriceSale(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Updates the product's prices for all future sales.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={savePrices} disabled={actionLoading}>
+              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
