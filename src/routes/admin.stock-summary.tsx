@@ -79,11 +79,45 @@ function AdminStockSummary() {
   const [priceTarget, setPriceTarget] = useState<StockEntry | null>(null);
   const [priceCost, setPriceCost] = useState("");
   const [priceSale, setPriceSale] = useState("");
+  const [qtyTarget, setQtyTarget] = useState<StockEntry | null>(null);
+  const [qtyValue, setQtyValue] = useState("");
 
   const openPriceEdit = (entry: StockEntry) => {
     setPriceTarget(entry);
     setPriceCost(String(entry.purchase_price ?? 0));
     setPriceSale(String(entry.sale_price ?? 0));
+  };
+
+  const openQtyEdit = (entry: StockEntry) => {
+    setQtyTarget(entry);
+    setQtyValue(String(entry.qty_in_unit != null ? entry.qty_in_unit : entry.qty));
+  };
+
+  const saveQty = async () => {
+    if (!qtyTarget) return;
+    const val = Number(qtyValue);
+    if (!Number.isFinite(val) || val <= 0) {
+      toast.error("Enter a valid quantity");
+      return;
+    }
+    setActionLoading(true);
+    let updates: { qty: number; qty_in_unit?: number } = { qty: val };
+    if (qtyTarget.qty_in_unit != null && qtyTarget.qty_in_unit > 0) {
+      const ratio = qtyTarget.qty / qtyTarget.qty_in_unit;
+      updates = { qty: Math.round(val * ratio), qty_in_unit: val };
+    }
+    const { error } = await supabase
+      .from("stock_entries")
+      .update(updates)
+      .eq("id", qtyTarget.id);
+    setActionLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Updated qty for ${qtyTarget.product_name}`);
+    setQtyTarget(null);
+    fetchData();
   };
 
   const savePrices = async () => {
@@ -320,6 +354,7 @@ function AdminStockSummary() {
             onApproveAll={approveAll}
             onReject={setRejectTarget}
             onEditPrices={openPriceEdit}
+            onEditQty={openQtyEdit}
             actionLoading={actionLoading}
           />
         ) : (
@@ -427,6 +462,49 @@ function AdminStockSummary() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!qtyTarget} onOpenChange={() => setQtyTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Edit Quantity
+            </DialogTitle>
+          </DialogHeader>
+          {qtyTarget && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm">
+                <strong>{qtyTarget.product_name}</strong>
+                <span className="text-muted-foreground ml-2">{qtyTarget.barcode}</span>
+              </p>
+              <div>
+                <Label>
+                  Quantity{qtyTarget.unit_name ? ` (in ${qtyTarget.unit_name})` : ""}
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={qtyValue}
+                  onChange={(e) => setQtyValue(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Adjust the requested quantity before approval.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQtyTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveQty} disabled={actionLoading}>
+              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
@@ -438,6 +516,7 @@ function PendingView({
   onApproveAll,
   onReject,
   onEditPrices,
+  onEditQty,
   actionLoading,
 }: {
   entries: StockEntry[];
@@ -446,6 +525,7 @@ function PendingView({
   onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
   onEditPrices: (e: StockEntry) => void;
+  onEditQty: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
 
@@ -512,7 +592,16 @@ function PendingView({
                     <td className="p-3 font-medium">{entry.product_name}</td>
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
-                    <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right font-bold text-green-600">
+                      <button
+                        onClick={() => onEditQty(entry)}
+                        className="inline-flex items-center gap-1 hover:underline"
+                        title="Edit quantity"
+                      >
+                        {fmtQty(entry)}
+                        <Pencil className="h-3 w-3 opacity-60" />
+                      </button>
+                    </td>
                     <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
                     <td className="p-3 text-right text-xs font-medium">
                       <button
