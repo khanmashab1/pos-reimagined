@@ -319,11 +319,13 @@ function AdminStockSummary() {
             onApprove={approve}
             onApproveAll={approveAll}
             onReject={setRejectTarget}
+            onEditPrices={openPriceEdit}
             actionLoading={actionLoading}
           />
         ) : (
-          <HistoryView entries={entries} summary={summary} tab={tab} />
+          <HistoryView entries={entries} summary={summary} tab={tab} onEditPrices={openPriceEdit} />
         )}
+
       </div>
 
       <Dialog open={!!rejectTarget} onOpenChange={() => setRejectTarget(null)}>
