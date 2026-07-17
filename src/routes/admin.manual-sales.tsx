@@ -126,7 +126,7 @@ function ManualSalesPage() {
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
       supabase.from("cash_sessions").select("opening_cash, cash_sales, cash_paid_out, expenses, expected_cash, opened_at")
-        .gte("opened_at", fromISO + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
+        .gte("opened_at", addDaysISO(fromISO, -1) + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
@@ -426,7 +426,7 @@ function ManualSalesPage() {
             <Label>Counter Cash</Label>
             <Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[draft.entry_date] ?? 0)}</span>
+              Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[addDaysISO(draft.entry_date, -1)] ?? 0)}</span> <span className="text-muted-foreground">(prev day)</span>
             </p>
           </div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
@@ -495,7 +495,7 @@ function ManualSalesPage() {
                     <Input type="number" value={r.counter_cash} onChange={(e) => updateRow(r, { counter_cash: Number(e.target.value) || 0 })}
                       className="h-8 w-24 text-right font-mono" />
                     <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                      exp: {Number(expectedCounterByDay[r.entry_date] ?? 0).toLocaleString()}
+                      exp: {Number(expectedCounterByDay[addDaysISO(r.entry_date, -1)] ?? 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="p-1 text-right">
