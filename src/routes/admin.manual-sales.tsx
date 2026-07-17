@@ -145,7 +145,7 @@ function ManualSalesPage() {
     const smMorning: Record<string, number> = {};
     const smNight: Record<string, number> = {};
     const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
-    const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hour12: false });
+    
 
     // Shifts are defined by cashier cash_sessions (open → close). The earliest
     // session that opened on a business day is the morning shift; every later
