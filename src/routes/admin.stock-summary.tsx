@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, Clock, Search, Pencil } from "lucide-react";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 
