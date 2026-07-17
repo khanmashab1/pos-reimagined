@@ -110,7 +110,7 @@ function ManualSalesPage() {
   async function load() {
     setLoading(true);
     const { fromISO, toISO } = range;
-    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }] = await Promise.all([
+    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }, { data: sessions }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
@@ -125,6 +125,8 @@ function ManualSalesPage() {
         .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
+      supabase.from("cash_sessions").select("opening_cash, cash_sales, cash_paid_out, expenses, expected_cash, opened_at")
+        .gte("opened_at", fromISO + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
