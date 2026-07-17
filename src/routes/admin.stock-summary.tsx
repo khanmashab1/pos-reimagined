@@ -79,11 +79,45 @@ function AdminStockSummary() {
   const [priceTarget, setPriceTarget] = useState<StockEntry | null>(null);
   const [priceCost, setPriceCost] = useState("");
   const [priceSale, setPriceSale] = useState("");
+  const [qtyTarget, setQtyTarget] = useState<StockEntry | null>(null);
+  const [qtyValue, setQtyValue] = useState("");
 
   const openPriceEdit = (entry: StockEntry) => {
     setPriceTarget(entry);
     setPriceCost(String(entry.purchase_price ?? 0));
     setPriceSale(String(entry.sale_price ?? 0));
+  };
+
+  const openQtyEdit = (entry: StockEntry) => {
+    setQtyTarget(entry);
+    setQtyValue(String(entry.qty_in_unit != null ? entry.qty_in_unit : entry.qty));
+  };
+
+  const saveQty = async () => {
+    if (!qtyTarget) return;
+    const val = Number(qtyValue);
+    if (!Number.isFinite(val) || val <= 0) {
+      toast.error("Enter a valid quantity");
+      return;
+    }
+    setActionLoading(true);
+    let updates: { qty: number; qty_in_unit?: number } = { qty: val };
+    if (qtyTarget.qty_in_unit != null && qtyTarget.qty_in_unit > 0) {
+      const ratio = qtyTarget.qty / qtyTarget.qty_in_unit;
+      updates = { qty: Math.round(val * ratio), qty_in_unit: val };
+    }
+    const { error } = await supabase
+      .from("stock_entries")
+      .update(updates)
+      .eq("id", qtyTarget.id);
+    setActionLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Updated qty for ${qtyTarget.product_name}`);
+    setQtyTarget(null);
+    fetchData();
   };
 
   const savePrices = async () => {
