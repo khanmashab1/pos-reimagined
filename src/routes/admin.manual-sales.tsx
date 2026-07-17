@@ -145,9 +145,13 @@ function ManualSalesPage() {
     const smMorning: Record<string, number> = {};
     const smNight: Record<string, number> = {};
     const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
-    const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hour12: false });
+    
 
-    // Build shift windows per business day from cash_sessions (earliest = morning).
+    // Shifts are defined by cashier cash_sessions (open → close). The earliest
+    // session that opened on a business day is the morning shift; every later
+    // session that day is night. Sales are attributed to the session whose
+    // window contains them; sales outside any window are attributed to the
+    // nearest session of that day.
     const sessionsByDay: Record<string, { opened: number; closed: number }[]> = {};
     for (const s of (sessions ?? []) as any[]) {
       const d = tzFmt.format(new Date(s.opened_at));
@@ -163,17 +167,23 @@ function ManualSalesPage() {
       const total = Number(r.total || 0);
       sm[d] = (sm[d] ?? 0) + total;
       const daySessions = sessionsByDay[d] ?? [];
-      const idx = daySessions.findIndex((s) => ts >= s.opened && ts <= s.closed);
-      let isMorning: boolean;
-      if (idx === 0) isMorning = true;
-      else if (idx > 0) isMorning = false;
-      else {
-        const h = Number(hourFmt.format(new Date(r.created_at)));
-        isMorning = h < 16;
+      let idx = daySessions.findIndex((s) => ts >= s.opened && ts <= s.closed);
+      if (idx === -1 && daySessions.length > 0) {
+        // Nearest session by distance to its [opened, closed] window.
+        let best = 0, bestDist = Infinity;
+        for (let i = 0; i < daySessions.length; i++) {
+          const s = daySessions[i];
+          const dist = ts < s.opened ? s.opened - ts : ts - s.closed;
+          if (dist < bestDist) { bestDist = dist; best = i; }
+        }
+        idx = best;
       }
+      // No sessions that day at all → treat as morning (single shift day).
+      const isMorning = idx <= 0;
       if (isMorning) smMorning[d] = (smMorning[d] ?? 0) + total;
       else smNight[d] = (smNight[d] ?? 0) + total;
     }
+
     setSalesByDay(sm);
     setSalesMorningByDay(smMorning);
     setSalesNightByDay(smNight);
