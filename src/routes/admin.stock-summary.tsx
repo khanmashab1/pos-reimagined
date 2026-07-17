@@ -406,6 +406,8 @@ function PendingView({
                   <th className="text-left p-3">Barcode</th>
                   <th className="text-left p-3">Cashier</th>
                   <th className="text-right p-3">Qty</th>
+                  <th className="text-right p-3">Cost</th>
+                  <th className="text-right p-3">Sale</th>
                   <th className="text-left p-3">Notes</th>
                   <th className="text-right p-3">Actions</th>
                 </tr>
@@ -420,9 +422,12 @@ function PendingView({
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
                     <td className="p-3 text-xs text-muted-foreground truncate max-w-[120px]" title={entry.notes || undefined}>
                       {entry.notes || "-"}
                     </td>
+
                     <td className="p-3 text-right whitespace-nowrap">
                       <div className="flex gap-1 justify-end">
                         <Button
