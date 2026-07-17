@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, Clock, Search, Pencil } from "lucide-react";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -76,6 +76,39 @@ function AdminStockSummary() {
   const [rejectTarget, setRejectTarget] = useState<StockEntry | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [priceTarget, setPriceTarget] = useState<StockEntry | null>(null);
+  const [priceCost, setPriceCost] = useState("");
+  const [priceSale, setPriceSale] = useState("");
+
+  const openPriceEdit = (entry: StockEntry) => {
+    setPriceTarget(entry);
+    setPriceCost(String(entry.purchase_price ?? 0));
+    setPriceSale(String(entry.sale_price ?? 0));
+  };
+
+  const savePrices = async () => {
+    if (!priceTarget) return;
+    const cost = Number(priceCost);
+    const sale = Number(priceSale);
+    if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(sale) || sale < 0) {
+      toast.error("Enter valid prices");
+      return;
+    }
+    setActionLoading(true);
+    const { error } = await supabase
+      .from("products")
+      .update({ purchase_price: cost, sale_price: sale })
+      .eq("id", priceTarget.product_id);
+    setActionLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Updated prices for ${priceTarget.product_name}`);
+    setPriceTarget(null);
+    fetchData();
+  };
+
 
   useEffect(() => {
     if (role !== "admin") {
@@ -286,11 +319,13 @@ function AdminStockSummary() {
             onApprove={approve}
             onApproveAll={approveAll}
             onReject={setRejectTarget}
+            onEditPrices={openPriceEdit}
             actionLoading={actionLoading}
           />
         ) : (
-          <HistoryView entries={entries} summary={summary} tab={tab} />
+          <HistoryView entries={entries} summary={summary} tab={tab} onEditPrices={openPriceEdit} />
         )}
+
       </div>
 
       <Dialog open={!!rejectTarget} onOpenChange={() => setRejectTarget(null)}>
@@ -339,6 +374,59 @@ function AdminStockSummary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!priceTarget} onOpenChange={() => setPriceTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Edit Prices
+            </DialogTitle>
+          </DialogHeader>
+          {priceTarget && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm">
+                <strong>{priceTarget.product_name}</strong>
+                <span className="text-muted-foreground ml-2">{priceTarget.barcode}</span>
+              </p>
+              <div>
+                <Label>Cost (Purchase price)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={priceCost}
+                  onChange={(e) => setPriceCost(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Sale price</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={priceSale}
+                  onChange={(e) => setPriceSale(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Updates the product's prices for all future sales.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={savePrices} disabled={actionLoading}>
+              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
@@ -349,6 +437,7 @@ function PendingView({
   onApprove,
   onApproveAll,
   onReject,
+  onEditPrices,
   actionLoading,
 }: {
   entries: StockEntry[];
@@ -356,8 +445,10 @@ function PendingView({
   onApprove: (e: StockEntry) => void;
   onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
+  onEditPrices: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
+
   const pending = entries.filter((e) => e.status === "pending");
 
   return (
@@ -423,7 +514,17 @@ function PendingView({
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
                     <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
-                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">
+                      <button
+                        onClick={() => onEditPrices(entry)}
+                        className="inline-flex items-center gap-1 hover:text-primary hover:underline"
+                        title="Edit prices"
+                      >
+                        {fmt(entry.sale_price ?? 0)}
+                        <Pencil className="h-3 w-3 opacity-60" />
+                      </button>
+                    </td>
+
                     <td className="p-3 text-xs text-muted-foreground truncate max-w-[120px]" title={entry.notes || undefined}>
                       {entry.notes || "-"}
                     </td>
@@ -464,11 +565,14 @@ function HistoryView({
   entries,
   summary,
   tab,
+  onEditPrices,
 }: {
   entries: StockEntry[];
   summary: StockSummary[];
   tab: string;
+  onEditPrices: (e: StockEntry) => void;
 }) {
+
   const [search, setSearch] = useState("");
 
   const filtered = search.trim()
@@ -554,7 +658,17 @@ function HistoryView({
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
                     <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
-                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">
+                      <button
+                        onClick={() => onEditPrices(entry)}
+                        className="inline-flex items-center gap-1 hover:text-primary hover:underline"
+                        title="Edit prices"
+                      >
+                        {fmt(entry.sale_price ?? 0)}
+                        <Pencil className="h-3 w-3 opacity-60" />
+                      </button>
+                    </td>
+
 
                     <td className="p-3">
                       {entry.status === "approved" ? (
