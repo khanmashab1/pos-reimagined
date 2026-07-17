@@ -93,7 +93,7 @@ function ManualSalesPage() {
   async function load() {
     setLoading(true);
     const { fromISO, toISO } = range;
-    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }] = await Promise.all([
+    const [{ data: entries }, { data: op }, { data: de }, { data: se }, { data: sales }, { data: sp }] = await Promise.all([
       supabase.from("manual_sale_days").select("*")
         .gte("entry_date", fromISO).lt("entry_date", toISO)
         .order("entry_date", { ascending: true }),
@@ -106,7 +106,10 @@ function ManualSalesPage() {
         .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
       supabase.from("sales").select("created_at, total")
         .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
+      supabase.from("supplier_payments").select("amount, payment_date")
+        .gte("payment_date", fromISO).lt("payment_date", toISO),
     ]);
+    setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
     const ex: Record<string, number> = {};
     for (const r of (op ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
