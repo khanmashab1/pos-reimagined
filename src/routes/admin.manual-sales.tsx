@@ -18,16 +18,32 @@ export const Route = createFileRoute("/admin/manual-sales")({
 
 type Person = { id: string; name: string; sort_order: number; is_active: boolean };
 
+// Per-person cash breakdown for a given day.
+// `taken` = cash the person received/holds. `paid` = cash they paid out.
+// Net contribution to cash-in-hand = taken - paid.
+export type PersonCash = { taken: number; paid: number };
+
 type Row = {
   id?: string;
   entry_date: string;
-  cash_by_person: Record<string, number>;
+  cash_by_person: Record<string, PersonCash>;
   others: number;
   counter_cash: number;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
 };
+
+// Legacy rows stored a plain number per person. Normalize to {taken, paid}.
+function normalizePersonCash(v: unknown): PersonCash {
+  if (typeof v === "number") return { taken: Number(v) || 0, paid: 0 };
+  if (v && typeof v === "object") {
+    const o = v as any;
+    return { taken: Number(o.taken) || 0, paid: Number(o.paid) || 0 };
+  }
+  return { taken: 0, paid: 0 };
+}
+const personNet = (p: PersonCash) => Number(p.taken || 0) - Number(p.paid || 0);
 
 const emptyRow = (): Row => ({
   entry_date: today(),
