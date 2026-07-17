@@ -426,7 +426,7 @@ function ManualSalesPage() {
             <Label>Counter Cash</Label>
             <Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[draft.entry_date] ?? 0)}</span>
+              Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[addDaysISO(draft.entry_date, -1)] ?? 0)}</span> <span className="text-muted-foreground">(prev day)</span>
             </p>
           </div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
