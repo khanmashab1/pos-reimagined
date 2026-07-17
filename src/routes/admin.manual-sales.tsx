@@ -172,7 +172,9 @@ function ManualSalesPage() {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
       const prevExp = r.previous_expense_override ?? prevGrand;
       const grandExp = Number(todayExp) + Number(prevExp);
-      const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b || 0), 0);
+      const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + personNet(b), 0);
+      const personTaken = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.taken || 0), 0);
+      const personPaid = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.paid || 0), 0);
       const totalCash = personSum + Number(r.others) + Number(r.counter_cash);
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
