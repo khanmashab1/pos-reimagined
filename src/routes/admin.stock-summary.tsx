@@ -549,7 +549,16 @@ function PendingView({
                     <td className="p-3 font-medium">{entry.product_name}</td>
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
-                    <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right font-bold text-green-600">
+                      <button
+                        onClick={() => onEditQty(entry)}
+                        className="inline-flex items-center gap-1 hover:underline"
+                        title="Edit quantity"
+                      >
+                        {fmtQty(entry)}
+                        <Pencil className="h-3 w-3 opacity-60" />
+                      </button>
+                    </td>
                     <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
                     <td className="p-3 text-right text-xs font-medium">
                       <button
