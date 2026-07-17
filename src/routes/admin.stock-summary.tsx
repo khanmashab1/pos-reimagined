@@ -354,6 +354,7 @@ function AdminStockSummary() {
             onApproveAll={approveAll}
             onReject={setRejectTarget}
             onEditPrices={openPriceEdit}
+            onEditQty={openQtyEdit}
             actionLoading={actionLoading}
           />
         ) : (
