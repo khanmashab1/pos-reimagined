@@ -146,10 +146,12 @@ function ManualSalesPage() {
 
     // Merge legacy fixed columns into cash_by_person for display.
     const mapped: Row[] = ((entries ?? []) as any[]).map((r) => {
-      const cbp: Record<string, number> = { ...(r.cash_by_person ?? {}) };
-      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = Number(r.cash_junaid);
-      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = Number(r.cash_usama);
-      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = Number(r.cash_zahid);
+      const raw = (r.cash_by_person ?? {}) as Record<string, unknown>;
+      const cbp: Record<string, PersonCash> = {};
+      for (const [k, v] of Object.entries(raw)) cbp[k] = normalizePersonCash(v);
+      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = { taken: Number(r.cash_junaid), paid: 0 };
+      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = { taken: Number(r.cash_usama), paid: 0 };
+      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = { taken: Number(r.cash_zahid), paid: 0 };
       return {
         id: r.id, entry_date: r.entry_date, cash_by_person: cbp,
         others: Number(r.others || 0), counter_cash: Number(r.counter_cash || 0),
