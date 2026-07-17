@@ -451,13 +451,23 @@ function ManualSalesPage() {
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
                   <td className="p-2 whitespace-nowrap">{r.entry_date}</td>
-                  {columnPersons.map((n) => (
-                    <td key={n} className="p-1 text-right">
-                      <Input type="number" value={r.cash_by_person[n] ?? 0}
-                        onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: Number(e.target.value) || 0 } })}
-                        className="h-8 w-24 text-right font-mono" />
-                    </td>
-                  ))}
+                  {columnPersons.map((n) => {
+                    const pc = r.cash_by_person[n] ?? { taken: 0, paid: 0 };
+                    return (
+                      <>
+                        <td key={n + "-t"} className="p-1 text-right">
+                          <Input type="number" value={pc.taken}
+                            onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, taken: Number(e.target.value) || 0 } } })}
+                            className="h-8 w-20 text-right font-mono" placeholder="taken" />
+                        </td>
+                        <td key={n + "-p"} className="p-1 text-right">
+                          <Input type="number" value={pc.paid}
+                            onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, paid: Number(e.target.value) || 0 } } })}
+                            className="h-8 w-20 text-right font-mono" placeholder="paid" />
+                        </td>
+                      </>
+                    );
+                  })}
                   <td className="p-1 text-right">
                     <Input type="number" value={r.others} onChange={(e) => updateRow(r, { others: Number(e.target.value) || 0 })}
                       className="h-8 w-24 text-right font-mono" />
