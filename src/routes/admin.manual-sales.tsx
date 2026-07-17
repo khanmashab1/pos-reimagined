@@ -147,14 +147,17 @@ function ManualSalesPage() {
     }
     setSalesByDay(sm);
 
-    // Expected counter cash at midnight per day = sum of each shift's
-    // expected_cash (cash that should be in the drawer). Uses Asia/Karachi date.
-    const ec: Record<string, number> = {};
+    // Expected counter cash at midnight per day = the last shift of that day's
+    // expected_cash (cash that should be in the drawer at close). Karachi date.
+    const ecLatest: Record<string, { t: number; v: number }> = {};
     for (const s of (sessions ?? []) as any[]) {
       if (s.expected_cash == null) continue;
       const d = tzFmt.format(new Date(s.opened_at));
-      ec[d] = (ec[d] ?? 0) + Number(s.expected_cash || 0);
+      const t = new Date(s.opened_at).getTime();
+      if (!ecLatest[d] || t > ecLatest[d].t) ecLatest[d] = { t, v: Number(s.expected_cash || 0) };
     }
+    const ec: Record<string, number> = {};
+    for (const d of Object.keys(ecLatest)) ec[d] = ecLatest[d].v;
     setExpectedCounterByDay(ec);
 
     // Merge legacy fixed columns into cash_by_person for display.
