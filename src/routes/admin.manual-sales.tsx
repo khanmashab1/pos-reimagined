@@ -495,7 +495,7 @@ function ManualSalesPage() {
                     <Input type="number" value={r.counter_cash} onChange={(e) => updateRow(r, { counter_cash: Number(e.target.value) || 0 })}
                       className="h-8 w-24 text-right font-mono" />
                     <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                      exp: {Number(expectedCounterByDay[r.entry_date] ?? 0).toLocaleString()}
+                      exp: {Number(expectedCounterByDay[addDaysISO(r.entry_date, -1)] ?? 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="p-1 text-right">
