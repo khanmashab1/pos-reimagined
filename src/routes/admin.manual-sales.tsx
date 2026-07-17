@@ -125,7 +125,7 @@ function ManualSalesPage() {
         .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
-      supabase.from("cash_sessions").select("opening_cash, cash_sales, cash_paid_out, expenses, expected_cash, opened_at")
+      supabase.from("cash_sessions").select("closing_cash, expected_cash, opened_at, closed_at")
         .gte("opened_at", addDaysISO(fromISO, -1) + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
@@ -147,14 +147,16 @@ function ManualSalesPage() {
     }
     setSalesByDay(sm);
 
-    // Expected counter cash at midnight per day = the last shift of that day's
-    // expected_cash (cash that should be in the drawer at close). Karachi date.
+    // Counter cash at midnight per day = the actual closing cash counted for
+    // that business day. A close just after midnight belongs to the day that
+    // ended at 11:59 PM, so we key it by the shift's opening/business date.
     const ecLatest: Record<string, { t: number; v: number }> = {};
     for (const s of (sessions ?? []) as any[]) {
-      if (s.expected_cash == null) continue;
+      const cash = s.closing_cash ?? s.expected_cash;
+      if (cash == null) continue;
       const d = tzFmt.format(new Date(s.opened_at));
-      const t = new Date(s.opened_at).getTime();
-      if (!ecLatest[d] || t > ecLatest[d].t) ecLatest[d] = { t, v: Number(s.expected_cash || 0) };
+      const t = new Date(s.closed_at ?? s.opened_at).getTime();
+      if (!ecLatest[d] || t > ecLatest[d].t) ecLatest[d] = { t, v: Number(cash || 0) };
     }
     const ec: Record<string, number> = {};
     for (const d of Object.keys(ecLatest)) ec[d] = ecLatest[d].v;
