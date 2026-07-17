@@ -428,7 +428,7 @@ function ManualSalesPage() {
               <tr>
                 <th className="p-2 text-left">#</th>
                 <th className="p-2 text-left">Date</th>
-                {columnPersons.map((n) => <th key={n} className="p-2 text-right">{n}</th>)}
+                {columnPersons.map((n) => <th key={n} className="p-2 text-right" colSpan={2}>{n} <span className="text-[9px] text-muted-foreground">(taken/paid)</span></th>)}
                 <th className="p-2 text-right">Others</th>
                 <th className="p-2 text-right">Counter</th>
                 <th className="p-2 text-right">Today Exp.</th>
