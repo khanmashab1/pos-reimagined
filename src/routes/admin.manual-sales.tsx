@@ -181,7 +181,7 @@ function ManualSalesPage() {
       const saleCalc = grandTotal - previousTotal;
       const salePos = salesByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
-      return { ...r, todayExp, prevExp, grandExp, personSum, totalCash, grandTotal, previousTotal, saleCalc, salePos };
+      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos };
     });
   }, [rows, expensesByDay, salesByDay]);
 
