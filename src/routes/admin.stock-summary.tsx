@@ -526,6 +526,8 @@ function HistoryView({
                 <th className="text-left p-3">Barcode</th>
                 <th className="text-left p-3">Cashier</th>
                 <th className="text-right p-3">Qty</th>
+                <th className="text-right p-3">Cost</th>
+                <th className="text-right p-3">Sale</th>
                 <th className="text-left p-3">Status</th>
                 <th className="text-left p-3">Notes</th>
                 {tab === "rejected" && <th className="text-left p-3">Reason</th>}
@@ -535,7 +537,7 @@ function HistoryView({
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={tab === "rejected" ? 8 : 7}
+                    colSpan={tab === "rejected" ? 10 : 9}
                     className="text-center py-12 text-muted-foreground"
                   >
                     No entries found
@@ -551,6 +553,9 @@ function HistoryView({
                     <td className="p-3 text-xs">{entry.barcode}</td>
                     <td className="p-3">{entry.cashier_name}</td>
                     <td className="p-3 text-right font-bold text-green-600">{fmtQty(entry)}</td>
+                    <td className="p-3 text-right text-xs">{fmt(entry.purchase_price ?? 0)}</td>
+                    <td className="p-3 text-right text-xs font-medium">{fmt(entry.sale_price ?? 0)}</td>
+
                     <td className="p-3">
                       {entry.status === "approved" ? (
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
