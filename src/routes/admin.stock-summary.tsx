@@ -40,29 +40,10 @@ interface StockEntry {
   rejected_by_name?: string;
   rejected_at?: string;
   rejection_reason?: string;
-}
-
-interface StockEntry {
-  id: string;
-  product_id: string;
-  cashier_id: string;
-  cashier_name: string;
-  product_name: string;
-  barcode: string;
-  qty: number;
-  unit_name: string | null;
-  qty_in_unit: number | null;
-  notes: string;
-  status: string;
-  created_at: string;
-  approved_by_name?: string;
-  approved_at?: string;
-  rejected_by_name?: string;
-  rejected_at?: string;
-  rejection_reason?: string;
   purchase_price?: number;
   sale_price?: number;
 }
+
 
 interface StockSummary {
   product_id: string;
