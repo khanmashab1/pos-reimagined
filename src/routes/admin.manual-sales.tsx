@@ -368,9 +368,19 @@ function ManualSalesPage() {
                 <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
               )}
               {draftPersonEntries.map(([name, amt]) => (
-                <div key={name} className="flex items-center gap-2">
+                <div key={name} className="flex items-center gap-2 flex-wrap">
                   <div className="w-40 font-medium text-sm">{name}</div>
-                  <Input type="number" className="w-40" value={amt} onChange={(e) => setDraftPerson(name, Number(e.target.value) || 0)} />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase text-muted-foreground">Taken</span>
+                    <Input type="number" className="w-28" value={amt.taken}
+                      onChange={(e) => setDraftPerson(name, { taken: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase text-muted-foreground">Paid</span>
+                    <Input type="number" className="w-28" value={amt.paid}
+                      onChange={(e) => setDraftPerson(name, { paid: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div className="text-xs text-muted-foreground">Net: <span className="font-mono">{personNet(amt).toLocaleString()}</span></div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -381,7 +391,7 @@ function ManualSalesPage() {
                   value=""
                   onValueChange={(v) => {
                     if (v === "__add__") setPersonDialog(true);
-                    else setDraftPerson(v, 0);
+                    else setDraftPerson(v, { taken: 0, paid: 0 });
                   }}
                 >
                   <SelectTrigger className="w-56"><SelectValue placeholder="+ Add person…" /></SelectTrigger>
