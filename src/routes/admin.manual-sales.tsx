@@ -246,9 +246,9 @@ function ManualSalesPage() {
     setRows((prev) => prev.map((r) => (r.id === row.id ? merged : r)));
     const upd: any = { ...patch };
     if (patch.cash_by_person) {
-      upd.cash_junaid = patch.cash_by_person["Junaid"] ?? 0;
-      upd.cash_usama = patch.cash_by_person["Usama"] ?? 0;
-      upd.cash_zahid = patch.cash_by_person["Zahid Ali"] ?? 0;
+      upd.cash_junaid = personNet(patch.cash_by_person["Junaid"] ?? { taken: 0, paid: 0 });
+      upd.cash_usama = personNet(patch.cash_by_person["Usama"] ?? { taken: 0, paid: 0 });
+      upd.cash_zahid = personNet(patch.cash_by_person["Zahid Ali"] ?? { taken: 0, paid: 0 });
     }
     const { error } = await supabase.from("manual_sale_days").update(upd).eq("id", row.id!);
     if (error) toast.error(error.message);
