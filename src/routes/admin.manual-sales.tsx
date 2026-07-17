@@ -317,11 +317,13 @@ function ManualSalesPage() {
 
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Stat label="Days" value={String(computed.length)} />
         <Stat label="Total Sale (ledger)" value={fmt(totals.sale)} accent="text-emerald-600" />
-        <Stat label="POS Sale (system)" value={fmt(totals.pos)} accent="text-blue-600" />
+        <Stat label="System Sale (POS)" value={fmt(totals.pos)} accent="text-blue-600" />
         <Stat label="Today Expenses" value={fmt(totals.expenses)} accent="text-destructive" />
+        <Stat label="System Expenses (Suppliers Paid)" value={fmt(supplierPaid)} accent="text-orange-600" />
+        <Stat label="Cash in Hand" value={fmt(totals.cash)} accent="text-emerald-700" />
       </div>
 
       <Card className="p-5">
