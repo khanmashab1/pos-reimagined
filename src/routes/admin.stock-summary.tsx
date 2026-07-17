@@ -384,6 +384,7 @@ function PendingView({
   onApprove,
   onApproveAll,
   onReject,
+  onEditPrices,
   actionLoading,
 }: {
   entries: StockEntry[];
@@ -391,8 +392,10 @@ function PendingView({
   onApprove: (e: StockEntry) => void;
   onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
+  onEditPrices: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
+
   const pending = entries.filter((e) => e.status === "pending");
 
   return (
