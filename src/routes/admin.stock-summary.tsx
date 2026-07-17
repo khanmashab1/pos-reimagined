@@ -473,6 +473,7 @@ function PendingView({
   onApproveAll,
   onReject,
   onEditPrices,
+  onEditQty,
   actionLoading,
 }: {
   entries: StockEntry[];
@@ -481,6 +482,7 @@ function PendingView({
   onApproveAll: () => void;
   onReject: (e: StockEntry) => void;
   onEditPrices: (e: StockEntry) => void;
+  onEditQty: (e: StockEntry) => void;
   actionLoading: boolean;
 }) {
 
