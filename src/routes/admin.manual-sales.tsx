@@ -142,12 +142,41 @@ function ManualSalesPage() {
     setExpensesByDay(ex);
 
     const sm: Record<string, number> = {};
+    const smMorning: Record<string, number> = {};
+    const smNight: Record<string, number> = {};
     const tzFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" });
+    const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hour12: false });
+
+    // Build shift windows per business day from cash_sessions (earliest = morning).
+    const sessionsByDay: Record<string, { opened: number; closed: number }[]> = {};
+    for (const s of (sessions ?? []) as any[]) {
+      const d = tzFmt.format(new Date(s.opened_at));
+      const opened = new Date(s.opened_at).getTime();
+      const closed = s.closed_at ? new Date(s.closed_at).getTime() : Number.POSITIVE_INFINITY;
+      (sessionsByDay[d] ??= []).push({ opened, closed });
+    }
+    for (const d of Object.keys(sessionsByDay)) sessionsByDay[d].sort((a, b) => a.opened - b.opened);
+
     for (const r of (sales ?? []) as any[]) {
+      const ts = new Date(r.created_at).getTime();
       const d = tzFmt.format(new Date(r.created_at));
-      sm[d] = (sm[d] ?? 0) + Number(r.total || 0);
+      const total = Number(r.total || 0);
+      sm[d] = (sm[d] ?? 0) + total;
+      const daySessions = sessionsByDay[d] ?? [];
+      const idx = daySessions.findIndex((s) => ts >= s.opened && ts <= s.closed);
+      let isMorning: boolean;
+      if (idx === 0) isMorning = true;
+      else if (idx > 0) isMorning = false;
+      else {
+        const h = Number(hourFmt.format(new Date(r.created_at)));
+        isMorning = h < 16;
+      }
+      if (isMorning) smMorning[d] = (smMorning[d] ?? 0) + total;
+      else smNight[d] = (smNight[d] ?? 0) + total;
     }
     setSalesByDay(sm);
+    setSalesMorningByDay(smMorning);
+    setSalesNightByDay(smNight);
 
     // Counter cash at midnight per day = the actual closing cash counted for
     // that business day. A close just after midnight belongs to the day that
