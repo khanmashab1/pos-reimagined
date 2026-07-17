@@ -147,6 +147,16 @@ function ManualSalesPage() {
     }
     setSalesByDay(sm);
 
+    // Expected counter cash at midnight per day = sum over that day's shifts of
+    // (opening + cash_sales − cash_paid_out − expenses). Uses Asia/Karachi date.
+    const ec: Record<string, number> = {};
+    for (const s of (sessions ?? []) as any[]) {
+      const d = tzFmt.format(new Date(s.opened_at));
+      const val = Number(s.expected_cash ?? (Number(s.opening_cash || 0) + Number(s.cash_sales || 0) - Number(s.cash_paid_out || 0) - Number(s.expenses || 0))) || 0;
+      ec[d] = (ec[d] ?? 0) + val;
+    }
+    setExpectedCounterByDay(ec);
+
     // Merge legacy fixed columns into cash_by_person for display.
     const mapped: Row[] = ((entries ?? []) as any[]).map((r) => {
       const raw = (r.cash_by_person ?? {}) as Record<string, unknown>;
