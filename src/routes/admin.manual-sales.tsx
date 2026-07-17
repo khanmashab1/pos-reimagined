@@ -165,10 +165,17 @@ function ManualSalesPage() {
     });
   }, [rows, expensesByDay, salesByDay]);
 
-  const totals = useMemo(() => computed.reduce((a, r) => ({
-    sale: a.sale + r.saleCalc, pos: a.pos + r.salePos,
-    expenses: a.expenses + r.todayExp, cash: a.cash + r.totalCash,
-  }), { sale: 0, pos: 0, expenses: 0, cash: 0 }), [computed]);
+  const totals = useMemo(() => {
+    const agg = computed.reduce((a, r) => ({
+      sale: a.sale + r.saleCalc, pos: a.pos + r.salePos,
+      expenses: a.expenses + r.todayExp,
+    }), { sale: 0, pos: 0, expenses: 0 });
+    // Cash in Hand = latest day's on-hand cash (persons + counter + others).
+    // Summing across days would double-count cash carried forward.
+    const last = computed[computed.length - 1];
+    const cash = last ? last.totalCash : 0;
+    return { ...agg, cash };
+  }, [computed]);
 
   async function addPerson() {
     const name = newPersonName.trim();
