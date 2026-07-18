@@ -1,0 +1,2 @@
+CREATE POLICY "Cashiers can enter counter cash" ON public.manual_sale_days FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'cashier'::app_role) OR has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "Cashiers can update counter cash" ON public.manual_sale_days FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'cashier'::app_role) OR has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'cashier'::app_role) OR has_role(auth.uid(), 'admin'::app_role));
