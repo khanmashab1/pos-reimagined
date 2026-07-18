@@ -225,6 +225,25 @@ function ManualSalesPage() {
   useEffect(() => { loadPersons(); }, []);
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [range.fromISO, range.toISO]);
 
+  // Prefill the draft form when the picked date already has a saved row
+  // (e.g. counter cash entered by the cashier from the POS at midnight).
+  // This lets the admin see and edit the existing values instead of a blank form.
+  useEffect(() => {
+    const existing = rows.find((r) => r.entry_date === draft.entry_date);
+    if (existing) {
+      setDraft((d) => ({
+        ...d,
+        cash_by_person: existing.cash_by_person,
+        others: existing.others,
+        counter_cash: existing.counter_cash,
+        today_expenses_override: existing.today_expenses_override,
+        previous_expense_override: existing.previous_expense_override,
+        notes: existing.notes,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.entry_date, rows]);
+
   const computed = useMemo(() => {
     let prevGrand = 0;
     return rows.map((r) => {
