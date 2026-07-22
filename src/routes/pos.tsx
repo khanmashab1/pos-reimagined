@@ -503,6 +503,11 @@ function PosPage() {
               <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4" /><span className="hidden md:inline ml-1 text-xs">Admin</span></Link>
             </Button>
           )}
+          {impersonate && (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={exitImpersonation} title="Stop viewing as cashier">
+              <X className="h-4 w-4" /><span className="hidden sm:inline ml-1 text-xs">Exit View</span>
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-2" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
