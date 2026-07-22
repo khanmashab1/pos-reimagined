@@ -28,9 +28,9 @@ const items = [
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
   { to: "/admin/feedback", label: "Customer Feedback", icon: MessageSquare },
   { to: "/admin/users", label: "Users", icon: Users },
-  { to: "/admin/access-pos", label: "Access Cashier POS", icon: UserCog },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/admin/access-pos", label: "Access Cashier POS", icon: UserCog },
 ];
 
 function useLowStockCount() {
