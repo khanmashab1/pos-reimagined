@@ -125,6 +125,18 @@ const CartItemRow = memo(function CartItemRow({
 
 function PosPage() {
   const { loading, user, role, signOut, fullName } = useAuth();
+  const [impersonate, setImpersonate] = useState<{ id: string; name: string } | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem("pos_impersonate");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const displayName = impersonate?.name ?? fullName;
+  const exitImpersonation = useCallback(() => {
+    try { sessionStorage.removeItem("pos_impersonate"); } catch {}
+    setImpersonate(null);
+  }, []);
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [cats, setCats] = useState<{ id: string; name: string }[]>([]);
