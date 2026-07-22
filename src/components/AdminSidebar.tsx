@@ -105,17 +105,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </Link>
           );
         })}
-        <Link to="/pos" onClick={onNavigate}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-sidebar-accent">
-          <ShoppingCart className="h-4 w-4" />
-          Open POS
-        </Link>
         <Link to="/admin/access-pos" onClick={onNavigate}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
             path.startsWith("/admin/access-pos") ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : "hover:bg-sidebar-accent"
           }`}>
           <UserCog className="h-4 w-4" />
           Access Cashier POS
+        </Link>
+        <Link to="/pos" onClick={onNavigate}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-sidebar-accent">
+          <ShoppingCart className="h-4 w-4" />
+          Open POS
         </Link>
       </nav>
 
