@@ -26,7 +26,6 @@ const items = [
   { to: "/admin/price-requests", label: "Price Requests", icon: DollarSign },
   { to: "/admin/daily-expenses", label: "Operating Expenses", icon: BookText },
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
-  { to: "/admin/feedback", label: "Customer Feedback", icon: MessageSquare },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
@@ -116,6 +115,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-sidebar-accent">
           <ShoppingCart className="h-4 w-4" />
           Open POS
+        </Link>
+        <Link to="/admin/feedback" onClick={onNavigate}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            path.startsWith("/admin/feedback") ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : "hover:bg-sidebar-accent"
+          }`}>
+          <MessageSquare className="h-4 w-4" />
+          Customer Feedback
         </Link>
       </nav>
 
