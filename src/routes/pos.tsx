@@ -429,7 +429,7 @@ function PosPage() {
         discount: cappedDiscount, total,
         cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
-        cashier_name: fullName, created_at: new Date().toISOString(),
+        cashier_name: displayName, created_at: new Date().toISOString(),
       });
       // Decrement stock locally for sold items instead of re-querying the whole catalog after every sale.
       const soldBase = new Map<string, number>();
