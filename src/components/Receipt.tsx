@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Printer, X } from "lucide-react";
 import { fmt } from "@/lib/format";
+import qrCodeAsset from "@/assets/Untitled.jpeg.asset.json";
 
 interface Sale {
   bill_no: string;
@@ -78,6 +79,10 @@ export function Receipt({ sale, onClose }: { sale: Sale; onClose: () => void }) 
       <Line l="Change" r={fmt(sale.change_returned)} />
 
       <div className="border-t border-dashed border-black my-2" />
+      <div className="flex flex-col items-center justify-center mt-2">
+        <img src={qrCodeAsset.url} alt="QR code" className="w-32 h-32" />
+        <div className="text-[9px] mt-1 text-center opacity-80">Scan for offers & info</div>
+      </div>
       <div className="text-center mt-2">{store.footer_message}</div>
       <div className="text-center text-[9px] mt-1 opacity-70">Powered by ZIC Mart POS</div>
     </div>
