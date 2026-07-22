@@ -458,7 +458,9 @@ function PosPage() {
           </div>
           <div className="min-w-0">
             <div className="font-bold text-xs sm:text-sm leading-tight truncate">ZIC Mart POS</div>
-            <div className="text-[10px] sm:text-xs opacity-70 leading-tight truncate">{fullName}</div>
+            <div className="text-[10px] sm:text-xs opacity-70 leading-tight truncate">
+              {displayName}{impersonate && <span className="ml-1 opacity-80">(admin view)</span>}
+            </div>
           </div>
         </div>
 
