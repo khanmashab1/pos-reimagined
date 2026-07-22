@@ -125,6 +125,18 @@ const CartItemRow = memo(function CartItemRow({
 
 function PosPage() {
   const { loading, user, role, signOut, fullName } = useAuth();
+  const [impersonate, setImpersonate] = useState<{ id: string; name: string } | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem("pos_impersonate");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const displayName = impersonate?.name ?? fullName;
+  const exitImpersonation = useCallback(() => {
+    try { sessionStorage.removeItem("pos_impersonate"); } catch {}
+    setImpersonate(null);
+  }, []);
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [cats, setCats] = useState<{ id: string; name: string }[]>([]);
@@ -417,7 +429,7 @@ function PosPage() {
         discount: cappedDiscount, total,
         cash_received: paymentMethod === "cash" ? (cash !== "" ? cashNum : total) : total,
         change_returned: paymentMethod === "cash" ? (cash !== "" ? change : 0) : 0,
-        cashier_name: fullName, created_at: new Date().toISOString(),
+        cashier_name: displayName, created_at: new Date().toISOString(),
       });
       // Decrement stock locally for sold items instead of re-querying the whole catalog after every sale.
       const soldBase = new Map<string, number>();
@@ -446,7 +458,9 @@ function PosPage() {
           </div>
           <div className="min-w-0">
             <div className="font-bold text-xs sm:text-sm leading-tight truncate">ZIC Mart POS</div>
-            <div className="text-[10px] sm:text-xs opacity-70 leading-tight truncate">{fullName}</div>
+            <div className="text-[10px] sm:text-xs opacity-70 leading-tight truncate">
+              {displayName}{impersonate && <span className="ml-1 opacity-80">(admin view)</span>}
+            </div>
           </div>
         </div>
 
@@ -487,6 +501,11 @@ function PosPage() {
           {role === "admin" && (
             <Button asChild size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3">
               <Link to="/admin/dashboard"><LayoutDashboard className="h-4 w-4" /><span className="hidden md:inline ml-1 text-xs">Admin</span></Link>
+            </Button>
+          )}
+          {impersonate && (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={exitImpersonation} title="Stop viewing as cashier">
+              <X className="h-4 w-4" /><span className="hidden sm:inline ml-1 text-xs">Exit View</span>
             </Button>
           )}
           <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-2" onClick={signOut}>

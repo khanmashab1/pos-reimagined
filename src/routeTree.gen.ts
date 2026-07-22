@@ -36,6 +36,7 @@ import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-exp
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminCashierReportRouteImport } from './routes/admin.cashier-report'
 import { Route as AdminBackupRouteImport } from './routes/admin.backup'
+import { Route as AdminAccessPosRouteImport } from './routes/admin.access-pos'
 
 const SuppliersRoute = SuppliersRouteImport.update({
   id: '/suppliers',
@@ -172,6 +173,11 @@ const AdminBackupRoute = AdminBackupRouteImport.update({
   path: '/backup',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAccessPosRoute = AdminAccessPosRouteImport.update({
+  id: '/access-pos',
+  path: '/access-pos',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
+  '/admin/access-pos': typeof AdminAccessPosRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
+  '/admin/access-pos': typeof AdminAccessPosRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
+  '/admin/access-pos': typeof AdminAccessPosRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cashier-report': typeof AdminCashierReportRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
+    | '/admin/access-pos'
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
+    | '/admin/access-pos'
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
+    | '/admin/access-pos'
     | '/admin/backup'
     | '/admin/cashier-report'
     | '/admin/categories'
@@ -553,10 +565,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBackupRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/access-pos': {
+      id: '/admin/access-pos'
+      path: '/access-pos'
+      fullPath: '/admin/access-pos'
+      preLoaderRoute: typeof AdminAccessPosRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAccessPosRoute: typeof AdminAccessPosRoute
   AdminBackupRoute: typeof AdminBackupRoute
   AdminCashierReportRoute: typeof AdminCashierReportRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
@@ -578,6 +598,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAccessPosRoute: AdminAccessPosRoute,
   AdminBackupRoute: AdminBackupRoute,
   AdminCashierReportRoute: AdminCashierReportRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,

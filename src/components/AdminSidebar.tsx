@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart,
   LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList,
   Truck, TrendingUp, AlertTriangle, Database, BookText, DollarSign, MessageSquare,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ const items = [
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
   { to: "/admin/feedback", label: "Customer Feedback", icon: MessageSquare },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/access-pos", label: "Access Cashier POS", icon: UserCog },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
