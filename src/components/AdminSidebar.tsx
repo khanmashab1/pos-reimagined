@@ -116,6 +116,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <ShoppingCart className="h-4 w-4" />
           Open POS
         </Link>
+        <Link to="/admin/feedback" onClick={onNavigate}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            path.startsWith("/admin/feedback") ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : "hover:bg-sidebar-accent"
+          }`}>
+          <MessageSquare className="h-4 w-4" />
+          Customer Feedback
+        </Link>
       </nav>
 
       <div className="p-3 border-t border-sidebar-border">
