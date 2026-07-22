@@ -26,7 +26,6 @@ const items = [
   { to: "/admin/price-requests", label: "Price Requests", icon: DollarSign },
   { to: "/admin/daily-expenses", label: "Operating Expenses", icon: BookText },
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
-  { to: "/admin/feedback", label: "Customer Feedback", icon: MessageSquare },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/backup", label: "Backup", icon: Database },
   { to: "/admin/settings", label: "Settings", icon: SettingsIcon },
