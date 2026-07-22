@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Settings as SettingsIcon, ShoppingCart,
   LogOut, Store, RotateCcw, FileBarChart, Users, Menu, X, ClipboardList,
   Truck, TrendingUp, AlertTriangle, Database, BookText, DollarSign, MessageSquare,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
