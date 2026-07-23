@@ -192,6 +192,7 @@ function StockEntryPage() {
     setShowDrop(false);
     setQty("");
     setNotes("");
+    setPhysicalStock("");
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
