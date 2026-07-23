@@ -215,6 +215,7 @@ function ManualSalesPage() {
       return {
         id: r.id, entry_date: r.entry_date, cash_by_person: cbp,
         others: Number(r.others || 0), counter_cash: Number(r.counter_cash || 0),
+        counter_cash_by: r.counter_cash_by ?? "",
         today_expenses_override: r.today_expenses_override, previous_expense_override: r.previous_expense_override,
         notes: r.notes ?? "",
       };
