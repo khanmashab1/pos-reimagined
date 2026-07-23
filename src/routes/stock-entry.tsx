@@ -86,6 +86,7 @@ function StockEntryPage() {
   const [reqReason, setReqReason] = useState("");
   const [submittingReq, setSubmittingReq] = useState(false);
   const [entries, setEntries] = useState<EntryRow[]>([]);
+  const [physicalStock, setPhysicalStock] = useState("");
   const [processing, setProcessing] = useState(false);
   const [summary, setSummary] = useState<SubmitSummary | null>(null);
 
