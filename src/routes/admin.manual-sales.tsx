@@ -310,6 +310,7 @@ function ManualSalesPage() {
       cash_by_person: draft.cash_by_person,
       others: draft.others,
       counter_cash: draft.counter_cash,
+      cash_with_junaid: draft.cash_with_junaid,
       today_expenses_override: draft.today_expenses_override,
       previous_expense_override: draft.previous_expense_override,
       notes: draft.notes,
