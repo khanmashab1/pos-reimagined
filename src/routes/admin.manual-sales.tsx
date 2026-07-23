@@ -238,6 +238,7 @@ function ManualSalesPage() {
         cash_by_person: existing.cash_by_person,
         others: existing.others,
         counter_cash: existing.counter_cash,
+        counter_cash_by: existing.counter_cash_by,
         today_expenses_override: existing.today_expenses_override,
         previous_expense_override: existing.previous_expense_override,
         notes: existing.notes,
