@@ -491,14 +491,25 @@ function ManualSalesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {draftPersonEntries.length > 0 && (
-                <div className="flex items-center justify-end gap-2 pt-2 border-t mt-2">
-                  <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
-                  <span className="font-mono font-semibold text-sm">
-                    {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
-                  </span>
+              <div className="flex items-center justify-between gap-4 pt-2 border-t mt-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap m-0">Total Cash with Junaid</Label>
+                  <Input
+                    type="number"
+                    className="w-32 h-8"
+                    value={draft.cash_with_junaid}
+                    onChange={(e) => setDraft({ ...draft, cash_with_junaid: Number(e.target.value) || 0 })}
+                  />
                 </div>
-              )}
+                {draftPersonEntries.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
+                    <span className="font-mono font-semibold text-sm">
+                      {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
