@@ -523,6 +523,7 @@ function ManualSalesPage() {
                 {columnPersons.map((n) => <th key={n} className="p-2 text-right" colSpan={2}>{n} <span className="text-[9px] text-muted-foreground">(taken/paid)</span></th>)}
                 <th className="p-2 text-right">Others</th>
                 <th className="p-2 text-right">Counter</th>
+                <th className="p-2 text-left">Posted By</th>
                 <th className="p-2 text-right">Today Exp.</th>
                 <th className="p-2 text-right">Prev Exp.</th>
                 <th className="p-2 text-right">Grand Exp.</th>
@@ -538,9 +539,9 @@ function ManualSalesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
@@ -575,6 +576,13 @@ function ManualSalesPage() {
                     {r.counter_cash_by ? (
                       <div className="text-[10px] text-emerald-700 mt-0.5">by {r.counter_cash_by}</div>
                     ) : null}
+                  </td>
+                  <td className="p-2 text-left text-[11px]">
+                    {r.counter_cash_by ? (
+                      <span className="text-emerald-700 font-medium">{r.counter_cash_by}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="p-1 text-right">
                     <Input type="number" placeholder={String(expensesByDay[r.entry_date] ?? 0)}
