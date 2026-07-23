@@ -30,6 +30,7 @@ type Row = {
   others: number;
   counter_cash: number;
   counter_cash_by: string;
+  cash_with_junaid: number;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
@@ -50,6 +51,7 @@ const emptyRow = (): Row => ({
   entry_date: today(),
   cash_by_person: {},
   others: 0, counter_cash: 0, counter_cash_by: "",
+  cash_with_junaid: 0,
   today_expenses_override: null, previous_expense_override: null, notes: "",
 });
 
