@@ -352,7 +352,7 @@ function ManualSalesPage() {
   }, [persons, rows]);
 
   function exportCSV() {
-    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Morning", "POS Night", "POS Total", "Notes"];
+    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Notes"];
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
       ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
