@@ -245,7 +245,7 @@ function StockEntryPage() {
     }
   };
 
-  const addEntry = () => {
+  const addEntry = async () => {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
@@ -253,6 +253,37 @@ function StockEntryPage() {
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
     const pieces = qtyNum * unitEquals;
+
+    // Stock Reconciliation validation & persistence
+    const hasPhysical = physicalStock.trim() !== "";
+    const physicalNum = Number(physicalStock);
+    const systemStock = Number(selectedProduct.stock ?? 0);
+    const difference = hasPhysical ? physicalNum - systemStock : 0;
+    const costPrice = Number(selectedProduct.purchase_price ?? 0);
+    const costImpact = difference * costPrice;
+    if (hasPhysical && (Number.isNaN(physicalNum) || physicalNum < 0)) {
+      return toast.error("Enter a valid physical stock count");
+    }
+    if (hasPhysical && difference !== 0 && !notes.trim()) {
+      return toast.error("Notes are required when there is a stock mismatch");
+    }
+    if (hasPhysical) {
+      const { error: recErr } = await supabase.from("stock_reconciliations").insert({
+        product_id: selectedProduct.id,
+        unit_id: unit?.id ?? null,
+        system_stock: systemStock,
+        physical_stock: physicalNum,
+        difference,
+        cost_price: costPrice,
+        cost_impact: costImpact,
+        notes: notes || null,
+        created_by: user?.id ?? null,
+      });
+      if (recErr) {
+        toast.error(`Reconciliation not saved: ${recErr.message}`);
+        return;
+      }
+    }
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -287,6 +318,7 @@ function StockEntryPage() {
     setSearch("");
     setQty("");
     setNotes("");
+    setPhysicalStock("");
   };
 
   const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
