@@ -30,6 +30,7 @@ type Row = {
   others: number;
   counter_cash: number;
   counter_cash_by: string;
+  cash_with_junaid: number;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
@@ -50,6 +51,7 @@ const emptyRow = (): Row => ({
   entry_date: today(),
   cash_by_person: {},
   others: 0, counter_cash: 0, counter_cash_by: "",
+  cash_with_junaid: 0,
   today_expenses_override: null, previous_expense_override: null, notes: "",
 });
 
@@ -216,6 +218,7 @@ function ManualSalesPage() {
         id: r.id, entry_date: r.entry_date, cash_by_person: cbp,
         others: Number(r.others || 0), counter_cash: Number(r.counter_cash || 0),
         counter_cash_by: r.counter_cash_by ?? "",
+        cash_with_junaid: Number(r.cash_with_junaid || 0),
         today_expenses_override: r.today_expenses_override, previous_expense_override: r.previous_expense_override,
         notes: r.notes ?? "",
       };
@@ -239,6 +242,7 @@ function ManualSalesPage() {
         others: existing.others,
         counter_cash: existing.counter_cash,
         counter_cash_by: existing.counter_cash_by,
+        cash_with_junaid: existing.cash_with_junaid,
         today_expenses_override: existing.today_expenses_override,
         previous_expense_override: existing.previous_expense_override,
         notes: existing.notes,
@@ -306,6 +310,7 @@ function ManualSalesPage() {
       cash_by_person: draft.cash_by_person,
       others: draft.others,
       counter_cash: draft.counter_cash,
+      cash_with_junaid: draft.cash_with_junaid,
       today_expenses_override: draft.today_expenses_override,
       previous_expense_override: draft.previous_expense_override,
       notes: draft.notes,
@@ -486,14 +491,25 @@ function ManualSalesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {draftPersonEntries.length > 0 && (
-                <div className="flex items-center justify-end gap-2 pt-2 border-t mt-2">
-                  <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
-                  <span className="font-mono font-semibold text-sm">
-                    {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
-                  </span>
+              <div className="flex items-center justify-between gap-4 pt-2 border-t mt-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap m-0">Total Cash with Junaid</Label>
+                  <Input
+                    type="number"
+                    className="w-32 h-8"
+                    value={draft.cash_with_junaid}
+                    onChange={(e) => setDraft({ ...draft, cash_with_junaid: Number(e.target.value) || 0 })}
+                  />
                 </div>
-              )}
+                {draftPersonEntries.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
+                    <span className="font-mono font-semibold text-sm">
+                      {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

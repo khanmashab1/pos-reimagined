@@ -244,6 +244,7 @@ export type Database = {
           cash_by_person: Json
           cash_junaid: number
           cash_usama: number
+          cash_with_junaid: number
           cash_zahid: number
           counter_cash: number
           counter_cash_by: string | null
@@ -262,6 +263,7 @@ export type Database = {
           cash_by_person?: Json
           cash_junaid?: number
           cash_usama?: number
+          cash_with_junaid?: number
           cash_zahid?: number
           counter_cash?: number
           counter_cash_by?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           cash_by_person?: Json
           cash_junaid?: number
           cash_usama?: number
+          cash_with_junaid?: number
           cash_zahid?: number
           counter_cash?: number
           counter_cash_by?: string | null
