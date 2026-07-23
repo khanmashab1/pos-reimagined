@@ -503,6 +503,19 @@ function ManualSalesPage() {
             </p>
           </div>
           <div><Label>Today Exp. (override)</Label><Input type="number" placeholder="auto" value={draft.today_expenses_override ?? ""} onChange={(e) => setDraft({ ...draft, today_expenses_override: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+          <div>
+            <Label>Total Cash</Label>
+            {(() => {
+              const personSum = Object.values(draft.cash_by_person || {}).reduce((a, b) => a + personNet(b), 0);
+              const total = personSum + Number(draft.others || 0) + Number(draft.counter_cash || 0);
+              return (
+                <>
+                  <Input readOnly value={total.toLocaleString()} className="font-mono font-semibold bg-muted/40" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Persons net + Counter Cash (auto)</p>
+                </>
+              );
+            })()}
+          </div>
         </div>
 
 
