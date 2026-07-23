@@ -611,6 +611,7 @@ function ManualSalesPage() {
                   <td className="p-2 whitespace-nowrap">{r.entry_date}</td>
                   {columnPersons.map((n) => {
                     const pc = r.cash_by_person[n] ?? { taken: 0, paid: 0 };
+                    const bal = r.personBalances?.[n] ?? 0;
                     return (
                       <>
                         <td key={n + "-t"} className="p-1 text-right">
@@ -622,6 +623,7 @@ function ManualSalesPage() {
                           <Input type="number" value={pc.paid}
                             onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, paid: Number(e.target.value) || 0 } } })}
                             className="h-8 w-20 text-right font-mono" placeholder="paid" />
+                          <div className="text-[10px] text-emerald-700 mt-0.5 font-mono">bal: {bal.toLocaleString()}</div>
                         </td>
                       </>
                     );
