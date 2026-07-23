@@ -81,7 +81,7 @@ export function Receipt({ sale, onClose }: { sale: Sale; onClose: () => void }) 
       <div className="border-t border-dashed border-black my-2" />
       <div className="flex flex-col items-center justify-center mt-2">
         <img src={qrCodeAsset.url} alt="QR code" className="w-32 h-32" />
-        <div className="text-[9px] mt-1 text-center opacity-80">Scan for offers & info</div>
+        <div className="text-[9px] mt-1 text-center opacity-80">Scan for feedback and suggestions</div>
       </div>
       <div className="text-center mt-2">{store.footer_message}</div>
       <div className="text-center text-[9px] mt-1 opacity-70">Powered by ZIC Mart POS</div>
