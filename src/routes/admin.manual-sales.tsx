@@ -126,8 +126,24 @@ function ManualSalesPage() {
         .gte("expense_date", fromISO).lt("expense_date", toISO),
       supabase.from("shift_expenses").select("created_at, amount")
         .gte("created_at", fromISO + "T00:00:00Z").lt("created_at", toISO + "T00:00:00Z"),
-      supabase.from("sales").select("created_at, total")
-        .gte("created_at", fromISO + "T00:00:00+05:00").lt("created_at", toISO + "T00:00:00+05:00"),
+      (async () => {
+        // Paginate: Supabase caps single responses at 1000 rows, and busy
+        // months easily exceed that (dropping the earliest days silently).
+        const pageSize = 1000;
+        const all: { created_at: string; total: number }[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase.from("sales").select("created_at, total")
+            .gte("created_at", fromISO + "T00:00:00+05:00")
+            .lt("created_at", toISO + "T00:00:00+05:00")
+            .order("created_at", { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (error) break;
+          const page = (data ?? []) as any[];
+          all.push(...page);
+          if (page.length < pageSize) break;
+        }
+        return { data: all } as { data: any[] };
+      })(),
       supabase.from("supplier_payments").select("amount, payment_date")
         .gte("payment_date", fromISO).lt("payment_date", toISO),
       supabase.from("cash_sessions").select("closing_cash, expected_cash, opened_at, closed_at")
