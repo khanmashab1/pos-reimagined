@@ -352,11 +352,11 @@ function ManualSalesPage() {
   }, [persons, rows]);
 
   function exportCSV() {
-    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Morning", "POS Night", "POS Total", "Notes"];
+    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Notes"];
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
       ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
-      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePosMorning, r.salePosNight, r.salePos, r.notes,
+      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, r.notes,
     ]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -531,17 +531,15 @@ function ManualSalesPage() {
                 <th className="p-2 text-right">Grand Total</th>
                 <th className="p-2 text-right">Prev Total</th>
                 <th className="p-2 text-right text-emerald-700">Sale</th>
-                <th className="p-2 text-right text-blue-700">POS Morning</th>
-                <th className="p-2 text-right text-blue-700">POS Night</th>
                 <th className="p-2 text-right text-blue-700">POS Total</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={14 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={14 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
@@ -596,8 +594,6 @@ function ManualSalesPage() {
                   <td className="p-2 text-right font-mono font-semibold">{Number(r.grandTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono text-muted-foreground">{Number(r.previousTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono font-bold text-emerald-700">{Number(r.saleCalc).toLocaleString()}</td>
-                  <td className="p-2 text-right font-mono text-blue-700">{Number(r.salePosMorning).toLocaleString()}</td>
-                  <td className="p-2 text-right font-mono text-blue-700">{Number(r.salePosNight).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono text-blue-700 font-semibold">{Number(r.salePos).toLocaleString()}</td>
                   <td className="p-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => delRow(r)}>
