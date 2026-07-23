@@ -268,8 +268,9 @@ function ManualSalesPage() {
       }
       const personBalances: Record<string, number> = { ...personRunning };
       const personCumTotal = Object.values(personBalances).reduce((a, b) => a + b, 0);
-      // Total Cash = today's persons net (Junaid + Usama + Others taken - paid) + Counter Cash.
-      const totalCash = personSum + Number(r.counter_cash);
+      // Total Cash = cumulative person balances (Junaid + Usama + Others bal) + Counter Cash.
+      const totalCash = personCumTotal + Number(r.counter_cash);
+
 
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
