@@ -475,9 +475,15 @@ function ManualSalesPage() {
               {draftPersonEntries.length === 0 && (
                 <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
               )}
-              {draftPersonEntries.map(([name, amt]) => (
+              {draftPersonEntries.map(([name, amt]) => {
+                const prevBal = draftPrevPersonBalances[name] ?? 0;
+                const runBal = prevBal + personNet(amt);
+                return (
                 <div key={name} className="flex items-center gap-2 flex-wrap">
-                  <div className="w-40 font-medium text-sm">{name}</div>
+                  <div className="w-40 font-medium text-sm">
+                    {name}
+                    <div className="text-[10px] text-muted-foreground font-normal">prev: {prevBal.toLocaleString()}</div>
+                  </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase text-muted-foreground">Taken</span>
                     <Input type="number" className="w-28" value={amt.taken}
@@ -489,11 +495,13 @@ function ManualSalesPage() {
                       onChange={(e) => setDraftPerson(name, { paid: Number(e.target.value) || 0 })} />
                   </div>
                   <div className="text-xs text-muted-foreground">Net: <span className="font-mono">{personNet(amt).toLocaleString()}</span></div>
+                  <div className="text-xs text-emerald-700">Bal: <span className="font-mono font-semibold">{runBal.toLocaleString()}</span></div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
+                );
+              })}
               <div className="flex items-center gap-2 pt-1">
                 <Select
                   value=""
