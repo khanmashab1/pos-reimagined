@@ -529,14 +529,27 @@ function ManualSalesPage() {
                     onChange={(e) => setDraft({ ...draft, cash_with_junaid: Number(e.target.value) || 0 })}
                   />
                 </div>
-                {draftPersonEntries.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
-                    <span className="font-mono font-semibold text-sm">
-                      {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
-                    </span>
-                  </div>
-                )}
+                {draftPersonEntries.length > 0 && (() => {
+                  const prevTotal = Object.values(draftPrevPersonBalances).reduce((a, b) => a + b, 0);
+                  const todayNet = draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0);
+                  const cumTotal = prevTotal + todayNet;
+                  return (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Prev Balance:</span>
+                        <span className="font-mono text-sm">{prevTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Today Net:</span>
+                        <span className="font-mono text-sm">{todayNet.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold">Total Cash by Person:</span>
+                        <span className="font-mono font-bold text-sm text-emerald-700">{cumTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
