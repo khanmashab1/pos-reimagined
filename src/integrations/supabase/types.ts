@@ -959,6 +959,63 @@ export type Database = {
           },
         ]
       }
+      stock_reconciliations: {
+        Row: {
+          cost_impact: number
+          cost_price: number
+          created_at: string
+          created_by: string | null
+          difference: number
+          id: string
+          notes: string | null
+          physical_stock: number
+          product_id: string
+          system_stock: number
+          unit_id: string | null
+        }
+        Insert: {
+          cost_impact?: number
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          difference?: number
+          id?: string
+          notes?: string | null
+          physical_stock?: number
+          product_id: string
+          system_stock?: number
+          unit_id?: string | null
+        }
+        Update: {
+          cost_impact?: number
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          difference?: number
+          id?: string
+          notes?: string | null
+          physical_stock?: number
+          product_id?: string
+          system_stock?: number
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "product_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           address: string
