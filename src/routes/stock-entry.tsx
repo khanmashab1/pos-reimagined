@@ -696,9 +696,23 @@ function StockEntryPage() {
 
             {/* Notes */}
             <div className="col-span-2">
-              <Label>
-                Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-              </Label>
+              {(() => {
+                const hasPhysical = physicalStock.trim() !== "";
+                const physicalNum = Number(physicalStock);
+                const sys = Number(selectedProduct?.stock ?? 0);
+                const diff = hasPhysical && !Number.isNaN(physicalNum) ? physicalNum - sys : 0;
+                const required = hasPhysical && diff !== 0;
+                return (
+                  <Label>
+                    Notes{" "}
+                    {required ? (
+                      <span className="text-red-600 font-normal text-xs">(required — explain mismatch)</span>
+                    ) : (
+                      <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    )}
+                  </Label>
+                );
+              })()}
               <Input
                 placeholder="e.g. New batch, Supplier..."
                 value={notes}
