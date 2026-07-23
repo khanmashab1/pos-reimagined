@@ -486,6 +486,14 @@ function ManualSalesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {draftPersonEntries.length > 0 && (
+                <div className="flex items-center justify-end gap-2 pt-2 border-t mt-2">
+                  <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
+                  <span className="font-mono font-semibold text-sm">
+                    {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
