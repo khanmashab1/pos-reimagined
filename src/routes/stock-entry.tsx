@@ -86,6 +86,7 @@ function StockEntryPage() {
   const [reqReason, setReqReason] = useState("");
   const [submittingReq, setSubmittingReq] = useState(false);
   const [entries, setEntries] = useState<EntryRow[]>([]);
+  const [physicalStock, setPhysicalStock] = useState("");
   const [processing, setProcessing] = useState(false);
   const [summary, setSummary] = useState<SubmitSummary | null>(null);
 
@@ -191,6 +192,7 @@ function StockEntryPage() {
     setShowDrop(false);
     setQty("");
     setNotes("");
+    setPhysicalStock("");
     const map = await fetchUnitsByProductIds([p.id]);
     const units = map[p.id] ?? [];
     setSelectedUnits(units);
@@ -243,7 +245,7 @@ function StockEntryPage() {
     }
   };
 
-  const addEntry = () => {
+  const addEntry = async () => {
     if (!selectedProduct) return toast.error("Select a product first");
     const qtyNum = Number(qty);
     if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
@@ -251,6 +253,37 @@ function StockEntryPage() {
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
     const pieces = qtyNum * unitEquals;
+
+    // Stock Reconciliation validation & persistence
+    const hasPhysical = physicalStock.trim() !== "";
+    const physicalNum = Number(physicalStock);
+    const systemStock = Number(selectedProduct.stock ?? 0);
+    const difference = hasPhysical ? physicalNum - systemStock : 0;
+    const costPrice = Number(selectedProduct.purchase_price ?? 0);
+    const costImpact = difference * costPrice;
+    if (hasPhysical && (Number.isNaN(physicalNum) || physicalNum < 0)) {
+      return toast.error("Enter a valid physical stock count");
+    }
+    if (hasPhysical && difference !== 0 && !notes.trim()) {
+      return toast.error("Notes are required when there is a stock mismatch");
+    }
+    if (hasPhysical) {
+      const { error: recErr } = await supabase.from("stock_reconciliations").insert({
+        product_id: selectedProduct.id,
+        unit_id: unit?.id ?? null,
+        system_stock: systemStock,
+        physical_stock: physicalNum,
+        difference,
+        cost_price: costPrice,
+        cost_impact: costImpact,
+        notes: notes || null,
+        created_by: user?.id ?? null,
+      });
+      if (recErr) {
+        toast.error(`Reconciliation not saved: ${recErr.message}`);
+        return;
+      }
+    }
 
     const matchKey = (e: EntryRow) =>
       e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
@@ -285,6 +318,7 @@ function StockEntryPage() {
     setSearch("");
     setQty("");
     setNotes("");
+    setPhysicalStock("");
   };
 
   const removeEntry = (idx: number) => setEntries((e) => e.filter((_, i) => i !== idx));
@@ -565,6 +599,65 @@ function StockEntryPage() {
               )}
             </div>
 
+            {/* Stock Reconciliation */}
+            {selectedProduct && (() => {
+              const hasPhysical = physicalStock.trim() !== "";
+              const physicalNum = Number(physicalStock);
+              const sys = Number(selectedProduct.stock ?? 0);
+              const diff = hasPhysical && !Number.isNaN(physicalNum) ? physicalNum - sys : 0;
+              const cost = Number(selectedProduct.purchase_price ?? 0);
+              const impact = diff * cost;
+              const diffColor =
+                diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-muted-foreground";
+              const diffLabel = diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : "0";
+              const impactLabel =
+                (impact > 0 ? "+" : impact < 0 ? "−" : "") +
+                "Rs. " +
+                Math.abs(impact).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              return (
+                <div className="col-span-2 rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Stock Reconciliation
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>System Stock</Label>
+                      <Input
+                        readOnly
+                        value={sys}
+                        className="mt-1 bg-muted/60 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <Label>Physical Stock (Counted)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Enter counted qty"
+                        value={physicalStock}
+                        onChange={(e) => setPhysicalStock(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Difference</div>
+                      <div className={`text-lg font-bold ${diffColor}`}>{hasPhysical ? diffLabel : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Cost Impact</div>
+                      <div className={`text-lg font-bold ${diffColor}`}>{hasPhysical ? impactLabel : "—"}</div>
+                    </div>
+                  </div>
+                  {hasPhysical && diff !== 0 && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-900 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                      ⚠ Stock mismatch detected — please add a note explaining the reason
+                      (e.g. damage, theft, miscount).
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Prices (read-only, request change from admin) */}
             <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center justify-between mb-2">
@@ -603,9 +696,23 @@ function StockEntryPage() {
 
             {/* Notes */}
             <div className="col-span-2">
-              <Label>
-                Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span>
-              </Label>
+              {(() => {
+                const hasPhysical = physicalStock.trim() !== "";
+                const physicalNum = Number(physicalStock);
+                const sys = Number(selectedProduct?.stock ?? 0);
+                const diff = hasPhysical && !Number.isNaN(physicalNum) ? physicalNum - sys : 0;
+                const required = hasPhysical && diff !== 0;
+                return (
+                  <Label>
+                    Notes{" "}
+                    {required ? (
+                      <span className="text-red-600 font-normal text-xs">(required — explain mismatch)</span>
+                    ) : (
+                      <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    )}
+                  </Label>
+                );
+              })()}
               <Input
                 placeholder="e.g. New batch, Supplier..."
                 value={notes}
