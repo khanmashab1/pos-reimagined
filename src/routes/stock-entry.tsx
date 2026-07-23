@@ -599,6 +599,65 @@ function StockEntryPage() {
               )}
             </div>
 
+            {/* Stock Reconciliation */}
+            {selectedProduct && (() => {
+              const hasPhysical = physicalStock.trim() !== "";
+              const physicalNum = Number(physicalStock);
+              const sys = Number(selectedProduct.stock ?? 0);
+              const diff = hasPhysical && !Number.isNaN(physicalNum) ? physicalNum - sys : 0;
+              const cost = Number(selectedProduct.purchase_price ?? 0);
+              const impact = diff * cost;
+              const diffColor =
+                diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-muted-foreground";
+              const diffLabel = diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : "0";
+              const impactLabel =
+                (impact > 0 ? "+" : impact < 0 ? "−" : "") +
+                "Rs. " +
+                Math.abs(impact).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              return (
+                <div className="col-span-2 rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Stock Reconciliation
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>System Stock</Label>
+                      <Input
+                        readOnly
+                        value={sys}
+                        className="mt-1 bg-muted/60 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <Label>Physical Stock (Counted)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Enter counted qty"
+                        value={physicalStock}
+                        onChange={(e) => setPhysicalStock(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Difference</div>
+                      <div className={`text-lg font-bold ${diffColor}`}>{hasPhysical ? diffLabel : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Cost Impact</div>
+                      <div className={`text-lg font-bold ${diffColor}`}>{hasPhysical ? impactLabel : "—"}</div>
+                    </div>
+                  </div>
+                  {hasPhysical && diff !== 0 && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-900 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                      ⚠ Stock mismatch detected — please add a note explaining the reason
+                      (e.g. damage, theft, miscount).
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Prices (read-only, request change from admin) */}
             <div className="col-span-2 rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center justify-between mb-2">
