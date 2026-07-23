@@ -539,9 +539,9 @@ function ManualSalesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={16 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
