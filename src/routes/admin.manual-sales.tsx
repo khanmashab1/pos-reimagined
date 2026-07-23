@@ -577,6 +577,13 @@ function ManualSalesPage() {
                       <div className="text-[10px] text-emerald-700 mt-0.5">by {r.counter_cash_by}</div>
                     ) : null}
                   </td>
+                  <td className="p-2 text-left text-[11px]">
+                    {r.counter_cash_by ? (
+                      <span className="text-emerald-700 font-medium">{r.counter_cash_by}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="p-1 text-right">
                     <Input type="number" placeholder={String(expensesByDay[r.entry_date] ?? 0)}
                       value={r.today_expenses_override ?? ""}
