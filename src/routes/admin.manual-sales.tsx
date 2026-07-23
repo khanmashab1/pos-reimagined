@@ -523,6 +523,7 @@ function ManualSalesPage() {
                 {columnPersons.map((n) => <th key={n} className="p-2 text-right" colSpan={2}>{n} <span className="text-[9px] text-muted-foreground">(taken/paid)</span></th>)}
                 <th className="p-2 text-right">Others</th>
                 <th className="p-2 text-right">Counter</th>
+                <th className="p-2 text-left">Posted By</th>
                 <th className="p-2 text-right">Today Exp.</th>
                 <th className="p-2 text-right">Prev Exp.</th>
                 <th className="p-2 text-right">Grand Exp.</th>
