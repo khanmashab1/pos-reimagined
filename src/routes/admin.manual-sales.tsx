@@ -356,7 +356,7 @@ function ManualSalesPage() {
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
       ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
-      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePosMorning, r.salePosNight, r.salePos, r.notes,
+      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, r.notes,
     ]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
