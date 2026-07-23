@@ -253,6 +253,8 @@ function ManualSalesPage() {
 
   const computed = useMemo(() => {
     let prevGrand = 0;
+    // Running per-person cash balance. Each day: prev balance + taken - paid.
+    const personRunning: Record<string, number> = {};
     return rows.map((r) => {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
       const prevExp = r.previous_expense_override ?? prevGrand;
@@ -260,6 +262,12 @@ function ManualSalesPage() {
       const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + personNet(b), 0);
       const personTaken = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.taken || 0), 0);
       const personPaid = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.paid || 0), 0);
+      // Update running balances with today's net.
+      for (const [name, pc] of Object.entries(r.cash_by_person || {})) {
+        personRunning[name] = (personRunning[name] ?? 0) + personNet(pc);
+      }
+      const personBalances: Record<string, number> = { ...personRunning };
+      const personCumTotal = Object.values(personBalances).reduce((a, b) => a + b, 0);
       const totalCash = personSum + Number(r.others) + Number(r.counter_cash);
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
@@ -268,9 +276,21 @@ function ManualSalesPage() {
       const salePosMorning = salesMorningByDay[r.entry_date] ?? 0;
       const salePosNight = salesNightByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
-      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
+      return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, personBalances, personCumTotal, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
   }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
+
+  // Cumulative person balances carried INTO the draft date (exclusive of draft's own row).
+  const draftPrevPersonBalances = useMemo(() => {
+    const bal: Record<string, number> = {};
+    for (const r of rows) {
+      if (r.entry_date >= draft.entry_date) continue;
+      for (const [name, pc] of Object.entries(r.cash_by_person || {})) {
+        bal[name] = (bal[name] ?? 0) + personNet(pc);
+      }
+    }
+    return bal;
+  }, [rows, draft.entry_date]);
 
   const totals = useMemo(() => {
     const agg = computed.reduce((a, r) => ({
@@ -455,9 +475,15 @@ function ManualSalesPage() {
               {draftPersonEntries.length === 0 && (
                 <p className="text-xs text-muted-foreground">No persons added yet for this day. Use the dropdown below.</p>
               )}
-              {draftPersonEntries.map(([name, amt]) => (
+              {draftPersonEntries.map(([name, amt]) => {
+                const prevBal = draftPrevPersonBalances[name] ?? 0;
+                const runBal = prevBal + personNet(amt);
+                return (
                 <div key={name} className="flex items-center gap-2 flex-wrap">
-                  <div className="w-40 font-medium text-sm">{name}</div>
+                  <div className="w-40 font-medium text-sm">
+                    {name}
+                    <div className="text-[10px] text-muted-foreground font-normal">prev: {prevBal.toLocaleString()}</div>
+                  </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase text-muted-foreground">Taken</span>
                     <Input type="number" className="w-28" value={amt.taken}
@@ -469,11 +495,13 @@ function ManualSalesPage() {
                       onChange={(e) => setDraftPerson(name, { paid: Number(e.target.value) || 0 })} />
                   </div>
                   <div className="text-xs text-muted-foreground">Net: <span className="font-mono">{personNet(amt).toLocaleString()}</span></div>
+                  <div className="text-xs text-emerald-700">Bal: <span className="font-mono font-semibold">{runBal.toLocaleString()}</span></div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDraftPerson(name)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
+                );
+              })}
               <div className="flex items-center gap-2 pt-1">
                 <Select
                   value=""
@@ -501,14 +529,27 @@ function ManualSalesPage() {
                     onChange={(e) => setDraft({ ...draft, cash_with_junaid: Number(e.target.value) || 0 })}
                   />
                 </div>
-                {draftPersonEntries.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">Total Cash by Person:</span>
-                    <span className="font-mono font-semibold text-sm">
-                      {draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0).toLocaleString()}
-                    </span>
-                  </div>
-                )}
+                {draftPersonEntries.length > 0 && (() => {
+                  const prevTotal = Object.values(draftPrevPersonBalances).reduce((a, b) => a + b, 0);
+                  const todayNet = draftPersonEntries.reduce((a, [, amt]) => a + personNet(amt), 0);
+                  const cumTotal = prevTotal + todayNet;
+                  return (
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Prev Balance:</span>
+                        <span className="font-mono text-sm">{prevTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Today Net:</span>
+                        <span className="font-mono text-sm">{todayNet.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold">Total Cash by Person:</span>
+                        <span className="font-mono font-bold text-sm text-emerald-700">{cumTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -570,6 +611,7 @@ function ManualSalesPage() {
                   <td className="p-2 whitespace-nowrap">{r.entry_date}</td>
                   {columnPersons.map((n) => {
                     const pc = r.cash_by_person[n] ?? { taken: 0, paid: 0 };
+                    const bal = r.personBalances?.[n] ?? 0;
                     return (
                       <>
                         <td key={n + "-t"} className="p-1 text-right">
@@ -581,6 +623,7 @@ function ManualSalesPage() {
                           <Input type="number" value={pc.paid}
                             onChange={(e) => updateRow(r, { cash_by_person: { ...r.cash_by_person, [n]: { ...pc, paid: Number(e.target.value) || 0 } } })}
                             className="h-8 w-20 text-right font-mono" placeholder="paid" />
+                          <div className="text-[10px] text-emerald-700 mt-0.5 font-mono">bal: {bal.toLocaleString()}</div>
                         </td>
                       </>
                     );
