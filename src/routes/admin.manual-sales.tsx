@@ -29,6 +29,7 @@ type Row = {
   cash_by_person: Record<string, PersonCash>;
   others: number;
   counter_cash: number;
+  counter_cash_by: string;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
@@ -48,7 +49,7 @@ const personNet = (p: PersonCash) => Number(p.taken || 0) - Number(p.paid || 0);
 const emptyRow = (): Row => ({
   entry_date: today(),
   cash_by_person: {},
-  others: 0, counter_cash: 0,
+  others: 0, counter_cash: 0, counter_cash_by: "",
   today_expenses_override: null, previous_expense_override: null, notes: "",
 });
 
@@ -214,6 +215,7 @@ function ManualSalesPage() {
       return {
         id: r.id, entry_date: r.entry_date, cash_by_person: cbp,
         others: Number(r.others || 0), counter_cash: Number(r.counter_cash || 0),
+        counter_cash_by: r.counter_cash_by ?? "",
         today_expenses_override: r.today_expenses_override, previous_expense_override: r.previous_expense_override,
         notes: r.notes ?? "",
       };
@@ -236,6 +238,7 @@ function ManualSalesPage() {
         cash_by_person: existing.cash_by_person,
         others: existing.others,
         counter_cash: existing.counter_cash,
+        counter_cash_by: existing.counter_cash_by,
         today_expenses_override: existing.today_expenses_override,
         previous_expense_override: existing.previous_expense_override,
         notes: existing.notes,
@@ -492,6 +495,9 @@ function ManualSalesPage() {
           <div>
             <Label>Counter Cash</Label>
             <Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} />
+            {draft.counter_cash_by ? (
+              <p className="text-[11px] text-emerald-700 mt-1">Counter cash posted by cashier <span className="font-semibold">{draft.counter_cash_by}</span></p>
+            ) : null}
             <p className="text-[11px] text-muted-foreground mt-1">
               Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[addDaysISO(draft.entry_date, -1)] ?? 0)}</span> <span className="text-muted-foreground">(prev day)</span>
             </p>
@@ -566,6 +572,9 @@ function ManualSalesPage() {
                     <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                       exp: {Number(expectedCounterByDay[addDaysISO(r.entry_date, -1)] ?? 0).toLocaleString()}
                     </div>
+                    {r.counter_cash_by ? (
+                      <div className="text-[10px] text-emerald-700 mt-0.5">by {r.counter_cash_by}</div>
+                    ) : null}
                   </td>
                   <td className="p-1 text-right">
                     <Input type="number" placeholder={String(expensesByDay[r.entry_date] ?? 0)}
