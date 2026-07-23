@@ -29,6 +29,7 @@ type Row = {
   cash_by_person: Record<string, PersonCash>;
   others: number;
   counter_cash: number;
+  counter_cash_by: string;
   today_expenses_override: number | null;
   previous_expense_override: number | null;
   notes: string;
