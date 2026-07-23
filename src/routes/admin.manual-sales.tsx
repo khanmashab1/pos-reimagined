@@ -572,6 +572,9 @@ function ManualSalesPage() {
                     <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                       exp: {Number(expectedCounterByDay[addDaysISO(r.entry_date, -1)] ?? 0).toLocaleString()}
                     </div>
+                    {r.counter_cash_by ? (
+                      <div className="text-[10px] text-emerald-700 mt-0.5">by {r.counter_cash_by}</div>
+                    ) : null}
                   </td>
                   <td className="p-1 text-right">
                     <Input type="number" placeholder={String(expensesByDay[r.entry_date] ?? 0)}
