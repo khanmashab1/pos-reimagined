@@ -49,7 +49,7 @@ const personNet = (p: PersonCash) => Number(p.taken || 0) - Number(p.paid || 0);
 const emptyRow = (): Row => ({
   entry_date: today(),
   cash_by_person: {},
-  others: 0, counter_cash: 0,
+  others: 0, counter_cash: 0, counter_cash_by: "",
   today_expenses_override: null, previous_expense_override: null, notes: "",
 });
 
