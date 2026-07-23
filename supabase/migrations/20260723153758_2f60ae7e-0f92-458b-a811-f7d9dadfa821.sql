@@ -1,0 +1,2 @@
+CREATE POLICY "stock_entries admin update" ON public.stock_entries FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "stock_entries admin delete" ON public.stock_entries FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
