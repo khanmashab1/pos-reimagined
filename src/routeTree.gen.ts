@@ -21,6 +21,7 @@ import { Route as SuppliersReportRouteImport } from './routes/suppliers.report'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as AdminStockSummaryRouteImport } from './routes/admin.stock-summary'
+import { Route as AdminStockReconciliationsRouteImport } from './routes/admin.stock-reconciliations'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
@@ -98,6 +99,12 @@ const AdminStockSummaryRoute = AdminStockSummaryRouteImport.update({
   path: '/stock-summary',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStockReconciliationsRoute =
+  AdminStockReconciliationsRouteImport.update({
+    id: '/stock-reconciliations',
+    path: '/stock-reconciliations',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminShiftsRoute = AdminShiftsRouteImport.update({
   id: '/shifts',
   path: '/shifts',
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-reconciliations': typeof AdminStockReconciliationsRoute
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
@@ -234,6 +242,7 @@ export interface FileRoutesByTo {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-reconciliations': typeof AdminStockReconciliationsRoute
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
@@ -265,6 +274,7 @@ export interface FileRoutesById {
   '/admin/returns': typeof AdminReturnsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/stock-reconciliations': typeof AdminStockReconciliationsRoute
   '/admin/stock-summary': typeof AdminStockSummaryRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/users': typeof AdminUsersRoute
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-reconciliations'
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-reconciliations'
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
@@ -357,6 +369,7 @@ export interface FileRouteTypes {
     | '/admin/returns'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/stock-reconciliations'
     | '/admin/stock-summary'
     | '/admin/suppliers'
     | '/admin/users'
@@ -458,6 +471,13 @@ declare module '@tanstack/react-router' {
       path: '/stock-summary'
       fullPath: '/admin/stock-summary'
       preLoaderRoute: typeof AdminStockSummaryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/stock-reconciliations': {
+      id: '/admin/stock-reconciliations'
+      path: '/stock-reconciliations'
+      fullPath: '/admin/stock-reconciliations'
+      preLoaderRoute: typeof AdminStockReconciliationsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shifts': {
@@ -592,6 +612,7 @@ interface AdminRouteChildren {
   AdminReturnsRoute: typeof AdminReturnsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
+  AdminStockReconciliationsRoute: typeof AdminStockReconciliationsRoute
   AdminStockSummaryRoute: typeof AdminStockSummaryRoute
   AdminSuppliersRoute: typeof AdminSuppliersRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -614,6 +635,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminReturnsRoute: AdminReturnsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
+  AdminStockReconciliationsRoute: AdminStockReconciliationsRoute,
   AdminStockSummaryRoute: AdminStockSummaryRoute,
   AdminSuppliersRoute: AdminSuppliersRoute,
   AdminUsersRoute: AdminUsersRoute,
