@@ -1,0 +1,1 @@
+ALTER TABLE public.manual_sale_days ADD COLUMN IF NOT EXISTS counter_cash_by text;

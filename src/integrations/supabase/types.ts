@@ -246,6 +246,7 @@ export type Database = {
           cash_usama: number
           cash_zahid: number
           counter_cash: number
+          counter_cash_by: string | null
           created_at: string
           created_by: string | null
           created_by_name: string
@@ -263,6 +264,7 @@ export type Database = {
           cash_usama?: number
           cash_zahid?: number
           counter_cash?: number
+          counter_cash_by?: string | null
           created_at?: string
           created_by?: string | null
           created_by_name?: string
@@ -280,6 +282,7 @@ export type Database = {
           cash_usama?: number
           cash_zahid?: number
           counter_cash?: number
+          counter_cash_by?: string | null
           created_at?: string
           created_by?: string | null
           created_by_name?: string
