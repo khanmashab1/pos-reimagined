@@ -1,0 +1,1 @@
+ALTER TABLE public.manual_sale_days ADD COLUMN IF NOT EXISTS cash_with_junaid numeric NOT NULL DEFAULT 0;
