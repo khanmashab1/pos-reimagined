@@ -270,10 +270,7 @@ function ManualSalesPage() {
       const personCumTotal = Object.values(personBalances).reduce((a, b) => a + b, 0);
       // Sale is derived from running balances (cumulative person cash), so
       // today's totalCash uses personCumTotal instead of just today's net.
-      // From 2026-07-01 onwards, exclude legacy "others" field from totalCash
-      // (Others is now tracked as a person in cash_by_person, avoiding double-count).
-      const includeOthers = r.entry_date < "2026-07-01";
-      const totalCash = personCumTotal + (includeOthers ? Number(r.others) : 0) + Number(r.counter_cash);
+      const totalCash = personCumTotal + Number(r.others) + Number(r.counter_cash);
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
       const saleCalc = grandTotal - previousTotal;
