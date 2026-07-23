@@ -100,6 +100,7 @@ export function MidnightCounterCashDialog({
       {
         entry_date: targetDate,
         counter_cash: n,
+        counter_cash_by: fullName ?? "",
         created_by: user?.id ?? null,
         created_by_name: fullName ?? "",
       } as any,
