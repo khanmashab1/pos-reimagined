@@ -494,6 +494,9 @@ function ManualSalesPage() {
           <div>
             <Label>Counter Cash</Label>
             <Input type="number" value={draft.counter_cash} onChange={(e) => setDraft({ ...draft, counter_cash: Number(e.target.value) || 0 })} />
+            {draft.counter_cash_by ? (
+              <p className="text-[11px] text-emerald-700 mt-1">Counter cash posted by cashier <span className="font-semibold">{draft.counter_cash_by}</span></p>
+            ) : null}
             <p className="text-[11px] text-muted-foreground mt-1">
               Expected at 12 AM: <span className="font-mono">{fmt(expectedCounterByDay[addDaysISO(draft.entry_date, -1)] ?? 0)}</span> <span className="text-muted-foreground">(prev day)</span>
             </p>
