@@ -23,6 +23,7 @@ const items = [
   { to: "/admin/shifts", label: "Cashier Shifts", icon: ClipboardList },
   { to: "/admin/cashier-report", label: "Cashier Report", icon: Users },
   { to: "/admin/stock-summary", label: "Stock Summary", icon: Package },
+  { to: "/admin/stock-reconciliations", label: "Stock Reconciliation", icon: ClipboardList },
   { to: "/admin/price-requests", label: "Price Requests", icon: DollarSign },
   { to: "/admin/daily-expenses", label: "Operating Expenses", icon: BookText },
   { to: "/admin/manual-sales", label: "Manual Sale Report", icon: FileBarChart },
