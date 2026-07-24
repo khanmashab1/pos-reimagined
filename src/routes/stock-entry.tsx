@@ -247,8 +247,12 @@ function StockEntryPage() {
 
   const addEntry = async () => {
     if (!selectedProduct) return toast.error("Select a product first");
-    const qtyNum = Number(qty);
-    if (!qty || qtyNum <= 0) return toast.error("Enter a valid quantity");
+    const hasQty = qty.trim() !== "" && Number(qty) > 0;
+    const hasPhysicalEarly = physicalStock.trim() !== "";
+    if (!hasQty && !hasPhysicalEarly) {
+      return toast.error("Enter a quantity to add or a physical stock count");
+    }
+    const qtyNum = hasQty ? Number(qty) : 0;
     const unit = selectedUnits.find((u) => u.id === selectedUnitId);
     const unitName = unit?.name ?? "Piece";
     const unitEquals = unit?.equals_base ?? 1;
