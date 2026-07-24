@@ -268,20 +268,42 @@ function StockEntryPage() {
       return toast.error("Notes are required when there is a stock mismatch");
     }
     if (hasPhysical) {
-      const { error: recErr } = await supabase.from("stock_reconciliations").insert({
-        product_id: selectedProduct.id,
-        unit_id: unit?.id ?? null,
-        system_stock: systemStock,
-        physical_stock: physicalNum,
-        difference,
-        cost_price: costPrice,
-        cost_impact: costImpact,
-        notes: notes || null,
-        created_by: user?.id ?? null,
-      });
+      const isAdmin = role === "admin";
+      const { data: recRow, error: recErr } = await supabase
+        .from("stock_reconciliations")
+        .insert({
+          product_id: selectedProduct.id,
+          unit_id: unit?.id ?? null,
+          system_stock: systemStock,
+          physical_stock: physicalNum,
+          difference,
+          cost_price: costPrice,
+          cost_impact: costImpact,
+          notes: notes || null,
+          created_by: user?.id ?? null,
+          created_by_name: fullName || null,
+          status: "pending",
+        })
+        .select("id")
+        .single();
       if (recErr) {
         toast.error(`Reconciliation not saved: ${recErr.message}`);
         return;
+      }
+      if (isAdmin && recRow?.id) {
+        const { error: apErr } = await supabase.rpc("approve_stock_reconciliation", {
+          _id: recRow.id,
+          _notes: "Auto-approved by admin",
+        });
+        if (apErr) {
+          toast.error(`Auto-approval failed: ${apErr.message}`);
+          return;
+        }
+        toast.success(`Stock reconciled: set to ${physicalNum}`);
+        // Refresh selected product stock in local state
+        setSelectedProduct({ ...selectedProduct, stock: physicalNum });
+      } else {
+        toast.success("Reconciliation submitted for admin approval");
       }
     }
 
