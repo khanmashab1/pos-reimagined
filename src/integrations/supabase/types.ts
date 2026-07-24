@@ -961,41 +961,62 @@ export type Database = {
       }
       stock_reconciliations: {
         Row: {
+          applied_at: string | null
           cost_impact: number
           cost_price: number
           created_at: string
           created_by: string | null
+          created_by_name: string | null
           difference: number
           id: string
           notes: string | null
           physical_stock: number
           product_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          status: string
           system_stock: number
           unit_id: string | null
         }
         Insert: {
+          applied_at?: string | null
           cost_impact?: number
           cost_price?: number
           created_at?: string
           created_by?: string | null
+          created_by_name?: string | null
           difference?: number
           id?: string
           notes?: string | null
           physical_stock?: number
           product_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
           system_stock?: number
           unit_id?: string | null
         }
         Update: {
+          applied_at?: string | null
           cost_impact?: number
           cost_price?: number
           created_at?: string
           created_by?: string | null
+          created_by_name?: string | null
           difference?: number
           id?: string
           notes?: string | null
           physical_stock?: number
           product_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
           system_stock?: number
           unit_id?: string | null
         }
@@ -1288,6 +1309,10 @@ export type Database = {
       }
       approve_return: { Args: { _return_id: string }; Returns: Json }
       approve_stock_entry: { Args: { _entry_id: string }; Returns: Json }
+      approve_stock_reconciliation: {
+        Args: { _id: string; _notes?: string }
+        Returns: Json
+      }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary:
         | { Args: { _days: number; _start_at: string }; Returns: Json }
@@ -1370,6 +1395,10 @@ export type Database = {
       }
       reject_stock_entry: {
         Args: { _entry_id: string; _reason: string }
+        Returns: Json
+      }
+      reject_stock_reconciliation: {
+        Args: { _id: string; _reason: string }
         Returns: Json
       }
       request_price_change: {
