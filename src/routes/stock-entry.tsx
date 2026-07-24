@@ -311,32 +311,34 @@ function StockEntryPage() {
       }
     }
 
-    const matchKey = (e: EntryRow) =>
-      e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
-    const existing = entries.findIndex(matchKey);
-    if (existing >= 0) {
-      setEntries((prev) =>
-        prev.map((e, i) =>
-          i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e,
-        ),
-      );
-      toast.success(`Updated ${selectedProduct.name}: +${qtyNum} ${unitName} (${pieces} pieces)`);
-    } else {
-      setEntries((prev) => [
-        ...prev,
-        {
-          product_id: selectedProduct.id,
-          product_name: selectedProduct.name,
-          barcode: selectedProduct.barcode,
-          current_stock: selectedProduct.stock,
-          qty: qtyNum,
-          notes,
-          unit_id: unit?.id ?? null,
-          unit_name: unitName,
-          unit_equals_base: unitEquals,
-        },
-      ]);
-      toast.success(`Adding ${qtyNum} ${unitName} = ${pieces} pieces to ${selectedProduct.name}`);
+    if (hasQty) {
+      const matchKey = (e: EntryRow) =>
+        e.product_id === selectedProduct.id && e.unit_id === (unit?.id ?? null);
+      const existing = entries.findIndex(matchKey);
+      if (existing >= 0) {
+        setEntries((prev) =>
+          prev.map((e, i) =>
+            i === existing ? { ...e, qty: e.qty + qtyNum, notes: notes || e.notes } : e,
+          ),
+        );
+        toast.success(`Updated ${selectedProduct.name}: +${qtyNum} ${unitName} (${pieces} pieces)`);
+      } else {
+        setEntries((prev) => [
+          ...prev,
+          {
+            product_id: selectedProduct.id,
+            product_name: selectedProduct.name,
+            barcode: selectedProduct.barcode,
+            current_stock: selectedProduct.stock,
+            qty: qtyNum,
+            notes,
+            unit_id: unit?.id ?? null,
+            unit_name: unitName,
+            unit_equals_base: unitEquals,
+          },
+        ]);
+        toast.success(`Adding ${qtyNum} ${unitName} = ${pieces} pieces to ${selectedProduct.name}`);
+      }
     }
     setSelectedProduct(null);
     setSelectedUnits([]);
