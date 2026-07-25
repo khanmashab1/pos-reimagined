@@ -398,6 +398,24 @@ export type Database = {
         }
         Relationships: []
       }
+      person_starting_balances: {
+        Row: {
+          balance: number
+          person_name: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          person_name: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          person_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       price_change_requests: {
         Row: {
           created_at: string
