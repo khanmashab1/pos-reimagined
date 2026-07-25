@@ -130,6 +130,7 @@ function StockReconciliationsPage() {
       const c = Number(r.cost_impact);
       if (r.status === "pending") pending++;
       if (d !== 0) mismatches++;
+      if (r.status === "rejected") continue;
       if (d < 0) shortage += Math.abs(c);
       else if (d > 0) surplus += Math.abs(c);
       netImpact += c;
