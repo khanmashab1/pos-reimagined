@@ -402,11 +402,11 @@ function ManualSalesPage() {
   }, [persons, rows]);
 
   function exportCSV() {
-    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Notes"];
+    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Diff (Sale-POS)", "Notes"];
     const body = computed.map((r, i) => [
       i + 1, r.entry_date,
       ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
-      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, r.notes,
+      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, (Number(r.saleCalc) - Number(r.salePos)), r.notes,
     ]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -482,6 +482,7 @@ function ManualSalesPage() {
         <Stat label="Days" value={String(computed.length)} />
         <Stat label="Total Sale (ledger)" value={fmt(totals.sale)} accent="text-emerald-600" />
         <Stat label="System Sale (POS)" value={fmt(totals.pos)} accent="text-blue-600" />
+        {(() => { const d = totals.sale - totals.pos; const cls = d === 0 ? "" : d > 0 ? "text-emerald-600" : "text-destructive"; return <Stat label="Diff (Sale − POS)" value={fmt(d)} accent={cls} />; })()}
         <Stat label="Today Expenses" value={fmt(totals.expenses)} accent="text-destructive" />
         <Stat label="System Expenses (Suppliers Paid)" value={fmt(supplierPaid)} accent="text-orange-600" />
         <Stat label="Cash in Hand" value={fmt(totals.cash)} accent="text-emerald-700" />
@@ -622,14 +623,15 @@ function ManualSalesPage() {
                 <th className="p-2 text-right">Prev Total</th>
                 <th className="p-2 text-right text-emerald-700">Sale</th>
                 <th className="p-2 text-right text-blue-700">POS Total</th>
+                <th className="p-2 text-right">Diff (Sale−POS)</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : computed.length === 0 ? (
-                <tr><td colSpan={14 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
+                <tr><td colSpan={15 + 2*columnPersons.length} className="p-8 text-center text-muted-foreground">No entries this month. Add one above.</td></tr>
               ) : computed.map((r, i) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">{i + 1}</td>
@@ -683,6 +685,7 @@ function ManualSalesPage() {
                   <td className="p-2 text-right font-mono text-muted-foreground">{Number(r.previousTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono font-bold text-emerald-700">{Number(r.saleCalc).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono text-blue-700 font-semibold">{Number(r.salePos).toLocaleString()}</td>
+                  {(() => { const d = Number(r.saleCalc) - Number(r.salePos); const cls = d === 0 ? "text-muted-foreground" : d > 0 ? "text-emerald-700" : "text-destructive"; return <td className={`p-2 text-right font-mono font-semibold ${cls}`}>{d.toLocaleString()}</td>; })()}
                   <td className="p-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => delRow(r)}>
                       <Trash2 className="h-3.5 w-3.5" />
