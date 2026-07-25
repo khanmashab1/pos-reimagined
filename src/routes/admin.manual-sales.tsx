@@ -684,6 +684,7 @@ function ManualSalesPage() {
                   <td className="p-2 text-right font-mono text-muted-foreground">{Number(r.previousTotal).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono font-bold text-emerald-700">{Number(r.saleCalc).toLocaleString()}</td>
                   <td className="p-2 text-right font-mono text-blue-700 font-semibold">{Number(r.salePos).toLocaleString()}</td>
+                  {(() => { const d = Number(r.saleCalc) - Number(r.salePos); const cls = d === 0 ? "text-muted-foreground" : d > 0 ? "text-emerald-700" : "text-destructive"; return <td className={`p-2 text-right font-mono font-semibold ${cls}`}>{d.toLocaleString()}</td>; })()}
                   <td className="p-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => delRow(r)}>
                       <Trash2 className="h-3.5 w-3.5" />
