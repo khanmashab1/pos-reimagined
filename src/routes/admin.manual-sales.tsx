@@ -85,6 +85,14 @@ function ManualSalesPage() {
   const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
+  const [personLedger, setPersonLedger] = useState<{
+    person: string;
+    received: number;
+    paid: number;
+    balance: number;
+    entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[];
+  }[]>([]);
+  const [ledgerOpen, setLedgerOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
@@ -150,6 +158,47 @@ function ManualSalesPage() {
         .gte("opened_at", addDaysISO(fromISO, -1) + "T00:00:00+05:00").lt("opened_at", toISO + "T00:00:00+05:00"),
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
+
+    // Person Balance ledger: cumulative from 2026-06-30 up to end of selected range.
+    // Received = shift_expenses given to that person (cashier "Add Expense").
+    // Paid     = person_payments (supplier payments made by that person).
+    const LEDGER_START = "2026-06-30";
+    const ledgerFrom = LEDGER_START;
+    const ledgerTo = toISO > LEDGER_START ? toISO : LEDGER_START;
+    const [{ data: seLedger }, { data: ppLedger }] = await Promise.all([
+      supabase.from("shift_expenses").select("created_at, amount, description")
+        .gte("created_at", ledgerFrom + "T00:00:00+05:00")
+        .lt("created_at", ledgerTo + "T00:00:00+05:00"),
+      supabase.from("person_payments").select("payment_date, person_name, amount, notes")
+        .gte("payment_date", ledgerFrom).lt("payment_date", ledgerTo),
+    ]);
+    const acc: Record<string, { received: number; paid: number; entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[] }> = {};
+    const norm = (s: string) => s.trim();
+    for (const r of (seLedger ?? []) as any[]) {
+      const name = norm(String(r.description ?? ""));
+      if (!name) continue;
+      (acc[name] ??= { received: 0, paid: 0, entries: [] });
+      acc[name].received += Number(r.amount || 0);
+      acc[name].entries.push({ date: String(r.created_at).slice(0, 10), kind: "received", amount: Number(r.amount || 0), note: "Cashier expense" });
+    }
+    for (const r of (ppLedger ?? []) as any[]) {
+      const name = norm(String(r.person_name ?? ""));
+      if (!name) continue;
+      (acc[name] ??= { received: 0, paid: 0, entries: [] });
+      acc[name].paid += Number(r.amount || 0);
+      acc[name].entries.push({ date: String(r.payment_date), kind: "paid", amount: Number(r.amount || 0), note: r.notes || "" });
+    }
+    setPersonLedger(
+      Object.entries(acc)
+        .map(([person, v]) => ({
+          person,
+          received: v.received,
+          paid: v.paid,
+          balance: v.received - v.paid,
+          entries: v.entries.sort((a, b) => b.date.localeCompare(a.date)),
+        }))
+        .sort((a, b) => b.balance - a.balance),
+    );
 
     const ex: Record<string, number> = {};
     for (const r of (op ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
@@ -498,6 +547,82 @@ function ManualSalesPage() {
         <Stat label="System Expenses (Suppliers Paid)" value={fmt(supplierPaid)} accent="text-orange-600" />
         <Stat label="Cash in Hand" value={fmt(totals.cash)} accent="text-emerald-700" />
       </div>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Person Balance Report</h2>
+            <p className="text-xs text-muted-foreground">Cumulative from 30 Jun 2026. Cashier expenses to a person add up; supplier payments made by that person deduct.</p>
+          </div>
+          {personLedger.length > 0 && (
+            <div className="flex gap-4 text-xs">
+              <div><span className="text-muted-foreground">Total Received:</span> <span className="font-mono font-semibold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.received, 0))}</span></div>
+              <div><span className="text-muted-foreground">Total Paid:</span> <span className="font-mono font-semibold text-destructive">{fmt(personLedger.reduce((a, p) => a + p.paid, 0))}</span></div>
+              <div><span className="text-muted-foreground">Net Balance:</span> <span className="font-mono font-bold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.balance, 0))}</span></div>
+            </div>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted uppercase text-[10px]">
+              <tr>
+                <th className="p-2 text-left">Person</th>
+                <th className="p-2 text-right">Received (Expenses)</th>
+                <th className="p-2 text-right">Paid (Suppliers)</th>
+                <th className="p-2 text-right">Balance</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {personLedger.length === 0 ? (
+                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
+              ) : personLedger.map((p) => (
+                <>
+                  <tr key={p.person} className="border-t hover:bg-muted/30">
+                    <td className="p-2 font-medium">{p.person}</td>
+                    <td className="p-2 text-right font-mono text-emerald-700">{fmt(p.received)}</td>
+                    <td className="p-2 text-right font-mono text-destructive">{fmt(p.paid)}</td>
+                    <td className={`p-2 text-right font-mono font-bold ${p.balance >= 0 ? "text-emerald-700" : "text-destructive"}`}>{fmt(p.balance)}</td>
+                    <td className="p-2 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => setLedgerOpen(ledgerOpen === p.person ? null : p.person)}>
+                        {ledgerOpen === p.person ? "Hide" : "Details"}
+                      </Button>
+                    </td>
+                  </tr>
+                  {ledgerOpen === p.person && (
+                    <tr key={p.person + "-d"}>
+                      <td colSpan={5} className="p-3 bg-muted/20">
+                        <table className="w-full text-xs">
+                          <thead className="text-[10px] uppercase text-muted-foreground">
+                            <tr>
+                              <th className="p-1 text-left">Date</th>
+                              <th className="p-1 text-left">Type</th>
+                              <th className="p-1 text-left">Note</th>
+                              <th className="p-1 text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {p.entries.map((e, i) => (
+                              <tr key={i} className="border-t">
+                                <td className="p-1">{e.date}</td>
+                                <td className={`p-1 font-medium ${e.kind === "received" ? "text-emerald-700" : "text-destructive"}`}>{e.kind === "received" ? "Received" : "Paid"}</td>
+                                <td className="p-1 text-muted-foreground">{e.note}</td>
+                                <td className={`p-1 text-right font-mono ${e.kind === "received" ? "text-emerald-700" : "text-destructive"}`}>{e.kind === "received" ? "+" : "−"}{fmt(e.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+
 
       <Card className="p-5">
         <h2 className="font-semibold mb-3 flex items-center gap-2"><Plus className="h-4 w-4" /> Add / Update Day</h2>
