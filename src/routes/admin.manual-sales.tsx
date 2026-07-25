@@ -402,12 +402,15 @@ function ManualSalesPage() {
   }, [persons, rows]);
 
   function exportCSV() {
-    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Diff (Sale-POS)", "Notes"];
-    const body = computed.map((r, i) => [
-      i + 1, r.entry_date,
-      ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
-      r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, (Number(r.saleCalc) - Number(r.salePos)), r.notes,
-    ]);
+    const header = ["SR.No", "Date", ...columnPersons, "Others", "Counter Cash", "Today Expenses", "Previous Expense", "Grand Expenses", "Total Cash", "Grand Total", "Previous Total", "Sale", "POS Total", "Sale Surplus", "POS Surplus", "Notes"];
+    const body = computed.map((r, i) => {
+      const d = Number(r.saleCalc) - Number(r.salePos);
+      return [
+        i + 1, r.entry_date,
+        ...columnPersons.map((n) => personNet(r.cash_by_person[n] ?? { taken: 0, paid: 0 })),
+        r.others, r.counter_cash, r.todayExp, r.prevExp, r.grandExp, r.totalCash, r.grandTotal, r.previousTotal, r.saleCalc, r.salePos, (d > 0 ? d : 0), (d < 0 ? -d : 0), r.notes,
+      ];
+    });
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
