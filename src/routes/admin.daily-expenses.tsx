@@ -22,7 +22,7 @@ export const Route = createFileRoute("/admin/daily-expenses")({
 const num = (v: unknown) => Number(v) || 0;
 
 
-const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Repair", "Miscellaneous"];
+const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Maintenance Cost", "Miscellaneous"];
 const PAY_METHODS = ["junaid", "usama", "others", "counter"];
 
 const METHOD_LABEL: Record<string, string> = {
