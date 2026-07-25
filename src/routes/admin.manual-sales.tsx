@@ -549,6 +549,82 @@ function ManualSalesPage() {
       </div>
 
       <Card className="p-5">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Person Balance Report</h2>
+            <p className="text-xs text-muted-foreground">Cumulative from 30 Jun 2026. Cashier expenses to a person add up; supplier payments made by that person deduct.</p>
+          </div>
+          {personLedger.length > 0 && (
+            <div className="flex gap-4 text-xs">
+              <div><span className="text-muted-foreground">Total Received:</span> <span className="font-mono font-semibold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.received, 0))}</span></div>
+              <div><span className="text-muted-foreground">Total Paid:</span> <span className="font-mono font-semibold text-destructive">{fmt(personLedger.reduce((a, p) => a + p.paid, 0))}</span></div>
+              <div><span className="text-muted-foreground">Net Balance:</span> <span className="font-mono font-bold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.balance, 0))}</span></div>
+            </div>
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted uppercase text-[10px]">
+              <tr>
+                <th className="p-2 text-left">Person</th>
+                <th className="p-2 text-right">Received (Expenses)</th>
+                <th className="p-2 text-right">Paid (Suppliers)</th>
+                <th className="p-2 text-right">Balance</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {personLedger.length === 0 ? (
+                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
+              ) : personLedger.map((p) => (
+                <>
+                  <tr key={p.person} className="border-t hover:bg-muted/30">
+                    <td className="p-2 font-medium">{p.person}</td>
+                    <td className="p-2 text-right font-mono text-emerald-700">{fmt(p.received)}</td>
+                    <td className="p-2 text-right font-mono text-destructive">{fmt(p.paid)}</td>
+                    <td className={`p-2 text-right font-mono font-bold ${p.balance >= 0 ? "text-emerald-700" : "text-destructive"}`}>{fmt(p.balance)}</td>
+                    <td className="p-2 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => setLedgerOpen(ledgerOpen === p.person ? null : p.person)}>
+                        {ledgerOpen === p.person ? "Hide" : "Details"}
+                      </Button>
+                    </td>
+                  </tr>
+                  {ledgerOpen === p.person && (
+                    <tr key={p.person + "-d"}>
+                      <td colSpan={5} className="p-3 bg-muted/20">
+                        <table className="w-full text-xs">
+                          <thead className="text-[10px] uppercase text-muted-foreground">
+                            <tr>
+                              <th className="p-1 text-left">Date</th>
+                              <th className="p-1 text-left">Type</th>
+                              <th className="p-1 text-left">Note</th>
+                              <th className="p-1 text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {p.entries.map((e, i) => (
+                              <tr key={i} className="border-t">
+                                <td className="p-1">{e.date}</td>
+                                <td className={`p-1 font-medium ${e.kind === "received" ? "text-emerald-700" : "text-destructive"}`}>{e.kind === "received" ? "Received" : "Paid"}</td>
+                                <td className="p-1 text-muted-foreground">{e.note}</td>
+                                <td className={`p-1 text-right font-mono ${e.kind === "received" ? "text-emerald-700" : "text-destructive"}`}>{e.kind === "received" ? "+" : "−"}{fmt(e.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+
+
+      <Card className="p-5">
         <h2 className="font-semibold mb-3 flex items-center gap-2"><Plus className="h-4 w-4" /> Add / Update Day</h2>
         <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 items-start">
           <div>
