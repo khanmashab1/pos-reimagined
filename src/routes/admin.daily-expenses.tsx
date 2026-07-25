@@ -55,7 +55,7 @@ const blankOp = {
   description: "",
   amount: "",
   paid_to: "",
-  payment_method: "cash",
+  payment_method: "junaid",
 };
 
 function OperatingExpensesPage() {
