@@ -23,10 +23,10 @@ const num = (v: unknown) => Number(v) || 0;
 
 
 const EXPENSE_CATEGORIES = ["Rent", "Electricity", "Gas", "Internet", "Salary", "Wages", "Miscellaneous"];
-const PAY_METHODS = ["cash", "easypaisa", "jazzcash", "card", "bank"];
+const PAY_METHODS = ["junaid", "usama", "others", "counter"];
 
 const METHOD_LABEL: Record<string, string> = {
-  cash: "Cash", easypaisa: "EasyPaisa", jazzcash: "JazzCash", card: "Card", bank: "Bank",
+  junaid: "Junaid", usama: "Usama", others: "Others", counter: "Counter",
 };
 
 type Preset = "today" | "7d" | "30d" | "90d" | "year" | "month" | "custom";
