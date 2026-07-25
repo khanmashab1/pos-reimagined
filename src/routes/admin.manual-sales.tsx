@@ -269,11 +269,15 @@ function ManualSalesPage() {
 
   const computed = useMemo(() => {
     let prevGrand = 0;
+    let prevGrandExp = 0;
     // Running per-person cash balance. Each day: prev balance + taken - paid.
     const personRunning: Record<string, number> = {};
     return rows.map((r) => {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
-      const prevExp = r.previous_expense_override ?? prevGrand;
+      // From 2026-06-30 onwards, Prev Exp. defaults to previous day's Grand Exp.
+      // (before that date, keep legacy behavior using previous day's Grand Total).
+      const useNewPrevExp = r.entry_date >= "2026-06-30";
+      const prevExp = r.previous_expense_override ?? (useNewPrevExp ? prevGrandExp : prevGrand);
       const grandExp = Number(todayExp) + Number(prevExp);
       const personSum = Object.values(r.cash_by_person || {}).reduce((a, b) => a + personNet(b), 0);
       const personTaken = Object.values(r.cash_by_person || {}).reduce((a, b) => a + Number(b?.taken || 0), 0);
@@ -295,9 +299,11 @@ function ManualSalesPage() {
       const salePosMorning = salesMorningByDay[r.entry_date] ?? 0;
       const salePosNight = salesNightByDay[r.entry_date] ?? 0;
       prevGrand = grandTotal;
+      prevGrandExp = grandExp;
       return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, personBalances, personCumTotal, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
   }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
+
 
   // Cumulative person balances carried INTO the draft date (exclusive of draft's own row).
   const draftPrevPersonBalances = useMemo(() => {
