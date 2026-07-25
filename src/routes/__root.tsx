@@ -86,7 +86,7 @@ function RootComponent() {
       <Toaster
         richColors
         position="top-right"
-        duration={2000}
+        duration={6000}
         closeButton
       />
     </AuthProvider>
