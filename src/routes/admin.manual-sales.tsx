@@ -169,13 +169,15 @@ function ManualSalesPage() {
     const LEDGER_START = "2026-06-30";
     const ledgerFrom = LEDGER_START;
     const ledgerTo = toISO > LEDGER_START ? toISO : LEDGER_START;
-    const [{ data: seLedger }, { data: ppLedger }, { data: sbLedger }] = await Promise.all([
+    const [{ data: seLedger }, { data: ppLedger }, { data: sbLedger }, { data: opLedger }] = await Promise.all([
       supabase.from("shift_expenses").select("created_at, amount, description")
         .gte("created_at", ledgerFrom + "T00:00:00+05:00")
         .lt("created_at", ledgerTo + "T00:00:00+05:00"),
       supabase.from("person_payments").select("payment_date, person_name, amount, notes")
         .gte("payment_date", ledgerFrom).lt("payment_date", ledgerTo),
       supabase.from("person_starting_balances").select("person_name, balance"),
+      supabase.from("operating_expenses").select("expense_date, paid_to, amount, description, category")
+        .gte("expense_date", ledgerFrom).lt("expense_date", ledgerTo),
     ]);
     const startMap: Record<string, number> = {};
     for (const r of (sbLedger ?? []) as any[]) startMap[String(r.person_name).trim()] = Number(r.balance || 0);
@@ -197,8 +199,22 @@ function ManualSalesPage() {
       acc[name].paid += Number(r.amount || 0);
       acc[name].entries.push({ date: String(r.payment_date), kind: "paid", amount: Number(r.amount || 0), note: r.notes || "" });
     }
+    // Operating expenses paid via a person deduct from that person's balance.
+    for (const r of (opLedger ?? []) as any[]) {
+      const name = norm(String(r.paid_to ?? ""));
+      if (!name) continue;
+      (acc[name] ??= { received: 0, paid: 0, entries: [] });
+      acc[name].paid += Number(r.amount || 0);
+      acc[name].entries.push({
+        date: String(r.expense_date),
+        kind: "paid",
+        amount: Number(r.amount || 0),
+        note: `Operating expense${r.category ? " — " + r.category : ""}${r.description ? ": " + r.description : ""}`,
+      });
+    }
     // Ensure persons with only a starting balance still show up
     for (const name of Object.keys(startMap)) acc[name] ??= { received: 0, paid: 0, entries: [] };
+
     setPersonLedger(
       Object.entries(acc)
         .map(([person, v]) => {
