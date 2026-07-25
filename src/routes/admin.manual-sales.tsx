@@ -87,12 +87,16 @@ function ManualSalesPage() {
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [personLedger, setPersonLedger] = useState<{
     person: string;
+    starting: number;
     received: number;
     paid: number;
     balance: number;
     entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[];
   }[]>([]);
+  const [startingBalances, setStartingBalances] = useState<Record<string, number>>({});
+  const [startingEdit, setStartingEdit] = useState<Record<string, string>>({});
   const [ledgerOpen, setLedgerOpen] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
