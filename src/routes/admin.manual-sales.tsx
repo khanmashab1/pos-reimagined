@@ -87,12 +87,16 @@ function ManualSalesPage() {
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [personLedger, setPersonLedger] = useState<{
     person: string;
+    starting: number;
     received: number;
     paid: number;
     balance: number;
     entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[];
   }[]>([]);
+  const [startingBalances, setStartingBalances] = useState<Record<string, number>>({});
+  const [startingEdit, setStartingEdit] = useState<Record<string, string>>({});
   const [ledgerOpen, setLedgerOpen] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
@@ -165,13 +169,18 @@ function ManualSalesPage() {
     const LEDGER_START = "2026-06-30";
     const ledgerFrom = LEDGER_START;
     const ledgerTo = toISO > LEDGER_START ? toISO : LEDGER_START;
-    const [{ data: seLedger }, { data: ppLedger }] = await Promise.all([
+    const [{ data: seLedger }, { data: ppLedger }, { data: sbLedger }] = await Promise.all([
       supabase.from("shift_expenses").select("created_at, amount, description")
         .gte("created_at", ledgerFrom + "T00:00:00+05:00")
         .lt("created_at", ledgerTo + "T00:00:00+05:00"),
       supabase.from("person_payments").select("payment_date, person_name, amount, notes")
         .gte("payment_date", ledgerFrom).lt("payment_date", ledgerTo),
+      supabase.from("person_starting_balances").select("person_name, balance"),
     ]);
+    const startMap: Record<string, number> = {};
+    for (const r of (sbLedger ?? []) as any[]) startMap[String(r.person_name).trim()] = Number(r.balance || 0);
+    setStartingBalances(startMap);
+    setStartingEdit(Object.fromEntries(Object.entries(startMap).map(([k, v]) => [k, String(v)])));
     const acc: Record<string, { received: number; paid: number; entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[] }> = {};
     const norm = (s: string) => s.trim();
     for (const r of (seLedger ?? []) as any[]) {
@@ -188,17 +197,24 @@ function ManualSalesPage() {
       acc[name].paid += Number(r.amount || 0);
       acc[name].entries.push({ date: String(r.payment_date), kind: "paid", amount: Number(r.amount || 0), note: r.notes || "" });
     }
+    // Ensure persons with only a starting balance still show up
+    for (const name of Object.keys(startMap)) acc[name] ??= { received: 0, paid: 0, entries: [] };
     setPersonLedger(
       Object.entries(acc)
-        .map(([person, v]) => ({
-          person,
-          received: v.received,
-          paid: v.paid,
-          balance: v.received - v.paid,
-          entries: v.entries.sort((a, b) => b.date.localeCompare(a.date)),
-        }))
+        .map(([person, v]) => {
+          const starting = startMap[person] ?? 0;
+          return {
+            person,
+            starting,
+            received: v.received,
+            paid: v.paid,
+            balance: starting + v.received - v.paid,
+            entries: v.entries.sort((a, b) => b.date.localeCompare(a.date)),
+          };
+        })
         .sort((a, b) => b.balance - a.balance),
     );
+
 
     const ex: Record<string, number> = {};
     for (const r of (op ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
@@ -555,7 +571,8 @@ function ManualSalesPage() {
             <p className="text-xs text-muted-foreground">Cumulative from 30 Jun 2026. Cashier expenses to a person add up; supplier payments made by that person deduct.</p>
           </div>
           {personLedger.length > 0 && (
-            <div className="flex gap-4 text-xs">
+            <div className="flex gap-4 text-xs flex-wrap">
+              <div><span className="text-muted-foreground">Total Starting:</span> <span className="font-mono font-semibold">{fmt(personLedger.reduce((a, p) => a + p.starting, 0))}</span></div>
               <div><span className="text-muted-foreground">Total Received:</span> <span className="font-mono font-semibold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.received, 0))}</span></div>
               <div><span className="text-muted-foreground">Total Paid:</span> <span className="font-mono font-semibold text-destructive">{fmt(personLedger.reduce((a, p) => a + p.paid, 0))}</span></div>
               <div><span className="text-muted-foreground">Net Balance:</span> <span className="font-mono font-bold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.balance, 0))}</span></div>
@@ -567,6 +584,7 @@ function ManualSalesPage() {
             <thead className="bg-muted uppercase text-[10px]">
               <tr>
                 <th className="p-2 text-left">Person</th>
+                <th className="p-2 text-right">Starting (30 Jun)</th>
                 <th className="p-2 text-right">Received (Expenses)</th>
                 <th className="p-2 text-right">Paid (Suppliers)</th>
                 <th className="p-2 text-right">Balance</th>
@@ -575,11 +593,34 @@ function ManualSalesPage() {
             </thead>
             <tbody>
               {personLedger.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
               ) : personLedger.map((p) => (
                 <>
                   <tr key={p.person} className="border-t hover:bg-muted/30">
                     <td className="p-2 font-medium">{p.person}</td>
+                    <td className="p-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Input
+                          className="h-7 w-24 text-right font-mono text-xs"
+                          value={startingEdit[p.person] ?? String(p.starting)}
+                          onChange={(e) => setStartingEdit({ ...startingEdit, [p.person]: e.target.value })}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={async () => {
+                            const v = Number(startingEdit[p.person] ?? p.starting) || 0;
+                            const { error } = await supabase
+                              .from("person_starting_balances")
+                              .upsert({ person_name: p.person, balance: v, updated_at: new Date().toISOString() }, { onConflict: "person_name" });
+                            if (error) { toast.error(error.message); return; }
+                            toast.success(`Starting balance saved for ${p.person}`);
+                            load();
+                          }}
+                        >Save</Button>
+                      </div>
+                    </td>
                     <td className="p-2 text-right font-mono text-emerald-700">{fmt(p.received)}</td>
                     <td className="p-2 text-right font-mono text-destructive">{fmt(p.paid)}</td>
                     <td className={`p-2 text-right font-mono font-bold ${p.balance >= 0 ? "text-emerald-700" : "text-destructive"}`}>{fmt(p.balance)}</td>
@@ -591,7 +632,7 @@ function ManualSalesPage() {
                   </tr>
                   {ledgerOpen === p.person && (
                     <tr key={p.person + "-d"}>
-                      <td colSpan={5} className="p-3 bg-muted/20">
+                      <td colSpan={6} className="p-3 bg-muted/20">
                         <table className="w-full text-xs">
                           <thead className="text-[10px] uppercase text-muted-foreground">
                             <tr>
@@ -602,6 +643,12 @@ function ManualSalesPage() {
                             </tr>
                           </thead>
                           <tbody>
+                            <tr className="border-t">
+                              <td className="p-1">2026-06-30</td>
+                              <td className="p-1 font-medium">Starting</td>
+                              <td className="p-1 text-muted-foreground">Opening balance as of 30 Jun</td>
+                              <td className="p-1 text-right font-mono">{fmt(p.starting)}</td>
+                            </tr>
                             {p.entries.map((e, i) => (
                               <tr key={i} className="border-t">
                                 <td className="p-1">{e.date}</td>
@@ -620,6 +667,7 @@ function ManualSalesPage() {
             </tbody>
           </table>
         </div>
+
       </Card>
 
 
