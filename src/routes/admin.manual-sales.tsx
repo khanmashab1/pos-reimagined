@@ -482,6 +482,7 @@ function ManualSalesPage() {
         <Stat label="Days" value={String(computed.length)} />
         <Stat label="Total Sale (ledger)" value={fmt(totals.sale)} accent="text-emerald-600" />
         <Stat label="System Sale (POS)" value={fmt(totals.pos)} accent="text-blue-600" />
+        {(() => { const d = totals.sale - totals.pos; const cls = d === 0 ? "" : d > 0 ? "text-emerald-600" : "text-destructive"; return <Stat label="Diff (Sale − POS)" value={fmt(d)} accent={cls} />; })()}
         <Stat label="Today Expenses" value={fmt(totals.expenses)} accent="text-destructive" />
         <Stat label="System Expenses (Suppliers Paid)" value={fmt(supplierPaid)} accent="text-orange-600" />
         <Stat label="Cash in Hand" value={fmt(totals.cash)} accent="text-emerald-700" />
