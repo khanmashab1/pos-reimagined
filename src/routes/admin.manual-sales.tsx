@@ -622,6 +622,7 @@ function ManualSalesPage() {
                 <th className="p-2 text-right">Prev Total</th>
                 <th className="p-2 text-right text-emerald-700">Sale</th>
                 <th className="p-2 text-right text-blue-700">POS Total</th>
+                <th className="p-2 text-right">Diff (Sale−POS)</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
