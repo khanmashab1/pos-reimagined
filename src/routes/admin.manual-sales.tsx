@@ -295,9 +295,10 @@ function ManualSalesPage() {
       const grandTotal = totalCash + grandExp;
       const previousTotal = prevGrand;
       const saleCalc = grandTotal - previousTotal;
-      const salePos = salesByDay[r.entry_date] ?? 0;
-      const salePosMorning = salesMorningByDay[r.entry_date] ?? 0;
-      const salePosNight = salesNightByDay[r.entry_date] ?? 0;
+      const isExcludedPos = r.entry_date === "2026-06-29";
+      const salePos = isExcludedPos ? 0 : (salesByDay[r.entry_date] ?? 0);
+      const salePosMorning = isExcludedPos ? 0 : (salesMorningByDay[r.entry_date] ?? 0);
+      const salePosNight = isExcludedPos ? 0 : (salesNightByDay[r.entry_date] ?? 0);
       prevGrand = grandTotal;
       prevGrandExp = grandExp;
       return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, personBalances, personCumTotal, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
