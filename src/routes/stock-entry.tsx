@@ -613,8 +613,8 @@ function StockEntryPage() {
               <Input
                 ref={qtyRef}
                 type="number"
-                min="1"
-                placeholder="0"
+                min="0"
+                placeholder="0 (leave blank if only reconciling)"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void addEntry()}
