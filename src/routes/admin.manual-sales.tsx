@@ -159,6 +159,47 @@ function ManualSalesPage() {
     ]);
     setSupplierPaid(((sp ?? []) as any[]).reduce((a, r) => a + Number(r.amount || 0), 0));
 
+    // Person Balance ledger: cumulative from 2026-06-30 up to end of selected range.
+    // Received = shift_expenses given to that person (cashier "Add Expense").
+    // Paid     = person_payments (supplier payments made by that person).
+    const LEDGER_START = "2026-06-30";
+    const ledgerFrom = LEDGER_START;
+    const ledgerTo = toISO > LEDGER_START ? toISO : LEDGER_START;
+    const [{ data: seLedger }, { data: ppLedger }] = await Promise.all([
+      supabase.from("shift_expenses").select("created_at, amount, description")
+        .gte("created_at", ledgerFrom + "T00:00:00+05:00")
+        .lt("created_at", ledgerTo + "T00:00:00+05:00"),
+      supabase.from("person_payments").select("payment_date, person_name, amount, notes")
+        .gte("payment_date", ledgerFrom).lt("payment_date", ledgerTo),
+    ]);
+    const acc: Record<string, { received: number; paid: number; entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[] }> = {};
+    const norm = (s: string) => s.trim();
+    for (const r of (seLedger ?? []) as any[]) {
+      const name = norm(String(r.description ?? ""));
+      if (!name) continue;
+      (acc[name] ??= { received: 0, paid: 0, entries: [] });
+      acc[name].received += Number(r.amount || 0);
+      acc[name].entries.push({ date: String(r.created_at).slice(0, 10), kind: "received", amount: Number(r.amount || 0), note: "Cashier expense" });
+    }
+    for (const r of (ppLedger ?? []) as any[]) {
+      const name = norm(String(r.person_name ?? ""));
+      if (!name) continue;
+      (acc[name] ??= { received: 0, paid: 0, entries: [] });
+      acc[name].paid += Number(r.amount || 0);
+      acc[name].entries.push({ date: String(r.payment_date), kind: "paid", amount: Number(r.amount || 0), note: r.notes || "" });
+    }
+    setPersonLedger(
+      Object.entries(acc)
+        .map(([person, v]) => ({
+          person,
+          received: v.received,
+          paid: v.paid,
+          balance: v.received - v.paid,
+          entries: v.entries.sort((a, b) => b.date.localeCompare(a.date)),
+        }))
+        .sort((a, b) => b.balance - a.balance),
+    );
+
     const ex: Record<string, number> = {};
     for (const r of (op ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
     for (const r of (de ?? []) as any[]) ex[r.expense_date] = (ex[r.expense_date] ?? 0) + Number(r.amount || 0);
