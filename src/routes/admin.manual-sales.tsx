@@ -571,7 +571,8 @@ function ManualSalesPage() {
             <p className="text-xs text-muted-foreground">Cumulative from 30 Jun 2026. Cashier expenses to a person add up; supplier payments made by that person deduct.</p>
           </div>
           {personLedger.length > 0 && (
-            <div className="flex gap-4 text-xs">
+            <div className="flex gap-4 text-xs flex-wrap">
+              <div><span className="text-muted-foreground">Total Starting:</span> <span className="font-mono font-semibold">{fmt(personLedger.reduce((a, p) => a + p.starting, 0))}</span></div>
               <div><span className="text-muted-foreground">Total Received:</span> <span className="font-mono font-semibold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.received, 0))}</span></div>
               <div><span className="text-muted-foreground">Total Paid:</span> <span className="font-mono font-semibold text-destructive">{fmt(personLedger.reduce((a, p) => a + p.paid, 0))}</span></div>
               <div><span className="text-muted-foreground">Net Balance:</span> <span className="font-mono font-bold text-emerald-700">{fmt(personLedger.reduce((a, p) => a + p.balance, 0))}</span></div>
@@ -583,6 +584,7 @@ function ManualSalesPage() {
             <thead className="bg-muted uppercase text-[10px]">
               <tr>
                 <th className="p-2 text-left">Person</th>
+                <th className="p-2 text-right">Starting (30 Jun)</th>
                 <th className="p-2 text-right">Received (Expenses)</th>
                 <th className="p-2 text-right">Paid (Suppliers)</th>
                 <th className="p-2 text-right">Balance</th>
@@ -591,11 +593,34 @@ function ManualSalesPage() {
             </thead>
             <tbody>
               {personLedger.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground text-xs">No person activity yet.</td></tr>
               ) : personLedger.map((p) => (
                 <>
                   <tr key={p.person} className="border-t hover:bg-muted/30">
                     <td className="p-2 font-medium">{p.person}</td>
+                    <td className="p-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Input
+                          className="h-7 w-24 text-right font-mono text-xs"
+                          value={startingEdit[p.person] ?? String(p.starting)}
+                          onChange={(e) => setStartingEdit({ ...startingEdit, [p.person]: e.target.value })}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={async () => {
+                            const v = Number(startingEdit[p.person] ?? p.starting) || 0;
+                            const { error } = await supabase
+                              .from("person_starting_balances")
+                              .upsert({ person_name: p.person, balance: v, updated_at: new Date().toISOString() }, { onConflict: "person_name" });
+                            if (error) { toast.error(error.message); return; }
+                            toast.success(`Starting balance saved for ${p.person}`);
+                            load();
+                          }}
+                        >Save</Button>
+                      </div>
+                    </td>
                     <td className="p-2 text-right font-mono text-emerald-700">{fmt(p.received)}</td>
                     <td className="p-2 text-right font-mono text-destructive">{fmt(p.paid)}</td>
                     <td className={`p-2 text-right font-mono font-bold ${p.balance >= 0 ? "text-emerald-700" : "text-destructive"}`}>{fmt(p.balance)}</td>
@@ -607,7 +632,7 @@ function ManualSalesPage() {
                   </tr>
                   {ledgerOpen === p.person && (
                     <tr key={p.person + "-d"}>
-                      <td colSpan={5} className="p-3 bg-muted/20">
+                      <td colSpan={6} className="p-3 bg-muted/20">
                         <table className="w-full text-xs">
                           <thead className="text-[10px] uppercase text-muted-foreground">
                             <tr>
@@ -618,6 +643,12 @@ function ManualSalesPage() {
                             </tr>
                           </thead>
                           <tbody>
+                            <tr className="border-t">
+                              <td className="p-1">2026-06-30</td>
+                              <td className="p-1 font-medium">Starting</td>
+                              <td className="p-1 text-muted-foreground">Opening balance as of 30 Jun</td>
+                              <td className="p-1 text-right font-mono">{fmt(p.starting)}</td>
+                            </tr>
                             {p.entries.map((e, i) => (
                               <tr key={i} className="border-t">
                                 <td className="p-1">{e.date}</td>
@@ -636,6 +667,7 @@ function ManualSalesPage() {
             </tbody>
           </table>
         </div>
+
       </Card>
 
 
