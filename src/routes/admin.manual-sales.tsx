@@ -85,6 +85,14 @@ function ManualSalesPage() {
   const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
+  const [personLedger, setPersonLedger] = useState<{
+    person: string;
+    received: number;
+    paid: number;
+    balance: number;
+    entries: { date: string; kind: "received" | "paid"; amount: number; note: string }[];
+  }[]>([]);
+  const [ledgerOpen, setLedgerOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Row>(emptyRow());
   const [saving, setSaving] = useState(false);
