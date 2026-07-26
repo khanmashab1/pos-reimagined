@@ -453,7 +453,10 @@ function SupplierDetail({ supplier, onClose }: { supplier: Supplier; onClose: ()
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cash">Cash (from drawer)</SelectItem>
-                      <SelectItem value="bank">Bank / Online</SelectItem>
+                      <SelectItem value="bank">Bank</SelectItem>
+                      <SelectItem value="online">Online (→ Junaid)</SelectItem>
+                      <SelectItem value="easypaisa">EasyPaisa (→ Junaid)</SelectItem>
+                      <SelectItem value="jazzcash">JazzCash (→ Usama)</SelectItem>
                       <SelectItem value="Junaid">Junaid (cash)</SelectItem>
                       <SelectItem value="Usama">Usama (cash)</SelectItem>
                     </SelectContent>
@@ -461,7 +464,7 @@ function SupplierDetail({ supplier, onClose }: { supplier: Supplier; onClose: ()
                 </div>
                 <div><Label className="text-xs">Notes</Label><Input value={paf.notes} onChange={e => setPaf({ ...paf, notes: e.target.value })} placeholder="optional" /></div>
               </div>
-              <p className="text-xs text-muted-foreground">Cash reduces the open drawer at shift close. Junaid / Usama are logged in the Daily Expenses report and deducted there.</p>
+              <p className="text-xs text-muted-foreground">Cash reduces the open drawer at shift close. Online / EasyPaisa → Junaid balance, JazzCash → Usama balance. Junaid / Usama cash are deducted from their balance.</p>
               <Button size="sm" className="w-full" onClick={addPayment} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />} Record Payment
               </Button>
