@@ -19,6 +19,7 @@ import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, ExpenseDialog, type OpenSession } from "@/components/ShiftDialog";
 import { MidnightCounterCashDialog } from "@/components/MidnightCounterCashDialog";
+import { FixPaymentDialog } from "@/components/FixPaymentDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
