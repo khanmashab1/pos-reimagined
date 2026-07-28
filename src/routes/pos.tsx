@@ -742,7 +742,7 @@ function PosPage() {
         open={fixPaymentOpen}
         onOpenChange={setFixPaymentOpen}
         sessionId={session?.id ?? null}
-        onChanged={loadSession}
+        onChanged={refreshSession}
       />
       <QuickAddProductDialog
         open={quickAddOpen}
