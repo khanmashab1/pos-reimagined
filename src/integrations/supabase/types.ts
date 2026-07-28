@@ -1331,6 +1331,10 @@ export type Database = {
         Args: { _id: string; _notes?: string }
         Returns: Json
       }
+      change_sale_payment: {
+        Args: { _new_payment: string; _sale_id: string }
+        Returns: Json
+      }
       close_shift: { Args: { _closing_cash: number }; Returns: Json }
       get_admin_dashboard_summary:
         | { Args: { _days: number; _start_at: string }; Returns: Json }

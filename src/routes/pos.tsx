@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import {
   Loader2, Plus, Minus, Trash2, ScanLine, ShoppingCart, X, Store,
   LogOut, LayoutDashboard, Camera, PlayCircle, StopCircle, CreditCard,
-  Banknote, RotateCcw, Package, Tag, Truck, HandCoins,
+  Banknote, RotateCcw, Package, Tag, Truck, HandCoins, Pencil,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,6 +19,7 @@ import { Receipt } from "@/components/Receipt";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { StartShiftDialog, CloseShiftDialog, ExpenseDialog, type OpenSession } from "@/components/ShiftDialog";
 import { MidnightCounterCashDialog } from "@/components/MidnightCounterCashDialog";
+import { FixPaymentDialog } from "@/components/FixPaymentDialog";
 import { QuickAddProductDialog, type QuickAddProduct } from "@/components/QuickAddProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchUnitsByProductIds, pickDefaultUnit, type ProductUnit } from "@/lib/units";
@@ -161,6 +162,7 @@ function PosPage() {
   const [closeOpen, setCloseOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [counterCashOpen, setCounterCashOpen] = useState(false);
+  const [fixPaymentOpen, setFixPaymentOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [manualSearch, setManualSearch] = useState("");
   const [manualResults, setManualResults] = useState<Product[]>([]);
@@ -484,6 +486,12 @@ function PosPage() {
             </Button>
           )}
           {session && (
+            <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={() => setFixPaymentOpen(true)}>
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1 text-xs">Fix Payment</span>
+            </Button>
+          )}
+          {session && (
             <Button size="sm" variant="ghost" className="text-sidebar-foreground hover:bg-sidebar-accent h-8 px-1.5 sm:px-3" onClick={() => setExpenseOpen(true)}>
               <HandCoins className="h-4 w-4" />
               <span className="hidden sm:inline ml-1 text-xs">Expense</span>
@@ -730,6 +738,12 @@ function PosPage() {
         onClosed={() => { setSession(null); setCart([]); setCash(""); setDiscount(0); }} />
       <ExpenseDialog open={expenseOpen} onOpenChange={setExpenseOpen} onRecorded={() => refreshSession()} />
       <MidnightCounterCashDialog session={session} open={counterCashOpen} onOpenChange={setCounterCashOpen} />
+      <FixPaymentDialog
+        open={fixPaymentOpen}
+        onOpenChange={setFixPaymentOpen}
+        sessionId={session?.id ?? null}
+        onChanged={refreshSession}
+      />
       <QuickAddProductDialog
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
