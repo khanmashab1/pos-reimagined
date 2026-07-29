@@ -371,7 +371,7 @@ function ManualSalesPage() {
     let prevGrand = 0;
     let prevGrandExp = 0;
     // Running per-person cash balance. Each day: prev balance + taken - paid.
-    const personRunning: Record<string, number> = {};
+    const personRunning: Record<string, number> = { ...openingPersonBal };
     return rows.map((r) => {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
       // From 2026-06-30 onwards, Prev Exp. defaults to previous day's Grand Exp.
