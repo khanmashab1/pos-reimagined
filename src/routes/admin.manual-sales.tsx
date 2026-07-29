@@ -595,6 +595,32 @@ function ManualSalesPage() {
             </div>
           )}
         </div>
+        {(() => {
+          const creditors = personLedger.filter(p => !["Junaid", "Usama"].includes(p.person) && p.balance > 0.005);
+          const totalCredit = creditors.reduce((a, p) => a + p.balance, 0);
+          if (creditors.length === 0) return null;
+          return (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-amber-900">
+                  Credit Customers (owe cash) — {creditors.length} {creditors.length === 1 ? "person" : "people"}
+                </div>
+                <div className="text-sm font-mono font-bold text-amber-900">
+                  Total: {fmt(totalCredit)}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {creditors.sort((a, b) => b.balance - a.balance).map(p => (
+                  <div key={p.person} className="flex justify-between items-center bg-white rounded px-2 py-1 text-xs border border-amber-200">
+                    <span className="font-medium truncate">{p.person}</span>
+                    <span className="font-mono font-semibold text-amber-900">{fmt(p.balance)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-amber-800 mt-2">Excludes Junaid & Usama. Positive balance = cash given to them not yet returned.</p>
+            </div>
+          );
+        })()}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted uppercase text-[10px]">
