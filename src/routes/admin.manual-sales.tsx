@@ -403,7 +403,7 @@ function ManualSalesPage() {
       prevGrandExp = grandExp;
       return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, personBalances, personCumTotal, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
-  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
+  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay, openingPersonBal]);
 
 
   // Cumulative person balances carried INTO the draft date (exclusive of draft's own row).
