@@ -324,6 +324,22 @@ function ManualSalesPage() {
       };
     });
     setRows(mapped);
+
+    // Opening person balances: net of every manual-sale day before the range.
+    const { data: prior } = await supabase.from("manual_sale_days")
+      .select("cash_by_person, cash_junaid, cash_usama, cash_zahid")
+      .lt("entry_date", fromISO);
+    const opening: Record<string, number> = {};
+    for (const r of (prior ?? []) as any[]) {
+      const raw = (r.cash_by_person ?? {}) as Record<string, unknown>;
+      const cbp: Record<string, PersonCash> = {};
+      for (const [k, v] of Object.entries(raw)) cbp[k] = normalizePersonCash(v);
+      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = { taken: Number(r.cash_junaid), paid: 0 };
+      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = { taken: Number(r.cash_usama), paid: 0 };
+      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = { taken: Number(r.cash_zahid), paid: 0 };
+      for (const [name, pc] of Object.entries(cbp)) opening[name] = (opening[name] ?? 0) + personNet(pc);
+    }
+    setOpeningPersonBal(opening);
     setLoading(false);
   }
 
