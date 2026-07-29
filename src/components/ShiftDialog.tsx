@@ -145,40 +145,52 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [customName, setCustomName] = useState("");
+  const [kind, setKind] = useState<"expense" | "repayment">("expense");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (open) { setAmount(""); setRecipient(""); setCustomName(""); } }, [open]);
+  useEffect(() => { if (open) { setAmount(""); setRecipient(""); setCustomName(""); setKind("expense"); } }, [open]);
 
   const submit = async () => {
     const amt = Number(amount);
     if (!(amt > 0)) return toast.error("Enter a valid amount");
-    if (!recipient) return toast.error("Select who received the cash");
-    const givenTo = recipient === "Other" ? customName.trim() : recipient;
-    if (recipient === "Other" && !givenTo) return toast.error("Mention the name");
+    if (!recipient) return toast.error("Select a name");
+    const person = recipient === "Other" ? customName.trim() : recipient;
+    if (recipient === "Other" && !person) return toast.error("Mention the name");
     setBusy(true);
-    const { error } = await supabase.rpc("record_expense" as any, {
-      _amount: amt,
-      _description: givenTo,
-    });
+    const { error } = kind === "repayment"
+      ? await supabase.rpc("record_credit_repayment" as any, { _amount: amt, _person: person })
+      : await supabase.rpc("record_expense" as any, { _amount: amt, _description: person });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Expense recorded — deducted from drawer");
+    toast.success(kind === "repayment"
+      ? "Repayment recorded — cash added back to counter"
+      : "Expense recorded — deducted from drawer");
     onRecorded();
     onOpenChange(false);
   };
 
+  const isRepay = kind === "repayment";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isRepay ? "Credit Repayment" : "Add Expense"}</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant={kind === "expense" ? "default" : "outline"} size="sm" onClick={() => setKind("expense")}>
+              Give / Expense
+            </Button>
+            <Button type="button" variant={kind === "repayment" ? "default" : "outline"} size="sm" onClick={() => setKind("repayment")}>
+              Credit Repayment
+            </Button>
+          </div>
           <div>
             <label className="text-sm font-medium">Amount</label>
             <Input type="number" autoFocus value={amount} onChange={e => setAmount(e.target.value)}
               placeholder="0" onKeyDown={e => e.key === "Enter" && submit()} />
           </div>
           <div>
-            <label className="text-sm font-medium">Given to</label>
+            <label className="text-sm font-medium">{isRepay ? "Paid back by" : "Given to"}</label>
             <Select value={recipient} onValueChange={setRecipient}>
               <SelectTrigger><SelectValue placeholder="Select name" /></SelectTrigger>
               <SelectContent>
@@ -190,17 +202,20 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
           {recipient === "Other" && (
             <div>
               <label className="text-sm font-medium">Name</label>
-              <Input autoFocus value={customName} onChange={e => setCustomName(e.target.value)}
+              <Input value={customName} onChange={e => setCustomName(e.target.value)}
                 placeholder="Mention the name" onKeyDown={e => e.key === "Enter" && submit()} />
             </div>
           )}
           <p className="text-xs text-muted-foreground">
-            This cash leaves the drawer and is subtracted from your expected cash at shift close.
+            {isRepay
+              ? "Person is returning previously given credit. Cash is added back to the drawer and their outstanding balance reduces."
+              : "This cash leaves the drawer and is subtracted from your expected cash at shift close."}
           </p>
         </div>
         <DialogFooter>
           <Button onClick={submit} disabled={busy} className="w-full">
-            {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Record Expense
+            {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isRepay ? "Record Repayment" : "Record Expense"}
           </Button>
         </DialogFooter>
       </DialogContent>

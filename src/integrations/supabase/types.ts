@@ -1397,6 +1397,10 @@ export type Database = {
         }
         Returns: Json
       }
+      record_credit_repayment: {
+        Args: { _amount: number; _person: string }
+        Returns: Json
+      }
       record_expense: {
         Args: { _amount: number; _description?: string }
         Returns: Json
