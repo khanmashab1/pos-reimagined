@@ -147,8 +147,19 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
   const [customName, setCustomName] = useState("");
   const [kind, setKind] = useState<"expense" | "repayment">("expense");
   const [busy, setBusy] = useState(false);
+  const [creditors, setCreditors] = useState<{ name: string; balance: number }[]>([]);
 
   useEffect(() => { if (open) { setAmount(""); setRecipient(""); setCustomName(""); setKind("expense"); } }, [open]);
+
+  useEffect(() => {
+    if (!open || kind !== "repayment") return;
+    setRecipient("");
+    (async () => {
+      const { data, error } = await supabase.rpc("get_credit_customers" as any);
+      if (error) return;
+      setCreditors(((data ?? []) as any[]).map(r => ({ name: String(r.person_name), balance: Number(r.balance || 0) })));
+    })();
+  }, [open, kind]);
 
   const submit = async () => {
     const amt = Number(amount);
@@ -194,11 +205,28 @@ export function ExpenseDialog({ open, onOpenChange, onRecorded }: {
             <Select value={recipient} onValueChange={setRecipient}>
               <SelectTrigger><SelectValue placeholder="Select name" /></SelectTrigger>
               <SelectContent>
-                {EXPENSE_RECIPIENTS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                <SelectItem value="Other">Other…</SelectItem>
+                {isRepay ? (
+                  <>
+                    {creditors.length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">No outstanding credit customers</div>
+                    )}
+                    {creditors.map(c => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {c.name} — Rs. {c.balance.toLocaleString()}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Other">Other…</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    {EXPENSE_RECIPIENTS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                    <SelectItem value="Other">Other…</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
+
           {recipient === "Other" && (
             <div>
               <label className="text-sm font-medium">Name</label>
