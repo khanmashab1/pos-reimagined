@@ -1343,6 +1343,13 @@ export type Database = {
             Returns: Json
           }
       get_admin_inventory_summary: { Args: never; Returns: Json }
+      get_credit_customers: {
+        Args: never
+        Returns: {
+          balance: number
+          person_name: string
+        }[]
+      }
       get_online_by_method: {
         Args: { _from: string; _to: string }
         Returns: Json
