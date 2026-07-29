@@ -408,7 +408,7 @@ function ManualSalesPage() {
 
   // Cumulative person balances carried INTO the draft date (exclusive of draft's own row).
   const draftPrevPersonBalances = useMemo(() => {
-    const bal: Record<string, number> = {};
+    const bal: Record<string, number> = { ...openingPersonBal };
     for (const r of rows) {
       if (r.entry_date >= draft.entry_date) continue;
       for (const [name, pc] of Object.entries(r.cash_by_person || {})) {
@@ -416,7 +416,7 @@ function ManualSalesPage() {
       }
     }
     return bal;
-  }, [rows, draft.entry_date]);
+  }, [rows, draft.entry_date, openingPersonBal]);
 
   const totals = useMemo(() => {
     const agg = computed.reduce((a, r) => ({
