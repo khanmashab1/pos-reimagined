@@ -84,6 +84,9 @@ function ManualSalesPage() {
   const [salesMorningByDay, setSalesMorningByDay] = useState<Record<string, number>>({});
   const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
+  // Person balances carried in from all days BEFORE the selected range, so the
+  // per-row "bal:" figures stay identical no matter which range is picked.
+  const [openingPersonBal, setOpeningPersonBal] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [personLedger, setPersonLedger] = useState<{
     person: string;
@@ -321,6 +324,22 @@ function ManualSalesPage() {
       };
     });
     setRows(mapped);
+
+    // Opening person balances: net of every manual-sale day before the range.
+    const { data: prior } = await supabase.from("manual_sale_days")
+      .select("cash_by_person, cash_junaid, cash_usama, cash_zahid")
+      .lt("entry_date", fromISO);
+    const opening: Record<string, number> = {};
+    for (const r of (prior ?? []) as any[]) {
+      const raw = (r.cash_by_person ?? {}) as Record<string, unknown>;
+      const cbp: Record<string, PersonCash> = {};
+      for (const [k, v] of Object.entries(raw)) cbp[k] = normalizePersonCash(v);
+      if (Number(r.cash_junaid) && cbp["Junaid"] == null) cbp["Junaid"] = { taken: Number(r.cash_junaid), paid: 0 };
+      if (Number(r.cash_usama) && cbp["Usama"] == null) cbp["Usama"] = { taken: Number(r.cash_usama), paid: 0 };
+      if (Number(r.cash_zahid) && cbp["Zahid Ali"] == null) cbp["Zahid Ali"] = { taken: Number(r.cash_zahid), paid: 0 };
+      for (const [name, pc] of Object.entries(cbp)) opening[name] = (opening[name] ?? 0) + personNet(pc);
+    }
+    setOpeningPersonBal(opening);
     setLoading(false);
   }
 
@@ -352,7 +371,7 @@ function ManualSalesPage() {
     let prevGrand = 0;
     let prevGrandExp = 0;
     // Running per-person cash balance. Each day: prev balance + taken - paid.
-    const personRunning: Record<string, number> = {};
+    const personRunning: Record<string, number> = { ...openingPersonBal };
     return rows.map((r) => {
       const todayExp = r.today_expenses_override ?? expensesByDay[r.entry_date] ?? 0;
       // From 2026-06-30 onwards, Prev Exp. defaults to previous day's Grand Exp.
@@ -384,12 +403,12 @@ function ManualSalesPage() {
       prevGrandExp = grandExp;
       return { ...r, todayExp, prevExp, grandExp, personSum, personTaken, personPaid, personBalances, personCumTotal, totalCash, grandTotal, previousTotal, saleCalc, salePos, salePosMorning, salePosNight };
     });
-  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay]);
+  }, [rows, expensesByDay, salesByDay, salesMorningByDay, salesNightByDay, openingPersonBal]);
 
 
   // Cumulative person balances carried INTO the draft date (exclusive of draft's own row).
   const draftPrevPersonBalances = useMemo(() => {
-    const bal: Record<string, number> = {};
+    const bal: Record<string, number> = { ...openingPersonBal };
     for (const r of rows) {
       if (r.entry_date >= draft.entry_date) continue;
       for (const [name, pc] of Object.entries(r.cash_by_person || {})) {
@@ -397,7 +416,7 @@ function ManualSalesPage() {
       }
     }
     return bal;
-  }, [rows, draft.entry_date]);
+  }, [rows, draft.entry_date, openingPersonBal]);
 
   const totals = useMemo(() => {
     const agg = computed.reduce((a, r) => ({
