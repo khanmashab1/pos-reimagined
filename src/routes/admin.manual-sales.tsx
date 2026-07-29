@@ -84,6 +84,9 @@ function ManualSalesPage() {
   const [salesMorningByDay, setSalesMorningByDay] = useState<Record<string, number>>({});
   const [salesNightByDay, setSalesNightByDay] = useState<Record<string, number>>({});
   const [expectedCounterByDay, setExpectedCounterByDay] = useState<Record<string, number>>({});
+  // Person balances carried in from all days BEFORE the selected range, so the
+  // per-row "bal:" figures stay identical no matter which range is picked.
+  const [openingPersonBal, setOpeningPersonBal] = useState<Record<string, number>>({});
   const [supplierPaid, setSupplierPaid] = useState<number>(0);
   const [personLedger, setPersonLedger] = useState<{
     person: string;
