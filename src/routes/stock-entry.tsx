@@ -17,7 +17,10 @@ import {
   Trash2,
   Clock,
   Tag,
+  Camera,
 } from "lucide-react";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
+
 import {
   Select,
   SelectContent,
@@ -75,6 +78,8 @@ function StockEntryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [showDrop, setShowDrop] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedUnits, setSelectedUnits] = useState<ProductUnit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -140,6 +145,26 @@ function StockEntryPage() {
     return () => clearTimeout(t);
   }, [search, selectedProduct]);
 
+  // Resolve a scanned barcode (product-level or unit-level) and select the product.
+  const lookupBarcode = async (code: string) => {
+    const { data } = await supabase
+      .from("products")
+      .select("id,barcode,name,stock,purchase_price,sale_price")
+      .eq("barcode", code)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (data) { selectProduct(data as Product); return; }
+    // Also match a per-unit barcode (Box / Half Box / …) and pre-select that unit.
+    const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
+    if (unitRow) {
+      const { data: prod } = await supabase
+        .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
+        .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
+      if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
+    }
+    toast.error(`Barcode not found: ${code}`);
+  };
+
   // Global barcode scanner
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -150,24 +175,7 @@ function StockEntryPage() {
         scanBuffer.current = "";
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
-        void (async () => {
-          const { data } = await supabase
-            .from("products")
-            .select("id,barcode,name,stock,purchase_price,sale_price")
-            .eq("barcode", code)
-            .eq("is_active", true)
-            .maybeSingle();
-          if (data) { selectProduct(data as Product); return; }
-          // Also match a per-unit barcode (Box / Half Box / …) and pre-select that unit.
-          const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
-          if (unitRow) {
-            const { data: prod } = await supabase
-              .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
-              .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
-            if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
-          }
-          toast.error(`Barcode not found: ${code}`);
-        })();
+        void lookupBarcode(code);
         return;
       }
       if (e.key.length === 1) {
@@ -182,6 +190,7 @@ function StockEntryPage() {
     return () => window.removeEventListener("keydown", handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // `products` already holds the server-side search results, so just cap the dropdown length.
   const filtered = search.trim() && !selectedProduct ? products.slice(0, 10) : [];
@@ -547,7 +556,7 @@ function StockEntryPage() {
               <div className="relative mt-1">
                 <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  className="pl-9"
+                  className="pl-9 pr-12"
                   placeholder="Search by name or scan barcode..."
                   value={search}
                   onChange={(e) => {
@@ -558,6 +567,19 @@ function StockEntryPage() {
                   onFocus={() => setShowDrop(true)}
                   onBlur={() => setTimeout(() => setShowDrop(false), 150)}
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Scan barcode with camera"
+                  title="Scan with camera"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setCameraOpen(true)}
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+
                 {showDrop && filtered.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-20 max-h-52 overflow-auto">
                     {filtered.map((p) => (
@@ -909,6 +931,16 @@ function StockEntryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BarcodeScanner
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onScan={async (code) => {
+          setCameraOpen(false);
+          await lookupBarcode(code.trim());
+        }}
+      />
     </div>
+
   );
 }
