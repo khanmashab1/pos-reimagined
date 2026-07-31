@@ -58,13 +58,17 @@ const CartItemRow = memo(function CartItemRow({
 }) {
   return (
     <div
-      className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
-      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
+      className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors
+        [grid-template-columns:1fr_4.5rem_4.5rem_3.5rem_1.75rem]
+        sm:[grid-template-columns:1fr_5rem_6rem_4rem_2rem]">
+
       <div className="min-w-0">
         <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
-        <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
+        {i.available_units.length <= 1 && (
+          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
+        )}
       </div>
-      <div className="hidden sm:block">
+      <div>
         {i.available_units.length > 1 ? (
           <Select
             value={i.unit_id ?? ""}
@@ -80,17 +84,18 @@ const CartItemRow = memo(function CartItemRow({
               });
             }}
           >
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="h-8 text-[11px] sm:text-xs px-2"><SelectValue /></SelectTrigger>
+            <SelectContent className="z-[100]">
               {i.available_units.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         ) : (
-          <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
+          <div className="text-right text-xs hidden sm:block">{fmt(i.unit_sale_price)}</div>
         )}
       </div>
+
       <div className="flex items-center justify-center gap-0.5 sm:gap-1">
         <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
           onClick={() => onUpdate(idx, { qty: Math.max(1, i.qty - 1) })}>
@@ -572,10 +577,12 @@ function PosPage() {
                 <div className="overflow-auto flex-1">
                   {/* Table header */}
                   <div className="sticky top-0 bg-muted/50 backdrop-blur border-b z-10">
-                    <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground"
-                      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
+                    <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground
+                      [grid-template-columns:1fr_4.5rem_4.5rem_3.5rem_1.75rem]
+                      sm:[grid-template-columns:1fr_5rem_6rem_4rem_2rem]">
                       <div>Product</div>
-                      <div className="text-right hidden sm:block">Unit / Price</div>
+                      <div className="text-right">Unit / Price</div>
+
                       <div className="text-center">Qty</div>
                       <div className="text-right">Total</div>
                       <div />
