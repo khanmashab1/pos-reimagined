@@ -577,10 +577,12 @@ function PosPage() {
                 <div className="overflow-auto flex-1">
                   {/* Table header */}
                   <div className="sticky top-0 bg-muted/50 backdrop-blur border-b z-10">
-                    <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground"
-                      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
+                    <div className="grid gap-1 px-2 sm:px-4 py-2 text-xs font-bold text-muted-foreground
+                      [grid-template-columns:1fr_4.5rem_4.5rem_3.5rem_1.75rem]
+                      sm:[grid-template-columns:1fr_5rem_6rem_4rem_2rem]">
                       <div>Product</div>
-                      <div className="text-right hidden sm:block">Unit / Price</div>
+                      <div className="text-right">Unit / Price</div>
+
                       <div className="text-center">Qty</div>
                       <div className="text-right">Total</div>
                       <div />
