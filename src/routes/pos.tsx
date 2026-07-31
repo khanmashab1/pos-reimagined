@@ -11,7 +11,7 @@ import {
   Banknote, RotateCcw, Package, Tag, Truck, HandCoins, Pencil,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
