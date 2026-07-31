@@ -17,7 +17,10 @@ import {
   Trash2,
   Clock,
   Tag,
+  Camera,
 } from "lucide-react";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
+
 import {
   Select,
   SelectContent,
