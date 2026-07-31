@@ -62,9 +62,11 @@ const CartItemRow = memo(function CartItemRow({
       style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
       <div className="min-w-0">
         <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
-        <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
+        {i.available_units.length <= 1 && (
+          <div className="sm:hidden text-[10px] text-muted-foreground">{fmt(i.unit_sale_price)} / {i.unit_name}</div>
+        )}
       </div>
-      <div className="hidden sm:block">
+      <div>
         {i.available_units.length > 1 ? (
           <Select
             value={i.unit_id ?? ""}
@@ -80,17 +82,18 @@ const CartItemRow = memo(function CartItemRow({
               });
             }}
           >
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="h-8 text-[11px] sm:text-xs px-2"><SelectValue /></SelectTrigger>
+            <SelectContent className="z-[100]">
               {i.available_units.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.name} · {fmt(Number(u.sale_price))}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         ) : (
-          <div className="text-right text-xs">{fmt(i.unit_sale_price)}</div>
+          <div className="text-right text-xs hidden sm:block">{fmt(i.unit_sale_price)}</div>
         )}
       </div>
+
       <div className="flex items-center justify-center gap-0.5 sm:gap-1">
         <Button size="icon" variant="ghost" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"
           onClick={() => onUpdate(idx, { qty: Math.max(1, i.qty - 1) })}>
