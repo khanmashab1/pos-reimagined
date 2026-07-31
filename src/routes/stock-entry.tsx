@@ -78,6 +78,8 @@ function StockEntryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [showDrop, setShowDrop] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedUnits, setSelectedUnits] = useState<ProductUnit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
