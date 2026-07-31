@@ -890,57 +890,62 @@ function BillSummary({
           Process Sale
         </Button>
 
-        <Popover open={discountOpen} onOpenChange={o => {
-          setDiscountOpen(o);
-          if (o) setDiscountInput(discount > 0 ? String(discount) : "");
-        }}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={`w-full text-xs font-semibold h-7 sm:h-8 gap-1.5 ${discount > 0 ? "border-orange-500/60 text-orange-400 bg-orange-500/10" : ""}`}
-            >
-              <Tag className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              {discount > 0 ? `Discount: ${fmt(discount)}` : "Add Discount"}
-              <kbd className="ml-auto text-[10px] opacity-50 font-mono bg-muted px-1 rounded">F10</kbd>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" className="w-56 sm:w-64 p-3 space-y-3">
-            <div className="text-xs sm:text-sm font-semibold flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-400" /> Discount Amount (Rs.)
-            </div>
-            <Input
-              type="number" min={0} autoFocus
-              className="h-9 sm:h-10 text-right text-base sm:text-lg font-bold"
-              placeholder="0.00"
-              value={discountInput}
-              onChange={e => setDiscountInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter") applyDiscount();
-                if (e.key === "Escape") setDiscountOpen(false);
-              }}
-            />
-            {subtotal > 0 && Number(discountInput) > 0 && (
-              <p className={`text-xs text-right -mt-1 ${Number(discountInput) > maxDiscount ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
-                = {((Number(discountInput) / subtotal) * 100).toFixed(1)}% off
-                {Number(discountInput) > maxDiscount && ` · exceeds max ${fmt(maxDiscount)}`}
-              </p>
-            )}
-            <p className="text-[11px] text-muted-foreground text-right">
-              Max discount: <span className="font-semibold">{fmt(maxDiscount)}</span> (cart cost {fmt(subtotal - maxDiscount)})
-            </p>
-            <div className="flex gap-2">
-              <Button size="sm" className="flex-1 text-xs sm:text-sm" onClick={applyDiscount}>Apply</Button>
-              {discount > 0 && (
-                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive px-2"
-                  onClick={() => { setDiscount(0); setDiscountInput(""); setDiscountOpen(false); }}>
-                  <X className="h-4 w-4" />
-                </Button>
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const next = !discountOpen;
+              setDiscountOpen(next);
+              if (next) setDiscountInput(discount > 0 ? String(discount) : "");
+            }}
+            className={`w-full text-xs font-semibold h-8 gap-1.5 ${discount > 0 ? "border-orange-500/60 text-orange-400 bg-orange-500/10" : ""}`}
+          >
+            <Tag className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            {discount > 0 ? `Discount: ${fmt(discount)}` : "Add Discount"}
+            <kbd className="ml-auto text-[10px] opacity-50 font-mono bg-muted px-1 rounded">F10</kbd>
+          </Button>
+
+          {discountOpen && (
+            <div className="rounded-lg border bg-popover text-popover-foreground p-3 space-y-3">
+              <div className="text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-400" /> Discount Amount (Rs.)
+              </div>
+              <Input
+                type="number" min={0} autoFocus
+                className="h-9 sm:h-10 text-right text-base sm:text-lg font-bold"
+                placeholder="0.00"
+                value={discountInput}
+                onChange={e => setDiscountInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") applyDiscount();
+                  if (e.key === "Escape") setDiscountOpen(false);
+                }}
+              />
+              {subtotal > 0 && Number(discountInput) > 0 && (
+                <p className={`text-xs text-right -mt-1 ${Number(discountInput) > maxDiscount ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                  = {((Number(discountInput) / subtotal) * 100).toFixed(1)}% off
+                  {Number(discountInput) > maxDiscount && ` · exceeds max ${fmt(maxDiscount)}`}
+                </p>
               )}
+              <p className="text-[11px] text-muted-foreground text-right">
+                Max discount: <span className="font-semibold">{fmt(maxDiscount)}</span> (cart cost {fmt(subtotal - maxDiscount)})
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" className="flex-1 text-xs sm:text-sm" onClick={applyDiscount}>Apply</Button>
+                <Button size="sm" variant="ghost" className="text-xs" onClick={() => setDiscountOpen(false)}>Cancel</Button>
+                {discount > 0 && (
+                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive px-2"
+                    onClick={() => { setDiscount(0); setDiscountInput(""); setDiscountOpen(false); }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-          </PopoverContent>
-        </Popover>
+          )}
+        </div>
+
       </div>
     </div>
   );
