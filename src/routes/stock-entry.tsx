@@ -931,6 +931,16 @@ function StockEntryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BarcodeScanner
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onScan={async (code) => {
+          setCameraOpen(false);
+          await lookupBarcode(code.trim());
+        }}
+      />
     </div>
+
   );
 }
