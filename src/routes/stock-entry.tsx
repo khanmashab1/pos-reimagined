@@ -140,6 +140,26 @@ function StockEntryPage() {
     return () => clearTimeout(t);
   }, [search, selectedProduct]);
 
+  // Resolve a scanned barcode (product-level or unit-level) and select the product.
+  const lookupBarcode = async (code: string) => {
+    const { data } = await supabase
+      .from("products")
+      .select("id,barcode,name,stock,purchase_price,sale_price")
+      .eq("barcode", code)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (data) { selectProduct(data as Product); return; }
+    // Also match a per-unit barcode (Box / Half Box / …) and pre-select that unit.
+    const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
+    if (unitRow) {
+      const { data: prod } = await supabase
+        .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
+        .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
+      if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
+    }
+    toast.error(`Barcode not found: ${code}`);
+  };
+
   // Global barcode scanner
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -150,24 +170,7 @@ function StockEntryPage() {
         scanBuffer.current = "";
         if (scanTimer.current) clearTimeout(scanTimer.current);
         if (!code) return;
-        void (async () => {
-          const { data } = await supabase
-            .from("products")
-            .select("id,barcode,name,stock,purchase_price,sale_price")
-            .eq("barcode", code)
-            .eq("is_active", true)
-            .maybeSingle();
-          if (data) { selectProduct(data as Product); return; }
-          // Also match a per-unit barcode (Box / Half Box / …) and pre-select that unit.
-          const { data: unitRow } = await supabase.from("product_units").select("*").eq("barcode", code).maybeSingle();
-          if (unitRow) {
-            const { data: prod } = await supabase
-              .from("products").select("id,barcode,name,stock,purchase_price,sale_price")
-              .eq("id", (unitRow as any).product_id).eq("is_active", true).maybeSingle();
-            if (prod) { selectProduct(prod as Product, (unitRow as any).id); return; }
-          }
-          toast.error(`Barcode not found: ${code}`);
-        })();
+        void lookupBarcode(code);
         return;
       }
       if (e.key.length === 1) {
@@ -182,6 +185,7 @@ function StockEntryPage() {
     return () => window.removeEventListener("keydown", handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // `products` already holds the server-side search results, so just cap the dropdown length.
   const filtered = search.trim() && !selectedProduct ? products.slice(0, 10) : [];
