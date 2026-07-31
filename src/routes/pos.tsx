@@ -58,8 +58,10 @@ const CartItemRow = memo(function CartItemRow({
 }) {
   return (
     <div
-      className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors"
-      style={{ gridTemplateColumns: "1fr 5rem 6rem 4rem 2rem" }}>
+      className="grid gap-1 px-2 sm:px-4 py-2 items-center hover:bg-muted/30 transition-colors
+        [grid-template-columns:1fr_4.5rem_4.5rem_3.5rem_1.75rem]
+        sm:[grid-template-columns:1fr_5rem_6rem_4rem_2rem]">
+
       <div className="min-w-0">
         <div className="font-medium text-xs sm:text-sm truncate">{i.name}</div>
         {i.available_units.length <= 1 && (
