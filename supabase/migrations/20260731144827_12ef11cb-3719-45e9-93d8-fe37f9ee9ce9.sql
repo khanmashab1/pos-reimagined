@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_base_unit_prices() FROM PUBLIC, anon, authenticated;
