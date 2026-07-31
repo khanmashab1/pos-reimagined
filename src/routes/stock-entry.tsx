@@ -556,7 +556,7 @@ function StockEntryPage() {
               <div className="relative mt-1">
                 <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  className="pl-9"
+                  className="pl-9 pr-12"
                   placeholder="Search by name or scan barcode..."
                   value={search}
                   onChange={(e) => {
@@ -567,6 +567,19 @@ function StockEntryPage() {
                   onFocus={() => setShowDrop(true)}
                   onBlur={() => setTimeout(() => setShowDrop(false), 150)}
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Scan barcode with camera"
+                  title="Scan with camera"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setCameraOpen(true)}
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+
                 {showDrop && filtered.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-20 max-h-52 overflow-auto">
                     {filtered.map((p) => (
