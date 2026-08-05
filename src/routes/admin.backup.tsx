@@ -15,28 +15,50 @@ export const Route = createFileRoute("/admin/backup")({
 interface TableInfo {
   key: string;
   label: string;
+  group: string;
 }
 
 const TABLES: TableInfo[] = [
-  { key: "profiles", label: "Profiles" },
-  { key: "user_roles", label: "User Roles" },
-  { key: "categories", label: "Categories" },
-  { key: "products", label: "Products" },
-  { key: "sales", label: "Sales" },
-  { key: "sale_items", label: "Sale Items" },
-  { key: "returns", label: "Returns" },
-  { key: "return_items", label: "Return Items" },
-  { key: "cash_sessions", label: "Cash Sessions" },
-  { key: "stock_entries", label: "Stock Entries" },
-  { key: "suppliers", label: "Suppliers" },
-  { key: "supplier_purchases", label: "Supplier Purchases" },
-  { key: "supplier_payments", label: "Supplier Payments" },
-  { key: "store_settings", label: "Store Settings" },
-  { key: "bill_sequences", label: "Bill Sequences" },
-  { key: "user_audit_log", label: "Audit Log" },
+  // Catalog
+  { key: "categories", label: "Categories", group: "Catalog" },
+  { key: "products", label: "Products", group: "Catalog" },
+  { key: "product_units", label: "Product Units", group: "Catalog" },
+  { key: "price_change_requests", label: "Price Requests", group: "Catalog" },
+  // Sales
+  { key: "sales", label: "Sales", group: "Sales" },
+  { key: "sale_items", label: "Sale Items", group: "Sales" },
+  { key: "returns", label: "Returns", group: "Sales" },
+  { key: "return_items", label: "Return Items", group: "Sales" },
+  { key: "cash_sessions", label: "Cash Sessions", group: "Sales" },
+  { key: "shift_expenses", label: "Shift Expenses", group: "Sales" },
+  // Inventory
+  { key: "stock_entries", label: "Stock Entries", group: "Inventory" },
+  { key: "inventory_movements", label: "Inventory Movements", group: "Inventory" },
+  { key: "stock_reconciliations", label: "Stock Reconciliations", group: "Inventory" },
+  // Suppliers & Cash
+  { key: "suppliers", label: "Suppliers", group: "Suppliers & Cash" },
+  { key: "supplier_purchases", label: "Supplier Purchases", group: "Suppliers & Cash" },
+  { key: "supplier_payments", label: "Supplier Payments", group: "Suppliers & Cash" },
+  { key: "person_payments", label: "Person Payments", group: "Suppliers & Cash" },
+  { key: "person_starting_balances", label: "Person Starting Balances", group: "Suppliers & Cash" },
+  { key: "daily_expenses", label: "Daily Expenses", group: "Suppliers & Cash" },
+  { key: "operating_expenses", label: "Operating Expenses", group: "Suppliers & Cash" },
+  { key: "manual_sale_days", label: "Manual Sale Days", group: "Suppliers & Cash" },
+  { key: "manual_sale_persons", label: "Manual Sale Persons", group: "Suppliers & Cash" },
+  // System
+  { key: "profiles", label: "Profiles", group: "System" },
+  { key: "user_roles", label: "User Roles", group: "System" },
+  { key: "store_settings", label: "Store Settings", group: "System" },
+  { key: "bill_sequences", label: "Bill Sequences", group: "System" },
+  { key: "customer_feedback", label: "Customer Feedback", group: "System" },
+  { key: "user_audit_log", label: "Audit Log", group: "System" },
 ];
 
+const GROUPS = Array.from(new Set(TABLES.map(t => t.group)));
+
 type BackupStatus = "idle" | "loading" | "success" | "error";
+
+const PAGE = 1000;
 
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -48,26 +70,62 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function toCsv(rows: Record<string, unknown>[]): string {
+  if (!rows.length) return "";
+  const cols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+  const esc = (v: unknown) => {
+    if (v === null || v === undefined) return "";
+    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [cols.join(","), ...rows.map(r => cols.map(c => esc(r[c])).join(","))].join("\n");
+}
+
+function downloadCsv(rows: Record<string, unknown>[], filename: string) {
+  const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Fetch every row of a table, paging past the 1000-row API limit. */
+async function fetchAll(key: string): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await (supabase.from(key as any) as any)
+      .select("*")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const batch = (data ?? []) as Record<string, unknown>[];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
 function BackupPage() {
   const [status, setStatus] = useState<Record<string, BackupStatus>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [allLoading, setAllLoading] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [format, setFormat] = useState<"json" | "csv">("json");
+
+  const stamp = () => new Date().toISOString().slice(0, 10);
 
   const backupTable = async (table: TableInfo) => {
     setStatus(prev => ({ ...prev, [table.key]: "loading" }));
     try {
-      const { data, error } = await (supabase.from(table.key as any) as any).select("*");
-
-      if (error) {
-        setStatus(prev => ({ ...prev, [table.key]: "error" }));
-        toast.error(`${table.label}: ${error.message}`);
-        return;
-      }
-
-      const filename = `pos-backup-${table.key}-${new Date().toISOString().slice(0, 10)}.json`;
-      downloadJson(data ?? [], filename);
+      const rows = await fetchAll(table.key);
+      const base = `pos-backup-${table.key}-${stamp()}`;
+      if (format === "csv") downloadCsv(rows, `${base}.csv`);
+      else downloadJson(rows, `${base}.json`);
+      setCounts(prev => ({ ...prev, [table.key]: rows.length }));
       setStatus(prev => ({ ...prev, [table.key]: "success" }));
       setTimeout(() => setStatus(prev => ({ ...prev, [table.key]: "idle" })), 3000);
-      toast.success(`${table.label} downloaded`);
+      toast.success(`${table.label} downloaded (${rows.length} rows)`);
     } catch (err) {
       setStatus(prev => ({ ...prev, [table.key]: "error" }));
       toast.error(`${table.label}: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -77,31 +135,33 @@ function BackupPage() {
   const backupAll = async () => {
     setAllLoading(true);
     const snapshot: Record<string, unknown> = { exported_at: new Date().toISOString() };
-    let hasError = false;
+    const rowCounts: Record<string, number> = {};
+    const failed: string[] = [];
 
-    for (const table of TABLES) {
+    for (const [i, table] of TABLES.entries()) {
+      setProgress(`${table.label} (${i + 1}/${TABLES.length})`);
       setStatus(prev => ({ ...prev, [table.key]: "loading" }));
-      const { data, error } = await (supabase.from(table.key as any) as any).select("*");
-
-      if (error) {
+      try {
+        const rows = await fetchAll(table.key);
+        snapshot[table.key] = rows;
+        rowCounts[table.key] = rows.length;
+        setStatus(prev => ({ ...prev, [table.key]: "idle" }));
+      } catch {
         setStatus(prev => ({ ...prev, [table.key]: "error" }));
-        hasError = true;
-        continue;
+        failed.push(table.label);
       }
-      snapshot[table.key] = data ?? [];
-      setStatus(prev => ({ ...prev, [table.key]: "idle" }));
     }
 
-    const filename = `pos-backup-full-${new Date().toISOString().slice(0, 10)}.json`;
-    downloadJson(snapshot, filename);
+    snapshot.row_counts = rowCounts;
+    setCounts(prev => ({ ...prev, ...rowCounts }));
+    downloadJson(snapshot, `pos-backup-full-${stamp()}.json`);
     setAllLoading(false);
+    setProgress("");
 
-    if (hasError) {
-      toast.error("Some tables failed — partial backup downloaded");
-    } else {
-      toast.success("Full backup downloaded");
-    }
+    if (failed.length) toast.error(`Partial backup — failed: ${failed.join(", ")}`);
+    else toast.success("Full backup downloaded");
   };
+
 
   const statusIcon = (s: BackupStatus) => {
     switch (s) {
