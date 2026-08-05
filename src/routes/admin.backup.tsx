@@ -173,49 +173,79 @@ function BackupPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="p-6 md:p-8 max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Database className="h-7 w-7" /> Backup
           </h1>
-          <p className="text-muted-foreground">Export your data as JSON files</p>
+          <p className="text-muted-foreground">
+            Export all {TABLES.length} data tables — complete, no row limits
+          </p>
         </div>
-        <Button size="lg" onClick={backupAll} disabled={allLoading}>
-          {allLoading ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Exporting...</>
-          ) : (
-            <><FileDown className="h-4 w-4 mr-2" /> Download All</>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            {(["json", "csv"] as const).map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFormat(f)}
+                className={`px-3 py-2 text-xs font-medium uppercase transition-colors ${
+                  format === f ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <Button size="lg" onClick={backupAll} disabled={allLoading}>
+            {allLoading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {progress || "Exporting..."}</>
+            ) : (
+              <><FileDown className="h-4 w-4 mr-2" /> Download All (JSON)</>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <Card className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {TABLES.map(table => {
-            const s = status[table.key] ?? "idle";
-            return (
-              <Button
-                key={table.key}
-                variant="outline"
-                className="h-auto py-4 px-4 justify-between gap-2"
-                disabled={s === "loading" || allLoading}
-                onClick={() => backupTable(table)}
-              >
-                <span className="font-medium text-sm">{table.label}</span>
-                {statusIcon(s)}
-              </Button>
-            );
-          })}
-        </div>
-      </Card>
+      {GROUPS.map(group => (
+        <Card key={group} className="p-6 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {group}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {TABLES.filter(t => t.group === group).map(table => {
+              const s = status[table.key] ?? "idle";
+              const count = counts[table.key];
+              return (
+                <Button
+                  key={table.key}
+                  variant="outline"
+                  className="h-auto py-3 px-4 justify-between gap-2"
+                  disabled={s === "loading" || allLoading}
+                  onClick={() => backupTable(table)}
+                >
+                  <span className="flex flex-col items-start text-left">
+                    <span className="font-medium text-sm">{table.label}</span>
+                    {count !== undefined && (
+                      <span className="text-[11px] text-muted-foreground">{count} rows</span>
+                    )}
+                  </span>
+                  {statusIcon(s)}
+                </Button>
+              );
+            })}
+          </div>
+        </Card>
+      ))}
 
       <Card className="p-6 bg-muted/30">
         <div className="text-sm text-muted-foreground space-y-1">
-          <p>Backups are downloaded as JSON files — one file per table or a single bundle.</p>
-          <p>Use <code className="text-xs bg-muted px-1.5 py-0.5 rounded">supabase db dump</code> for full database snapshots.</p>
+          <p>Single-table downloads use the selected format (JSON or CSV). "Download All" always bundles every table into one JSON file with row counts.</p>
+          <p>Large tables are fetched in pages, so nothing is cut off at 1,000 rows.</p>
         </div>
       </Card>
     </div>
   );
 }
+
