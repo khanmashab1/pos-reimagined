@@ -31,6 +31,7 @@ const PERIODS = [
   { key: "7d", label: "Last 7 days", days: 7 },
   { key: "30d", label: "Last 30 days", days: 30 },
   { key: "90d", label: "Last 90 days", days: 90 },
+  { key: "all", label: "All time", days: 365 },
 ] as const;
 type PeriodKey = typeof PERIODS[number]["key"];
 

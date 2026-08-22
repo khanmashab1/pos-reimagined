@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>How to Add a Product</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 16mm;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      body {
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #1e293b;
+        line-height: 1.55;
+        font-size: 12.5px;
+        margin: 0;
+      }
+      h1 {
+        font-size: 26px;
+        margin: 0 0 4px;
+        color: #6d28d9;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 26px 0 8px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid #ede9fe;
+        color: #5b21b6;
+        page-break-after: avoid;
+      }
+      h2 .num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        margin-right: 8px;
+        border-radius: 6px;
+        background: #6d28d9;
+        color: #fff;
+        font-size: 12px;
+        vertical-align: middle;
+      }
+      .subtitle {
+        color: #64748b;
+        margin: 0 0 18px;
+        font-size: 13px;
+      }
+      .lead {
+        background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+        border: 1px solid #e9d5ff;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 0 0 8px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+        font-size: 12px;
+        page-break-inside: avoid;
+      }
+      th,
+      td {
+        border: 1px solid #e2e8f0;
+        padding: 7px 10px;
+        text-align: left;
+      }
+      th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+      }
+      .example th {
+        background: #f5f3ff;
+        color: #5b21b6;
+      }
+      .example tr.base td {
+        background: #faf5ff;
+        font-weight: 600;
+      }
+      .tip {
+        border-left: 4px solid #8b5cf6;
+        background: #faf5ff;
+        padding: 9px 14px;
+        margin: 10px 0;
+        border-radius: 0 8px 8px 0;
+        font-size: 12px;
+      }
+      ol,
+      ul {
+        margin: 8px 0;
+        padding-left: 22px;
+      }
+      li {
+        margin: 4px 0;
+      }
+      code {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-family: "Consolas", monospace;
+        font-size: 11.5px;
+        color: #be185d;
+      }
+      .rules {
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        border-radius: 10px;
+        padding: 12px 18px;
+        margin-top: 8px;
+      }
+      .rules li {
+        list-style: none;
+        margin-left: -10px;
+      }
+      .rules li::before {
+        content: "\2713";
+        color: #059669;
+        font-weight: 700;
+        margin-right: 8px;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+        color: #94a3b8;
+        font-size: 11px;
+        text-align: center;
+      }
+      .step {
+        page-break-inside: avoid;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>How to Add a Product</h1>
+    <p class="subtitle">A simple step-by-step guide for shop staff &mdash; ZIC POS</p>
+
+    <div class="lead">
+      Adding a product takes about a minute. You enter the item once, set up the
+      pack sizes you sell it in (single, box, carton&hellip;), and the system
+      handles all the counting and price conversions for you.
+    </div>
+
+    <div class="step">
+      <h2><span class="num">1</span>Open the form</h2>
+      <p>
+        Go to <strong>Admin &rarr; Products</strong> and click the
+        <strong>+ Add Product</strong> button at the top right. A window pops up.
+      </p>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">2</span>Fill the basic info</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>What to type</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Product Name</strong></td>
+            <td>The name of the item</td>
+            <td>Chocolate Cookies</td>
+          </tr>
+          <tr>
+            <td><strong>Barcode</strong></td>
+            <td>Scan with the camera button, or click <strong>Gen</strong> to create one</td>
+            <td>ZIC123456789</td>
+          </tr>
+          <tr>
+            <td><strong>Category</strong></td>
+            <td>Pick from the list (or leave as &ldquo;None&rdquo;)</td>
+            <td>Snacks</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tip">
+        <strong>Tip:</strong> No barcode on the item? Just click <strong>Gen</strong>
+        and the system makes a unique one for you.
+      </div>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">3</span>Set your default prices</h2>
+      <ul>
+        <li><strong>Default Purchase Price</strong> &mdash; what <em>you</em> pay for one single piece (your cost).</li>
+        <li><strong>Default Sale Price</strong> &mdash; what the <em>customer</em> pays for one single piece.</li>
+      </ul>
+      <p>
+        These are the prices for your <strong>base unit</strong> (one piece).
+        You&rsquo;ll set bigger-pack prices in the next step.
+      </p>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">4</span>Set up your units (the important part)</h2>
+      <p>
+        The <strong>Units, Conversion &amp; Pricing</strong> table lets you sell the
+        same product in different pack sizes.
+      </p>
+      <p>
+        <strong>The base unit</strong> is your smallest sellable piece &mdash; all
+        stock is counted in it. By default it&rsquo;s called <strong>Piece</strong>,
+        but you can rename it (e.g. &ldquo;Bottle&rdquo;, &ldquo;Egg&rdquo;, &ldquo;Kg&rdquo;).
+      </p>
+      <p><strong>To add a bigger pack (like a Box):</strong></p>
+      <ol>
+        <li>Click <strong>+ Add Unit</strong>.</li>
+        <li><strong>Unit Name</strong> &rarr; type the pack name, e.g. <code>Box</code>.</li>
+        <li><strong>Equals (in Pieces)</strong> &rarr; how many pieces are inside. A box of 6 &rarr; type <code>6</code>.</li>
+        <li><strong>Purchase</strong> &amp; <strong>Sale</strong> &rarr; the cost and selling price for the whole box.</li>
+        <li>The <strong>Profit</strong> column fills in automatically.</li>
+      </ol>
+      <p><strong>Example setup:</strong></p>
+      <table class="example">
+        <thead>
+          <tr>
+            <th>Unit</th>
+            <th class="num">Equals</th>
+            <th class="num">Purchase</th>
+            <th class="num">Sale</th>
+            <th class="num">Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="base">
+            <td>Piece (Base)</td>
+            <td class="num">1</td>
+            <td class="num">8</td>
+            <td class="num">10</td>
+            <td class="num">2</td>
+          </tr>
+          <tr>
+            <td>Box</td>
+            <td class="num">6</td>
+            <td class="num">45</td>
+            <td class="num">60</td>
+            <td class="num">15</td>
+          </tr>
+          <tr>
+            <td>Carton</td>
+            <td class="num">24</td>
+            <td class="num">170</td>
+            <td class="num">230</td>
+            <td class="num">60</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tip">
+        The small badges under each name let you <strong>Set base</strong> (mark the
+        smallest piece &mdash; only one can be base) and pick the
+        <strong>Default sale</strong> unit (what the cashier sees first at checkout).
+      </div>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">5</span>Enter your starting stock</h2>
+      <p>
+        In the <strong>Initial Stock</strong> box, pick <em>any</em> unit and type how
+        much you have &mdash; the system converts it for you.
+      </p>
+      <ul>
+        <li>Received <strong>2 Cartons</strong>? Pick <code>Carton</code>, type <code>2</code>.</li>
+        <li>It instantly shows <strong>Total Stock = 48 Pieces</strong> (2 &times; 24).</li>
+      </ul>
+      <p>You never have to count single pieces &mdash; enter stock whichever way is easiest.</p>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">6</span>Check the preview (optional)</h2>
+      <ul>
+        <li><strong>Stock Summary</strong> &mdash; shows your stock in neat chunks (e.g. <em>2 Cartons</em>).</li>
+        <li><strong>Real-time Stock Preview</strong> &mdash; test &ldquo;If you sell 1 Box&rdquo; and see what&rsquo;s left. It warns you in red if stock would go negative.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">7</span>Save</h2>
+      <p>
+        Click the green <strong>&check; Save Product</strong> button at the bottom.
+        Done! Your product is ready to sell.
+      </p>
+    </div>
+
+    <div class="step">
+      <h2>Quick rules to remember</h2>
+      <ul class="rules">
+        <li>Stock is <strong>always stored in the base unit</strong> (pieces).</li>
+        <li>You can <strong>sell in any unit</strong> &mdash; the system converts and subtracts stock automatically.</li>
+        <li>Each unit can have its <strong>own price</strong>.</li>
+        <li><strong>Unit names must be unique</strong>, and conversion must be <strong>greater than 0</strong>.</li>
+        <li>Purchase and sale prices <strong>cannot be negative</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="footer">ZIC POS &mdash; Product Management Guide</div>
+  </body>
+</html>
