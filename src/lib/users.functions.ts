@@ -25,180 +25,51 @@ const deleteUserSchema = z.object({
   token: z.string().min(1),
 });
 
-/** Verify the bearer token belongs to an active admin; returns their id + display name. */
-async function requireAdmin(token: string) {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error("Missing Supabase environment variables");
-  }
-  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+function getClient(token: string) {
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://ivczucpqxwwthhyzphix.supabase.co";
+  const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2Y3p1Y3BxeHd3dGhoeXpwaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTgzODksImV4cCI6MjEwMjg3NDM4OX0.rNpBnN2xppIFblYjl0bkkmLvQXLEkFVAejzEVSWlDqM";
+  return createClient(url, key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: claims, error: claimsErr } = await userClient.auth.getUser();
-  if (claimsErr || !claims?.user) throw new Error("Unauthorized");
-  const { data: roleRow, error: roleErr } = await userClient
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", claims.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (roleErr) throw new Error(roleErr.message);
-  if (!roleRow) throw new Error("Only admins can manage users");
-  return {
-    userId: claims.user.id,
-    callerName: (claims.user.user_metadata?.full_name as string) ?? "Admin",
-  };
 }
 
 export const createUser = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => createUserSchema.parse(data))
   .handler(async ({ data }) => {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
-
-    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      global: { headers: { Authorization: `Bearer ${data.token}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
+    const client = getClient(data.token);
+    const { data: newUserId, error } = await client.rpc("admin_create_user" as any, {
+      _email: data.email.trim().toLowerCase(),
+      _password: data.password,
+      _full_name: data.full_name.trim(),
+      _username: data.username.trim(),
+      _role: data.role,
     });
-
-    const { data: claims, error: claimsErr } = await userClient.auth.getUser();
-    if (claimsErr || !claims?.user) throw new Error("Unauthorized");
-
-    const userId = claims.user.id;
-
-    const { data: roleRow, error: roleErr } = await userClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (roleErr) throw new Error(roleErr.message);
-    if (!roleRow) throw new Error("Only admins can create users");
-
-    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: data.full_name,
-        username: data.username,
-      },
-    });
-
-    if (createErr || !created?.user) {
-      throw new Error(createErr?.message ?? "Failed to create user");
-    }
-
-    const newUserId = created.user.id;
-
-    const { data: existingProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("id", newUserId)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      await supabaseAdmin.from("profiles").insert({
-        id: newUserId,
-        full_name: data.full_name,
-        username: data.username,
-        is_active: true,
-      });
-    }
-
-    const { error: roleUpdateErr } = await supabaseAdmin
-      .from("user_roles")
-      .update({ role: data.role })
-      .eq("user_id", newUserId);
-
-    if (roleUpdateErr) {
-      await supabaseAdmin.from("user_roles").upsert(
-        { user_id: newUserId, role: data.role },
-        { onConflict: "user_id" }
-      );
-    }
-
-    const callerName = claims.user.user_metadata?.full_name ?? "Admin";
-    await supabaseAdmin.from("user_audit_log").insert({
-      actor_id: userId,
-      actor_name: callerName,
-      target_user_id: newUserId,
-      target_user_name: data.full_name,
-      action: "user_created",
-      details: { email: data.email, role: data.role },
-    });
-
+    if (error) throw new Error(error.message);
     return { id: newUserId, email: data.email, role: data.role };
   });
 
 export const updateUser = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => updateUserSchema.parse(data))
   .handler(async ({ data }) => {
-    const { userId, callerName } = await requireAdmin(data.token);
-
-    // Profile fields (name / username)
-    const { error: profErr } = await supabaseAdmin
-      .from("profiles")
-      .update({ full_name: data.full_name, username: data.username })
-      .eq("id", data.user_id);
-    if (profErr) throw new Error(profErr.message);
-
-    // Auth metadata + optional password reset
-    const authUpdate: { user_metadata: Record<string, unknown>; password?: string } = {
-      user_metadata: { full_name: data.full_name, username: data.username },
-    };
-    if (data.password && data.password.length >= 6) authUpdate.password = data.password;
-    const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, authUpdate);
-    if (authErr) throw new Error(authErr.message);
-
-    await supabaseAdmin.from("user_audit_log").insert({
-      actor_id: userId,
-      actor_name: callerName,
-      target_user_id: data.user_id,
-      target_user_name: data.full_name,
-      action: "user_updated",
-      details: { password_reset: !!authUpdate.password },
+    const client = getClient(data.token);
+    const { error } = await client.rpc("admin_update_user" as any, {
+      _target_user_id: data.user_id,
+      _full_name: data.full_name.trim(),
+      _username: data.username.trim(),
+      _password: data.password ? data.password.trim() : null,
     });
-
+    if (error) throw new Error(error.message);
     return { id: data.user_id };
   });
 
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => deleteUserSchema.parse(data))
   .handler(async ({ data }) => {
-    const { userId, callerName } = await requireAdmin(data.token);
-    if (data.user_id === userId) throw new Error("You cannot delete yourself");
-
-    // Capture name for the audit entry before deletion
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name, username")
-      .eq("id", data.user_id)
-      .maybeSingle();
-    const targetName = (prof?.full_name as string) || (prof?.username as string) || "";
-
-    const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
-    if (delErr) throw new Error(delErr.message);
-
-    // Clean up app rows (in case FK cascade is not configured)
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
-    await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
-
-    await supabaseAdmin.from("user_audit_log").insert({
-      actor_id: userId,
-      actor_name: callerName,
-      target_user_id: data.user_id,
-      target_user_name: targetName,
-      action: "user_deleted",
-      details: {},
+    const client = getClient(data.token);
+    const { error } = await client.rpc("admin_delete_user" as any, {
+      _target_user_id: data.user_id,
     });
-
+    if (error) throw new Error(error.message);
     return { id: data.user_id };
   });

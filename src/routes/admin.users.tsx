@@ -13,7 +13,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Users as UsersIcon, ShieldCheck, History, UserPlus, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createUser, updateUser, deleteUser } from "@/lib/users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,
@@ -43,9 +42,10 @@ function UsersPage() {
     if (!confirm(`Delete ${u.full_name || u.username}? This permanently removes their login and cannot be undone.`)) return;
     setDeleting(u.id);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Not authenticated");
-      await deleteUser({ data: { user_id: u.id, token: session.access_token } });
+      const { error } = await supabase.rpc("admin_delete_user" as any, {
+        _target_user_id: u.id,
+      });
+      if (error) throw error;
       toast.success(`Deleted ${u.full_name || u.username}`);
       load();
     } catch (err: any) {
@@ -253,18 +253,14 @@ function EditUserDialog({ target, onClose, onSaved }: {
     if (password && password.length < 6) return toast.error("Password must be at least 6 characters");
     setBusy(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Not authenticated");
-      await updateUser({
-        data: {
-          user_id: target.id,
-          full_name: fullName.trim(),
-          username: username.trim(),
-          password: password || undefined,
-          token: session.access_token,
-        },
+      const { error } = await supabase.rpc("admin_update_user" as any, {
+        _target_user_id: target.id,
+        _full_name: fullName.trim(),
+        _username: username.trim(),
+        _password: password ? password.trim() : null,
       });
-      toast.success("User updated");
+      if (error) throw error;
+      toast.success("User updated successfully");
       onClose();
       onSaved();
     } catch (err: any) {
@@ -321,14 +317,20 @@ function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!email.trim()) return toast.error("Email is required");
+    if (!fullName.trim()) return toast.error("Full name is required");
+    if (!username.trim()) return toast.error("Username is required");
     if (password.length < 6) return toast.error("Password must be at least 6 characters");
     setBusy(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Not authenticated");
-      await createUser({
-        data: { email, password, full_name: fullName, username, role, token: session.access_token },
+      const { error } = await supabase.rpc("admin_create_user" as any, {
+        _email: email.trim().toLowerCase(),
+        _password: password,
+        _full_name: fullName.trim(),
+        _username: username.trim(),
+        _role: role,
       });
+      if (error) throw error;
       toast.success(`User created: ${fullName}`);
       reset();
       setOpen(false);
