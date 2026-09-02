@@ -1,0 +1,26 @@
+[
+  {
+    "id": "7146c0f9-766b-4efd-bc55-c0f90cdb9f95",
+    "expense_date": "2026-08-14",
+    "category": "Wages",
+    "description": "",
+    "amount": 4000,
+    "paid_to": "",
+    "payment_method": "junaid",
+    "recorded_by": null,
+    "recorded_by_name": "Junaid Abbasi",
+    "created_at": "2026-08-14T10:02:50.298984+00:00"
+  },
+  {
+    "id": "b9761014-db41-41f5-8870-4857824876a4",
+    "expense_date": "2026-08-19",
+    "category": "Internet",
+    "description": "",
+    "amount": 3400,
+    "paid_to": "",
+    "payment_method": "junaid",
+    "recorded_by": null,
+    "recorded_by_name": "Junaid Abbasi",
+    "created_at": "2026-08-19T11:25:45.363079+00:00"
+  }
+]

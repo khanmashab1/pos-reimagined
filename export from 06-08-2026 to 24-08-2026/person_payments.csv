@@ -1,0 +1,7 @@
+id,payment_date,person_name,amount,payment_method,notes,recorded_by,recorded_by_name,created_at
+4c36a4b0-136c-4dba-ac1e-086aef671bfb,2026-08-09,Junaid,16000,easypaisa,Supplier payment: Walls,f686d4d0-3678-467e-9535-3d5f1309c328,Cashier 1,2026-08-09T15:41:01.377588+00:00
+25211d4c-8d44-49fd-bfbf-6841d2e0408c,2026-08-10,Junaid,5450,Junaid,Supplier payment: anees traders,62c5814c-09e6-4583-874d-c3660ce3283f,Asad,2026-08-10T15:01:52.824764+00:00
+078f1e53-f1f4-497f-967f-8cb0e9457b95,2026-08-10,Junaid,17900,Junaid,Supplier payment: jadoon traders,62c5814c-09e6-4583-874d-c3660ce3283f,Asad,2026-08-10T15:03:05.415185+00:00
+13e7591c-7bfd-4482-95ec-a0cfae9f8d45,2026-08-10,Junaid,6500,Junaid,Supplier payment: Amir Trader,62c5814c-09e6-4583-874d-c3660ce3283f,Asad,2026-08-10T15:04:26.710585+00:00
+fa2a7ff9-7eb2-4f90-b1be-30fecc1087f3,2026-08-15,Junaid,4000,Junaid,Supplier payment: jadoon traders,62c5814c-09e6-4583-874d-c3660ce3283f,Asad,2026-08-15T14:28:38.793197+00:00
+9da3eafc-913c-4e01-9fac-03bacd0f79d0,2026-08-20,Junaid,21000,Junaid,Supplier payment: Walls,62c5814c-09e6-4583-874d-c3660ce3283f,Asad,2026-08-20T15:38:30.656243+00:00

@@ -1,0 +1,488 @@
+[
+  {
+    "id": "9458f7f3-74ef-4ec2-b8f4-8269e323c997",
+    "session_id": "e62824eb-ce73-4828-9b80-318033d3114a",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 1200,
+    "description": "Usama",
+    "created_at": "2026-08-06T06:40:33.019177+00:00"
+  },
+  {
+    "id": "92a0236a-52fa-4eef-94a1-ddbada8be4a0",
+    "session_id": "f81e6868-dde3-4686-9329-cde4da5bc824",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 350,
+    "description": "Usama",
+    "created_at": "2026-08-06T17:46:24.877339+00:00"
+  },
+  {
+    "id": "c94f963e-7bcd-4a38-abe0-ee20f53ad1a0",
+    "session_id": "f81e6868-dde3-4686-9329-cde4da5bc824",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 160,
+    "description": "mohiz",
+    "created_at": "2026-08-07T03:21:09.600012+00:00"
+  },
+  {
+    "id": "f80feeb5-0087-41af-8c0a-e546cd70e2d0",
+    "session_id": "45effc76-690f-4397-a1ad-dde2c4061ee6",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 160,
+    "description": "Junaid",
+    "created_at": "2026-08-07T11:37:42.361959+00:00"
+  },
+  {
+    "id": "724afdf5-670d-40fe-8842-4b2459ecfbed",
+    "session_id": "45effc76-690f-4397-a1ad-dde2c4061ee6",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 80,
+    "description": "Junaid",
+    "created_at": "2026-08-07T12:19:32.348855+00:00"
+  },
+  {
+    "id": "f1e110ad-861b-49cd-8617-3b6f50df9483",
+    "session_id": "45effc76-690f-4397-a1ad-dde2c4061ee6",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 100,
+    "description": "Junaid",
+    "created_at": "2026-08-07T13:00:50.260944+00:00"
+  },
+  {
+    "id": "19085700-a7e5-4329-ae5d-4d0d9543d69a",
+    "session_id": "45effc76-690f-4397-a1ad-dde2c4061ee6",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 8300,
+    "description": "Junaid",
+    "created_at": "2026-08-07T13:42:38.228552+00:00"
+  },
+  {
+    "id": "0b7ae691-b378-4feb-bdf1-fa34a2aa6167",
+    "session_id": "26b9316c-4fce-4ae1-aa93-6a1365bec50d",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 230,
+    "description": "manager",
+    "created_at": "2026-08-07T22:34:36.050513+00:00"
+  },
+  {
+    "id": "385333ce-72e2-4b62-8817-deb94a40f159",
+    "session_id": "4571c8fa-6ccb-4c5b-9dc9-fd105c7109b5",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 2000,
+    "description": "Usama",
+    "created_at": "2026-08-08T15:59:51.322203+00:00"
+  },
+  {
+    "id": "e4048286-3ee8-4e62-a4c6-7899d94f6dc8",
+    "session_id": "4571c8fa-6ccb-4c5b-9dc9-fd105c7109b5",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 3000,
+    "description": "Junaid",
+    "created_at": "2026-08-08T15:59:59.888092+00:00"
+  },
+  {
+    "id": "0bcd4e0f-1190-48c5-bf14-65be122d7379",
+    "session_id": "2c77dba6-84d4-4d77-876b-b539d5aebb1c",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 70,
+    "description": "Junaid",
+    "created_at": "2026-08-10T11:43:50.33816+00:00"
+  },
+  {
+    "id": "0fc5b12c-a69e-4aa2-8acd-a20a497b8e78",
+    "session_id": "2c77dba6-84d4-4d77-876b-b539d5aebb1c",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 160,
+    "description": "Junaid",
+    "created_at": "2026-08-10T11:51:44.828525+00:00"
+  },
+  {
+    "id": "fb52c128-ef3b-4445-92f0-7488f98504d8",
+    "session_id": "2c77dba6-84d4-4d77-876b-b539d5aebb1c",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 330,
+    "description": "Junaid",
+    "created_at": "2026-08-10T15:07:27.596915+00:00"
+  },
+  {
+    "id": "44e17670-5afa-4af3-b18b-59963a738d5c",
+    "session_id": "1eac2cd8-9143-470f-9174-536ba0534d2d",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 8100,
+    "description": "Junaid",
+    "created_at": "2026-08-10T17:05:22.189294+00:00"
+  },
+  {
+    "id": "f2c46e39-d34a-47af-a467-0ae9d92a9a00",
+    "session_id": "1eac2cd8-9143-470f-9174-536ba0534d2d",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 230,
+    "description": "tyre wala",
+    "created_at": "2026-08-10T19:18:47.672841+00:00"
+  },
+  {
+    "id": "0aca6390-dc8b-47d5-85e4-b52d1374f8c2",
+    "session_id": "059973fb-f039-42c5-901e-6c77462f7fb9",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 300,
+    "description": "Usama",
+    "created_at": "2026-08-11T12:35:28.330828+00:00"
+  },
+  {
+    "id": "a3a98e06-8c18-4241-ad29-7dd6f297f412",
+    "session_id": "c9fe0214-b133-414d-b64e-58831f5eb1e2",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 11500,
+    "description": "Junaid",
+    "created_at": "2026-08-11T16:50:33.107087+00:00"
+  },
+  {
+    "id": "88be9c89-fd97-4664-a9b3-eb1ed8381dd9",
+    "session_id": "c9fe0214-b133-414d-b64e-58831f5eb1e2",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 650,
+    "description": "oil shop",
+    "created_at": "2026-08-11T20:10:41.092347+00:00"
+  },
+  {
+    "id": "9dadd0d9-a3cb-45b6-8ddf-edd8ce417321",
+    "session_id": "a5c179ea-f038-4e50-a9a7-bee6c4b2a8db",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 210,
+    "description": "khawaja sab",
+    "created_at": "2026-08-12T17:35:39.570016+00:00"
+  },
+  {
+    "id": "bd3fa75d-0fa7-4a0f-9e6d-c821b78585a7",
+    "session_id": "a5c179ea-f038-4e50-a9a7-bee6c4b2a8db",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 4800,
+    "description": "Junaid",
+    "created_at": "2026-08-12T17:56:24.399435+00:00"
+  },
+  {
+    "id": "abdf33da-511e-424b-8ac2-c25a6136e925",
+    "session_id": "a5c179ea-f038-4e50-a9a7-bee6c4b2a8db",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 130,
+    "description": "mohiz",
+    "created_at": "2026-08-13T04:03:38.55321+00:00"
+  },
+  {
+    "id": "9b77d234-3173-47d8-8d2d-4252da91ad3b",
+    "session_id": "91b69460-82ac-42ae-a9a8-d754a61ce42e",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 450,
+    "description": "Usama",
+    "created_at": "2026-08-13T14:37:50.118137+00:00"
+  },
+  {
+    "id": "0348634c-72bd-4413-8f08-940bcf9fa477",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 510,
+    "description": "Usama",
+    "created_at": "2026-08-14T09:28:57.5409+00:00"
+  },
+  {
+    "id": "3c323fc4-fa88-45b9-9c83-dd710d8b5d75",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": -2410,
+    "description": "khawaja sab",
+    "created_at": "2026-08-14T09:55:51.841833+00:00"
+  },
+  {
+    "id": "d0ce2480-39e4-4431-adc2-40676646be7c",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": -90,
+    "description": "manager",
+    "created_at": "2026-08-14T09:56:14.475847+00:00"
+  },
+  {
+    "id": "f63a4c4d-92e3-4c09-9480-757b49ab2678",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 4000,
+    "description": "Junaid",
+    "created_at": "2026-08-14T09:56:35.295975+00:00"
+  },
+  {
+    "id": "04af2eb6-0071-4528-9186-1b8d4e205711",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 50,
+    "description": "Junaid",
+    "created_at": "2026-08-14T10:56:45.667657+00:00"
+  },
+  {
+    "id": "e1f85a44-a288-4647-8949-163f34069d77",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 13000,
+    "description": "Junaid",
+    "created_at": "2026-08-14T11:24:42.080911+00:00"
+  },
+  {
+    "id": "4ff259eb-ccfe-4504-9a9b-be08784438b4",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 85,
+    "description": "Usama",
+    "created_at": "2026-08-14T12:54:55.90737+00:00"
+  },
+  {
+    "id": "080d58c8-2a2f-4150-942e-7832cd51f259",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 4600,
+    "description": "Junaid",
+    "created_at": "2026-08-14T14:18:26.180355+00:00"
+  },
+  {
+    "id": "290d6fc2-bb33-4c1f-8d62-66e9d1d1f72b",
+    "session_id": "edd13119-ddd3-41d5-a5f4-66de06387da2",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 60,
+    "description": "Usama",
+    "created_at": "2026-08-14T15:23:07.972873+00:00"
+  },
+  {
+    "id": "99594d12-08f9-4ce7-a2e3-3a0353934d4e",
+    "session_id": "ab5186e0-6cd1-4028-867d-a976233a1458",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 280,
+    "description": "Usama",
+    "created_at": "2026-08-14T19:10:43.86436+00:00"
+  },
+  {
+    "id": "99d34053-87cc-42f7-882b-5c4da867350d",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 290,
+    "description": "Usama",
+    "created_at": "2026-08-15T17:48:08.905362+00:00"
+  },
+  {
+    "id": "9b40e65e-7a95-49b7-8c39-12f43bcc8031",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 180,
+    "description": "Usama",
+    "created_at": "2026-08-15T18:36:17.769686+00:00"
+  },
+  {
+    "id": "f34b30ed-bf19-4372-a2a7-1b98e7a4c9f9",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 100,
+    "description": "Junaid",
+    "created_at": "2026-08-15T18:36:43.551779+00:00"
+  },
+  {
+    "id": "9f01f7d3-a5f7-4e12-872b-d20e1bfa7e19",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 1300,
+    "description": "Junaid",
+    "created_at": "2026-08-15T22:23:02.593766+00:00"
+  },
+  {
+    "id": "4974799c-e683-4133-a15a-2da9a6fa940f",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 3000,
+    "description": "Junaid",
+    "created_at": "2026-08-15T22:24:22.364032+00:00"
+  },
+  {
+    "id": "b727c8f7-3434-4a66-a95f-be42b7ed5d7a",
+    "session_id": "e9646a71-d506-4acd-8c76-eaa61da8bfa9",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 500,
+    "description": "Junaid",
+    "created_at": "2026-08-15T22:53:13.954312+00:00"
+  },
+  {
+    "id": "fa94655a-d631-4fd6-b157-149437c5c2a1",
+    "session_id": "003cdfa9-2e53-4bd2-b966-e58c98e8e50e",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 600,
+    "description": "Usama",
+    "created_at": "2026-08-16T08:28:26.771487+00:00"
+  },
+  {
+    "id": "023d2a33-605c-45c2-8f41-2191c9f5b9ba",
+    "session_id": "b062c998-bc7f-49b5-8665-1c7fd4724790",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 17500,
+    "description": "Junaid",
+    "created_at": "2026-08-16T16:26:01.733072+00:00"
+  },
+  {
+    "id": "90c4f23d-cd33-41a7-b908-c42c1c09b105",
+    "session_id": "b062c998-bc7f-49b5-8665-1c7fd4724790",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 800,
+    "description": "Usama",
+    "created_at": "2026-08-16T16:37:44.525603+00:00"
+  },
+  {
+    "id": "98db28d3-475f-403a-8c12-2bcf518d8886",
+    "session_id": "b062c998-bc7f-49b5-8665-1c7fd4724790",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 240,
+    "description": "Usama",
+    "created_at": "2026-08-16T16:40:15.113777+00:00"
+  },
+  {
+    "id": "0d38bb72-74a6-4193-9aa0-8ac325493b8e",
+    "session_id": "499ee146-ac2b-4222-8efb-d4935fcc146e",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 350,
+    "description": "Usama",
+    "created_at": "2026-08-17T16:40:23.405278+00:00"
+  },
+  {
+    "id": "579bc709-fdda-41a1-9ec9-b4f8ae257b85",
+    "session_id": "499ee146-ac2b-4222-8efb-d4935fcc146e",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 11700,
+    "description": "Junaid",
+    "created_at": "2026-08-17T16:41:04.424624+00:00"
+  },
+  {
+    "id": "bae3a14f-29c1-41ef-a114-8a6b85052351",
+    "session_id": "70fb8503-f917-4827-96bd-d9757a495dd8",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 5000,
+    "description": "Junaid",
+    "created_at": "2026-08-18T15:46:52.146668+00:00"
+  },
+  {
+    "id": "c481ae4e-6a7f-484b-9b18-68791a92a43d",
+    "session_id": "3ed912a6-97a2-463a-bb81-11fe8d738d21",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 500,
+    "description": "Junaid",
+    "created_at": "2026-08-19T04:21:07.717895+00:00"
+  },
+  {
+    "id": "d762a6ae-da13-4d2a-9a1b-0e680f8bd2ff",
+    "session_id": "3ed912a6-97a2-463a-bb81-11fe8d738d21",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 550,
+    "description": "Junaid",
+    "created_at": "2026-08-19T15:02:22.441647+00:00"
+  },
+  {
+    "id": "1a593d77-b0ed-40eb-92c8-c11e4b6ee2c9",
+    "session_id": "3ed912a6-97a2-463a-bb81-11fe8d738d21",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 200,
+    "description": "Junaid",
+    "created_at": "2026-08-19T15:02:48.906384+00:00"
+  },
+  {
+    "id": "64871fe0-75b2-4a07-8d6f-4316cb2172a3",
+    "session_id": "c4709d91-a633-44cc-b151-e7112e75b93c",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 90,
+    "description": "Usama",
+    "created_at": "2026-08-20T13:01:01.398661+00:00"
+  },
+  {
+    "id": "95efe8d8-8487-4d9a-be33-8c0ae8148300",
+    "session_id": "c4709d91-a633-44cc-b151-e7112e75b93c",
+    "cashier_id": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "cashier_name": "Asad",
+    "amount": 90,
+    "description": "Usama",
+    "created_at": "2026-08-20T14:50:31.789354+00:00"
+  },
+  {
+    "id": "8b4c448a-dead-441a-bdcc-f45eb9931acc",
+    "session_id": "650612b2-7f73-4062-9d19-ddb14f3659df",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 30,
+    "description": "Junaid",
+    "created_at": "2026-08-20T16:03:50.867598+00:00"
+  },
+  {
+    "id": "23769ca4-b7fc-4ae3-81b1-a34e05db7c5e",
+    "session_id": "650612b2-7f73-4062-9d19-ddb14f3659df",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 1500,
+    "description": "Usama",
+    "created_at": "2026-08-20T16:18:37.932374+00:00"
+  },
+  {
+    "id": "c7210295-834c-466c-9085-df3492c6563a",
+    "session_id": "650612b2-7f73-4062-9d19-ddb14f3659df",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 1320,
+    "description": "Junaid",
+    "created_at": "2026-08-20T16:52:58.294227+00:00"
+  },
+  {
+    "id": "2c9985b1-96fb-4df6-8cf7-66c9a01fa1c5",
+    "session_id": "650612b2-7f73-4062-9d19-ddb14f3659df",
+    "cashier_id": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "cashier_name": "Cashier 1",
+    "amount": 4000,
+    "description": "Usama",
+    "created_at": "2026-08-21T03:21:30.541652+00:00"
+  }
+]

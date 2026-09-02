@@ -1,0 +1,68 @@
+[
+  {
+    "id": "4c36a4b0-136c-4dba-ac1e-086aef671bfb",
+    "payment_date": "2026-08-09",
+    "person_name": "Junaid",
+    "amount": 16000,
+    "payment_method": "easypaisa",
+    "notes": "Supplier payment: Walls",
+    "recorded_by": "f686d4d0-3678-467e-9535-3d5f1309c328",
+    "recorded_by_name": "Cashier 1",
+    "created_at": "2026-08-09T15:41:01.377588+00:00"
+  },
+  {
+    "id": "25211d4c-8d44-49fd-bfbf-6841d2e0408c",
+    "payment_date": "2026-08-10",
+    "person_name": "Junaid",
+    "amount": 5450,
+    "payment_method": "Junaid",
+    "notes": "Supplier payment: anees traders",
+    "recorded_by": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "recorded_by_name": "Asad",
+    "created_at": "2026-08-10T15:01:52.824764+00:00"
+  },
+  {
+    "id": "078f1e53-f1f4-497f-967f-8cb0e9457b95",
+    "payment_date": "2026-08-10",
+    "person_name": "Junaid",
+    "amount": 17900,
+    "payment_method": "Junaid",
+    "notes": "Supplier payment: jadoon traders",
+    "recorded_by": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "recorded_by_name": "Asad",
+    "created_at": "2026-08-10T15:03:05.415185+00:00"
+  },
+  {
+    "id": "13e7591c-7bfd-4482-95ec-a0cfae9f8d45",
+    "payment_date": "2026-08-10",
+    "person_name": "Junaid",
+    "amount": 6500,
+    "payment_method": "Junaid",
+    "notes": "Supplier payment: Amir Trader",
+    "recorded_by": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "recorded_by_name": "Asad",
+    "created_at": "2026-08-10T15:04:26.710585+00:00"
+  },
+  {
+    "id": "fa2a7ff9-7eb2-4f90-b1be-30fecc1087f3",
+    "payment_date": "2026-08-15",
+    "person_name": "Junaid",
+    "amount": 4000,
+    "payment_method": "Junaid",
+    "notes": "Supplier payment: jadoon traders",
+    "recorded_by": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "recorded_by_name": "Asad",
+    "created_at": "2026-08-15T14:28:38.793197+00:00"
+  },
+  {
+    "id": "9da3eafc-913c-4e01-9fac-03bacd0f79d0",
+    "payment_date": "2026-08-20",
+    "person_name": "Junaid",
+    "amount": 21000,
+    "payment_method": "Junaid",
+    "notes": "Supplier payment: Walls",
+    "recorded_by": "62c5814c-09e6-4583-874d-c3660ce3283f",
+    "recorded_by_name": "Asad",
+    "created_at": "2026-08-20T15:38:30.656243+00:00"
+  }
+]
