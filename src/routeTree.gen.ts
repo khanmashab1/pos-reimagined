@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as StockEntryRouteImport } from './routes/stock-entry'
 import { Route as ReturnsRouteImport } from './routes/returns'
+import { Route as PriceRouteImport } from './routes/price'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeedbackRouteImport } from './routes/feedback'
@@ -52,6 +53,11 @@ const StockEntryRoute = StockEntryRouteImport.update({
 const ReturnsRoute = ReturnsRouteImport.update({
   id: '/returns',
   path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PriceRoute = PriceRouteImport.update({
+  id: '/price',
+  path: '/price',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/price': typeof PriceRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/price': typeof PriceRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/feedback': typeof FeedbackRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/price': typeof PriceRoute
   '/returns': typeof ReturnsRoute
   '/stock-entry': typeof StockEntryRoute
   '/suppliers': typeof SuppliersRouteWithChildren
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/login'
     | '/pos'
+    | '/price'
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/login'
     | '/pos'
+    | '/price'
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/login'
     | '/pos'
+    | '/price'
     | '/returns'
     | '/stock-entry'
     | '/suppliers'
@@ -382,6 +394,7 @@ export interface RootRouteChildren {
   FeedbackRoute: typeof FeedbackRoute
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
+  PriceRoute: typeof PriceRoute
   ReturnsRoute: typeof ReturnsRoute
   StockEntryRoute: typeof StockEntryRoute
   SuppliersRoute: typeof SuppliersRouteWithChildren
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/returns'
       fullPath: '/returns'
       preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/price': {
+      id: '/price'
+      path: '/price'
+      fullPath: '/price'
+      preLoaderRoute: typeof PriceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -661,6 +681,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackRoute: FeedbackRoute,
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
+  PriceRoute: PriceRoute,
   ReturnsRoute: ReturnsRoute,
   StockEntryRoute: StockEntryRoute,
   SuppliersRoute: SuppliersRouteWithChildren,

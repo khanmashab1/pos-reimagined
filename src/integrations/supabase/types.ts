@@ -1374,6 +1374,59 @@ export type Database = {
       }
       next_bill_no: { Args: { _prefix: string }; Returns: string }
       open_shift: { Args: { _opening_cash: number }; Returns: Json }
+      price_categories: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      price_lookup_barcode: {
+        Args: { _code: string }
+        Returns: {
+          barcode: string
+          category_id: string
+          name: string
+          product_id: string
+          sale_price: number
+          stock: number
+          unit_barcode: string
+          unit_equals_base: number
+          unit_id: string
+          unit_name: string
+          unit_sale_price: number
+        }[]
+      }
+      price_search: {
+        Args: {
+          _category: string
+          _limit: number
+          _offset: number
+          _search: string
+        }
+        Returns: {
+          barcode: string
+          category_id: string
+          id: string
+          name: string
+          sale_price: number
+          stock: number
+          total_count: number
+        }[]
+      }
+      price_units: {
+        Args: { _product_ids: string[] }
+        Returns: {
+          barcode: string
+          equals_base: number
+          id: string
+          is_base: boolean
+          is_default_sale: boolean
+          name: string
+          product_id: string
+          sale_price: number
+        }[]
+      }
       process_return: {
         Args: { _items: Json; _reason: string; _sale_id: string }
         Returns: Json
