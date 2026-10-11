@@ -9,70 +9,40 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SuppliersRouteImport } from './routes/suppliers'
-import { Route as StockEntryRouteImport } from './routes/stock-entry'
-import { Route as ReturnsRouteImport } from './routes/returns'
-import { Route as PriceRouteImport } from './routes/price'
-import { Route as PosRouteImport } from './routes/pos'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as FeedbackRouteImport } from './routes/feedback'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SuppliersReportRouteImport } from './routes/suppliers.report'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
-import { Route as AdminStockSummaryRouteImport } from './routes/admin.stock-summary'
-import { Route as AdminStockReconciliationsRouteImport } from './routes/admin.stock-reconciliations'
-import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
-import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
-import { Route as AdminReportsRouteImport } from './routes/admin.reports'
-import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit-calculator'
-import { Route as AdminProductsRouteImport } from './routes/admin.products'
-import { Route as AdminPriceRequestsRouteImport } from './routes/admin.price-requests'
-import { Route as AdminManualSalesRouteImport } from './routes/admin.manual-sales'
-import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
-import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
-import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
-import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-expenses'
-import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
-import { Route as AdminCashierReportRouteImport } from './routes/admin.cashier-report'
-import { Route as AdminBackupRouteImport } from './routes/admin.backup'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PosRouteImport } from './routes/pos'
+import { Route as PriceRouteImport } from './routes/price'
+import { Route as ReturnsRouteImport } from './routes/returns'
+import { Route as StockEntryRouteImport } from './routes/stock-entry'
+import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as AdminAccessPosRouteImport } from './routes/admin.access-pos'
+import { Route as AdminBackupRouteImport } from './routes/admin.backup'
+import { Route as AdminCashierReportRouteImport } from './routes/admin.cashier-report'
+import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
+import { Route as AdminDailyExpensesRouteImport } from './routes/admin.daily-expenses'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
+import { Route as AdminLowStockRouteImport } from './routes/admin.low-stock'
+import { Route as AdminManualSalesRouteImport } from './routes/admin.manual-sales'
+import { Route as AdminPriceRequestsRouteImport } from './routes/admin.price-requests'
+import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminProfitCalculatorRouteImport } from './routes/admin.profit-calculator'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminReturnsRouteImport } from './routes/admin.returns'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
+import { Route as AdminStockReconciliationsRouteImport } from './routes/admin.stock-reconciliations'
+import { Route as AdminStockSummaryRouteImport } from './routes/admin.stock-summary'
+import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as SuppliersReportRouteImport } from './routes/suppliers.report'
 
-const SuppliersRoute = SuppliersRouteImport.update({
-  id: '/suppliers',
-  path: '/suppliers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StockEntryRoute = StockEntryRouteImport.update({
-  id: '/stock-entry',
-  path: '/stock-entry',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReturnsRoute = ReturnsRouteImport.update({
-  id: '/returns',
-  path: '/returns',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PriceRoute = PriceRouteImport.update({
-  id: '/price',
-  path: '/price',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PosRoute = PosRouteImport.update({
-  id: '/pos',
-  path: '/pos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeedbackRoute = FeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -80,29 +50,119 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuppliersReportRoute = SuppliersReportRouteImport.update({
-  id: '/report',
-  path: '/report',
-  getParentRoute: () => SuppliersRoute,
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRoute,
+const PosRoute = PosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
+const PriceRoute = PriceRouteImport.update({
+  id: '/price',
+  path: '/price',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReturnsRoute = ReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockEntryRoute = StockEntryRouteImport.update({
+  id: '/stock-entry',
+  path: '/stock-entry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuppliersRoute = SuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAccessPosRoute = AdminAccessPosRouteImport.update({
+  id: '/access-pos',
+  path: '/access-pos',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminStockSummaryRoute = AdminStockSummaryRouteImport.update({
-  id: '/stock-summary',
-  path: '/stock-summary',
+const AdminBackupRoute = AdminBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCashierReportRoute = AdminCashierReportRouteImport.update({
+  id: '/cashier-report',
+  path: '/cashier-report',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDailyExpensesRoute = AdminDailyExpensesRouteImport.update({
+  id: '/daily-expenses',
+  path: '/daily-expenses',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLowStockRoute = AdminLowStockRouteImport.update({
+  id: '/low-stock',
+  path: '/low-stock',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminManualSalesRoute = AdminManualSalesRouteImport.update({
+  id: '/manual-sales',
+  path: '/manual-sales',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPriceRequestsRoute = AdminPriceRequestsRouteImport.update({
+  id: '/price-requests',
+  path: '/price-requests',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProductsRoute = AdminProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProfitCalculatorRoute = AdminProfitCalculatorRouteImport.update({
+  id: '/profit-calculator',
+  path: '/profit-calculator',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReturnsRoute = AdminReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShiftsRoute = AdminShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminStockReconciliationsRoute =
@@ -111,85 +171,25 @@ const AdminStockReconciliationsRoute =
     path: '/stock-reconciliations',
     getParentRoute: () => AdminRoute,
   } as any)
-const AdminShiftsRoute = AdminShiftsRouteImport.update({
-  id: '/shifts',
-  path: '/shifts',
+const AdminStockSummaryRoute = AdminStockSummaryRouteImport.update({
+  id: '/stock-summary',
+  path: '/stock-summary',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminReturnsRoute = AdminReturnsRouteImport.update({
-  id: '/returns',
-  path: '/returns',
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminReportsRoute = AdminReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminProfitCalculatorRoute = AdminProfitCalculatorRouteImport.update({
-  id: '/profit-calculator',
-  path: '/profit-calculator',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminProductsRoute = AdminProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPriceRequestsRoute = AdminPriceRequestsRouteImport.update({
-  id: '/price-requests',
-  path: '/price-requests',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminManualSalesRoute = AdminManualSalesRouteImport.update({
-  id: '/manual-sales',
-  path: '/manual-sales',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminLowStockRoute = AdminLowStockRouteImport.update({
-  id: '/low-stock',
-  path: '/low-stock',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminFeedbackRoute = AdminFeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDashboardRoute = AdminDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDailyExpensesRoute = AdminDailyExpensesRouteImport.update({
-  id: '/daily-expenses',
-  path: '/daily-expenses',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminCashierReportRoute = AdminCashierReportRouteImport.update({
-  id: '/cashier-report',
-  path: '/cashier-report',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminBackupRoute = AdminBackupRouteImport.update({
-  id: '/backup',
-  path: '/backup',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminAccessPosRoute = AdminAccessPosRouteImport.update({
-  id: '/access-pos',
-  path: '/access-pos',
-  getParentRoute: () => AdminRoute,
+const SuppliersReportRoute = SuppliersReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => SuppliersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -402,53 +402,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/suppliers': {
-      id: '/suppliers'
-      path: '/suppliers'
-      fullPath: '/suppliers'
-      preLoaderRoute: typeof SuppliersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stock-entry': {
-      id: '/stock-entry'
-      path: '/stock-entry'
-      fullPath: '/stock-entry'
-      preLoaderRoute: typeof StockEntryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/returns': {
-      id: '/returns'
-      path: '/returns'
-      fullPath: '/returns'
-      preLoaderRoute: typeof ReturnsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/price': {
-      id: '/price'
-      path: '/price'
-      fullPath: '/price'
-      preLoaderRoute: typeof PriceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pos': {
-      id: '/pos'
-      path: '/pos'
-      fullPath: '/pos'
-      preLoaderRoute: typeof PosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/feedback': {
-      id: '/feedback'
-      path: '/feedback'
-      fullPath: '/feedback'
-      preLoaderRoute: typeof FeedbackRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -458,144 +416,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/suppliers/report': {
-      id: '/suppliers/report'
-      path: '/report'
-      fullPath: '/suppliers/report'
-      preLoaderRoute: typeof SuppliersReportRouteImport
-      parentRoute: typeof SuppliersRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRoute
+    '/pos': {
+      id: '/pos'
+      path: '/pos'
+      fullPath: '/pos'
+      preLoaderRoute: typeof PosRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/suppliers': {
-      id: '/admin/suppliers'
-      path: '/suppliers'
-      fullPath: '/admin/suppliers'
-      preLoaderRoute: typeof AdminSuppliersRouteImport
-      parentRoute: typeof AdminRoute
+    '/price': {
+      id: '/price'
+      path: '/price'
+      fullPath: '/price'
+      preLoaderRoute: typeof PriceRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/stock-summary': {
-      id: '/admin/stock-summary'
-      path: '/stock-summary'
-      fullPath: '/admin/stock-summary'
-      preLoaderRoute: typeof AdminStockSummaryRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/stock-reconciliations': {
-      id: '/admin/stock-reconciliations'
-      path: '/stock-reconciliations'
-      fullPath: '/admin/stock-reconciliations'
-      preLoaderRoute: typeof AdminStockReconciliationsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/shifts': {
-      id: '/admin/shifts'
-      path: '/shifts'
-      fullPath: '/admin/shifts'
-      preLoaderRoute: typeof AdminShiftsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/returns': {
-      id: '/admin/returns'
+    '/returns': {
+      id: '/returns'
       path: '/returns'
-      fullPath: '/admin/returns'
-      preLoaderRoute: typeof AdminReturnsRouteImport
-      parentRoute: typeof AdminRoute
+      fullPath: '/returns'
+      preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/reports': {
-      id: '/admin/reports'
-      path: '/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof AdminReportsRouteImport
-      parentRoute: typeof AdminRoute
+    '/stock-entry': {
+      id: '/stock-entry'
+      path: '/stock-entry'
+      fullPath: '/stock-entry'
+      preLoaderRoute: typeof StockEntryRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/profit-calculator': {
-      id: '/admin/profit-calculator'
-      path: '/profit-calculator'
-      fullPath: '/admin/profit-calculator'
-      preLoaderRoute: typeof AdminProfitCalculatorRouteImport
-      parentRoute: typeof AdminRoute
+    '/suppliers': {
+      id: '/suppliers'
+      path: '/suppliers'
+      fullPath: '/suppliers'
+      preLoaderRoute: typeof SuppliersRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/products': {
-      id: '/admin/products'
-      path: '/products'
-      fullPath: '/admin/products'
-      preLoaderRoute: typeof AdminProductsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/price-requests': {
-      id: '/admin/price-requests'
-      path: '/price-requests'
-      fullPath: '/admin/price-requests'
-      preLoaderRoute: typeof AdminPriceRequestsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/manual-sales': {
-      id: '/admin/manual-sales'
-      path: '/manual-sales'
-      fullPath: '/admin/manual-sales'
-      preLoaderRoute: typeof AdminManualSalesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/low-stock': {
-      id: '/admin/low-stock'
-      path: '/low-stock'
-      fullPath: '/admin/low-stock'
-      preLoaderRoute: typeof AdminLowStockRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/feedback': {
-      id: '/admin/feedback'
-      path: '/feedback'
-      fullPath: '/admin/feedback'
-      preLoaderRoute: typeof AdminFeedbackRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/dashboard': {
-      id: '/admin/dashboard'
-      path: '/dashboard'
-      fullPath: '/admin/dashboard'
-      preLoaderRoute: typeof AdminDashboardRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/daily-expenses': {
-      id: '/admin/daily-expenses'
-      path: '/daily-expenses'
-      fullPath: '/admin/daily-expenses'
-      preLoaderRoute: typeof AdminDailyExpensesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/categories': {
-      id: '/admin/categories'
-      path: '/categories'
-      fullPath: '/admin/categories'
-      preLoaderRoute: typeof AdminCategoriesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/cashier-report': {
-      id: '/admin/cashier-report'
-      path: '/cashier-report'
-      fullPath: '/admin/cashier-report'
-      preLoaderRoute: typeof AdminCashierReportRouteImport
+    '/admin/access-pos': {
+      id: '/admin/access-pos'
+      path: '/access-pos'
+      fullPath: '/admin/access-pos'
+      preLoaderRoute: typeof AdminAccessPosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/backup': {
@@ -605,12 +479,138 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBackupRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/access-pos': {
-      id: '/admin/access-pos'
-      path: '/access-pos'
-      fullPath: '/admin/access-pos'
-      preLoaderRoute: typeof AdminAccessPosRouteImport
+    '/admin/cashier-report': {
+      id: '/admin/cashier-report'
+      path: '/cashier-report'
+      fullPath: '/admin/cashier-report'
+      preLoaderRoute: typeof AdminCashierReportRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/daily-expenses': {
+      id: '/admin/daily-expenses'
+      path: '/daily-expenses'
+      fullPath: '/admin/daily-expenses'
+      preLoaderRoute: typeof AdminDailyExpensesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/feedback': {
+      id: '/admin/feedback'
+      path: '/feedback'
+      fullPath: '/admin/feedback'
+      preLoaderRoute: typeof AdminFeedbackRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/low-stock': {
+      id: '/admin/low-stock'
+      path: '/low-stock'
+      fullPath: '/admin/low-stock'
+      preLoaderRoute: typeof AdminLowStockRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/manual-sales': {
+      id: '/admin/manual-sales'
+      path: '/manual-sales'
+      fullPath: '/admin/manual-sales'
+      preLoaderRoute: typeof AdminManualSalesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/price-requests': {
+      id: '/admin/price-requests'
+      path: '/price-requests'
+      fullPath: '/admin/price-requests'
+      preLoaderRoute: typeof AdminPriceRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/products': {
+      id: '/admin/products'
+      path: '/products'
+      fullPath: '/admin/products'
+      preLoaderRoute: typeof AdminProductsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/profit-calculator': {
+      id: '/admin/profit-calculator'
+      path: '/profit-calculator'
+      fullPath: '/admin/profit-calculator'
+      preLoaderRoute: typeof AdminProfitCalculatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/returns': {
+      id: '/admin/returns'
+      path: '/returns'
+      fullPath: '/admin/returns'
+      preLoaderRoute: typeof AdminReturnsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shifts': {
+      id: '/admin/shifts'
+      path: '/shifts'
+      fullPath: '/admin/shifts'
+      preLoaderRoute: typeof AdminShiftsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/stock-reconciliations': {
+      id: '/admin/stock-reconciliations'
+      path: '/stock-reconciliations'
+      fullPath: '/admin/stock-reconciliations'
+      preLoaderRoute: typeof AdminStockReconciliationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/stock-summary': {
+      id: '/admin/stock-summary'
+      path: '/stock-summary'
+      fullPath: '/admin/stock-summary'
+      preLoaderRoute: typeof AdminStockSummaryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/suppliers': {
+      id: '/admin/suppliers'
+      path: '/suppliers'
+      fullPath: '/admin/suppliers'
+      preLoaderRoute: typeof AdminSuppliersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/suppliers/report': {
+      id: '/suppliers/report'
+      path: '/report'
+      fullPath: '/suppliers/report'
+      preLoaderRoute: typeof SuppliersReportRouteImport
+      parentRoute: typeof SuppliersRoute
     }
   }
 }
